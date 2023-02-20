@@ -116,7 +116,7 @@ class Resource( BaseDocument ):
 	# additional field holding data of a resource, used when loading, but won't be persisted in db
 	raw: Any = field( default=None, repr=False, metadata={ PERSIST: False, PROTECTED: True } )  # structured data making up this resource
 	content: bytes = field( default=None, repr=False, metadata={ PERSIST: False, PROTECTED: True } )  # raw content as bytes
-	text: InitVar[str] = field( default=None, repr=False, metadata={ PERSIST: False, PROTECTED: True } )  # decoded content as string, to be removed
+	text: InitVar = field( default=None, repr=False, metadata={ PERSIST: False, PROTECTED: True } )  # decoded content as string, to be removed
 
 	resources: List[Resource] = field( default_factory=list, repr=False, metadata={ PERSIST: False, PROTECTED: True } )
 
