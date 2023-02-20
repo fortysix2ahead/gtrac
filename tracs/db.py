@@ -283,7 +283,7 @@ class ActivityDb:
 	def insert_resource( self, r: Resource ) -> int:
 		return self.resources.insert( r )
 
-	def upsert_resource( self, r: Resource ) -> list[int]:
+	def upsert_resource( self, r: Resource ) -> List[int]:
 		return self.resources.upsert( r, (Query().uid == r.uid) & (Query().path == r.path) )
 
 	def upsert_activity( self, a: Activity, doc_id: Optional[int] = None, uid: Optional[str] = None ) -> None:
@@ -313,7 +313,7 @@ class ActivityDb:
 		else:
 			self._activities.update( delete( field ), doc_ids=[a.doc_id] )
 
-	def set_field( self, q: Query, field: str, value: Any ) -> list[int]:
+	def set_field( self, q: Query, field: str, value: Any ) -> List[int]:
 		return self._activities.update( set_field( field, value ), cond=q )
 
 	# -----
