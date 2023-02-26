@@ -6,7 +6,7 @@ from dataclasses import field
 from dataclasses import Field
 from dataclasses import fields
 from dataclasses import InitVar
-from datetime import datetime
+from datetime import datetime, time
 from typing import Any
 from typing import Dict
 from typing import Union
@@ -84,9 +84,9 @@ class Activity( BaseDocument ):
 	resources: List[Resource] = field( init=True, default_factory=list, metadata={ PROTECTED: True, PERSIST: False } )
 	parts: List = field( init=True, default_factory=list, metadata={ PROTECTED: True } )
 
-	others: InitVar[List[Activity]] = field( default=None )
-	other_parts: InitVar[List[Activity]] = field( default=None )
-	force: InitVar[bool] = field( default=False )
+	others: InitVar = field( default=None )
+	other_parts: InitVar = field( default=None )
+	force: InitVar = field( default=False )
 
 	#parent_id: int = field( default=None, metadata={ PROTECTED: True } )
 	#parent_uid: str = field( default=None, metadata={ PROTECTED: True } )
