@@ -19,9 +19,9 @@ from tracs.config import ApplicationContext
 db_live_path = Path( Path().expanduser().resolve(), '../../com.github.tracs.data/db' )
 
 local_fs = open_fs( '~/Projekte/com.github.tracs.data/db' )
-mem_fs = open_fs( 'mem://' )
-
 local_json = '~/Projekte/com.github.tracs.data/db/activities.json'
+
+mem_fs = open_fs( 'mem://' )
 mem_json = 'mem://activities.json'
 
 @dataclass
@@ -33,16 +33,14 @@ class Sample:
 @dataclass
 class TinyTable:
 
-    pass
+    tables: List[Dict[str, Dict]] = field( default_factory=list )
 
 @dataclass
 class TinyDatabase:
 
-    tables: Dict[str, Activity] = field( default_factory=dict )
-
-tiny_database_schema = Schema(
-    name_mapping={ 'tables': '_default' }
-)
+#    tables: Dict[str, Dict] = field( default_factory=list )
+    tables: Dict[str, Activity] = field( default_factory=list )
+#    tables: List[TinyTable] = field( default_factory=list )
 
 ctx = ApplicationContext()
 
@@ -89,6 +87,26 @@ def test_dump_factory():
     obj = Activity( doc_id=1, time=datetime.utcnow(), time_end=datetime.utcnow() )
     obj = factory.dump( obj, Activity )
     ctx.pp( obj )
+
+def test_load_factory():
+    copy_file( local_fs, 'activities.json', mem_fs, 'activities.json' )
+    json = loads( mem_fs.readbytes( 'activities.json' ) )
+
+    activity_schema = Schema( exclude=[ 'doc_id', 'type' ], omit_default=True )
+    tiny_database_schema = Schema(
+        name_mapping={'tables': '_default'}
+    )
+
+    factory = Factory(
+        debug_path=True,
+        schemas={
+            TinyDatabase: tiny_database_schema,
+            Activity: activity_schema,
+        }
+    )
+
+    obj = factory.load( json, TinyDatabase )
+    ctx.pp( obj.tables.get( '1' ) )
 
 def test_dump_wizard():
     obj = Activity( doc_id=1, time=datetime.utcnow(), time_end=datetime.utcnow() )
