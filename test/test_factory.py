@@ -12,11 +12,15 @@ from fs import open_fs
 from fs.copy import copy_fs, copy_file
 from pathlib import Path
 from orjson import loads
+from tinydb import TinyDB
 
 from tracs.activity import Activity
 from tracs.config import ApplicationContext
+from tracs.db import ActivityDb
+from tracs.db_storage import DataClassStorage
 
-db_live_path = Path( Path().expanduser().resolve(), '../../com.github.tracs.data/db' )
+db_live_path = Path( Path( '~' ).expanduser(), 'Projekte/com.github.tracs.data/db' )
+activities_live_path = Path( db_live_path, 'activities.json' )
 
 local_fs = open_fs( '~/Projekte/com.github.tracs.data/db' )
 local_json = '~/Projekte/com.github.tracs.data/db/activities.json'
@@ -25,7 +29,7 @@ mem_fs = open_fs( 'mem://' )
 mem_json = 'mem://activities.json'
 
 ctx = ApplicationContext()
-ctx.timeit()
+ctx.timeit( skip_print=True )
 
 @dataclass
 class Sample:
@@ -46,6 +50,16 @@ class ActivityDatabase:
 
 def test_read_db():
     ctx.pp( db_live_path )
+
+def test_load_complete_tinydb():
+    ctx.timeit( skip_print=True )
+    db = ActivityDb( db_live_path )
+    ctx.timeit( 'open tiny db (complete)' )
+
+def test_load_tinydb():
+    ctx.timeit( skip_print=True )
+    db = TinyDB( storage=DataClassStorage, path=activities_live_path, read_only=True, passthrough=True )
+    ctx.timeit( 'open tiny db (activities only)' )
 
 def test_dump_factory():
     activity_schema = Schema( exclude=[ 'doc_id', 'type' ], omit_default=True )
