@@ -25,6 +25,7 @@ mem_fs = open_fs( 'mem://' )
 mem_json = 'mem://activities.json'
 
 ctx = ApplicationContext()
+ctx.timeit()
 
 @dataclass
 class Sample:
@@ -70,6 +71,8 @@ def test_dump_factory():
     ctx.pp( obj )
 
 def test_load_factory():
+    ctx.timeit( skip_print=True )
+
     copy_file( local_fs, 'activities.json', mem_fs, 'activities.json' )
     json = loads( mem_fs.readbytes( 'activities.json' ) )
 
@@ -89,6 +92,9 @@ def test_load_factory():
     )
 
     obj = factory.load(json, ActivityDatabase)
+
+    ctx.timeit( message='load via factory' )
+
     _all = obj.all_activities()
     ctx.pp( obj.activities().get( 111 ) )
 

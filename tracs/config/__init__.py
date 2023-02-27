@@ -8,7 +8,7 @@ from importlib import import_module
 from importlib.resources import path as pkg_path
 from logging import getLogger
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 from typing import List
 from typing import Tuple
 
@@ -185,12 +185,16 @@ class ApplicationContext:
 			self.progress.update( task_id=self.task_id, advance=1, msg='' if msg is None else msg )
 			self.progress.stop()
 
-	def timeit( self ):
+	def timeit( self, message: Optional[str] = None, skip_print: bool = False ):
 		if not self.apptime:
 			self.apptime = datetime.now()
 		else:
 			diff = datetime.now() - self.apptime
-			self.console.print( f'{diff}' )
+			if not skip_print:
+				if message:
+					self.console.print(f'{message}: {diff}')
+				else:
+					self.console.print( f'{diff}' )
 			self.apptime = datetime.now()
 
 	def dump_config_state( self ) -> None:
