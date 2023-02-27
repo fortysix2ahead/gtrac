@@ -61,6 +61,8 @@ def test_load_complete_tinydb():
 def test_load_tinydb():
     ctx.timeit( skip_print=True )
     db = TinyDB( storage=DataClassStorage, path=activities_live_path, read_only=True, passthrough=True )
+    db.table( '_default' ).document_class = Activity
+    all_ = db.table( '_default' ).all()
     ctx.timeit( 'open tiny db (activities only)' )
 
 def test_dump_factory():
@@ -108,13 +110,13 @@ def test_load_factory():
     )
 
     obj = factory.load(json, ActivityDatabase)
+    all_ = obj.activities()
 
     ctx.timeit( message='load via factory' )
 
-    _all = obj.activities()
     ctx.pp( obj.activities().get( 111 ) )
 
-    return _all
+    return all_
 
 def test_rules():
     _all = test_load_factory()
@@ -129,7 +131,10 @@ def test_rules():
     expr = ComparisonExpression( context, 'eq', left, right )
     expr.reduce()
 
-    print( expr.evaluate( thing ) )
+    ctx.pp( expr.evaluate( thing ) )
+
+    results = list( filter( lambda a: expr.evaluate( a ), _all ) )
+    ctx.pp( results )
 
 def test_dump_wizard():
     obj = Activity( doc_id=1, time=datetime.utcnow(), time_end=datetime.utcnow() )
