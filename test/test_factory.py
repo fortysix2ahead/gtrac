@@ -24,6 +24,8 @@ local_json = '~/Projekte/com.github.tracs.data/db/activities.json'
 mem_fs = open_fs( 'mem://' )
 mem_json = 'mem://activities.json'
 
+ctx = ApplicationContext()
+
 @dataclass
 class Sample:
 
@@ -31,39 +33,18 @@ class Sample:
     t: time = field( default=None )
 
 @dataclass
-class TinyTable:
+class ActivityDatabase:
 
-    tables: List[Dict[str, Dict]] = field( default_factory=list )
+    tables: Dict[str, Dict[int, Activity]] = field( default_factory=list )
 
-@dataclass
-class TinyDatabase:
+    def activities( self ) -> Dict[int, Activity]:
+        return self.tables.get( '_default' )
 
-#    tables: Dict[str, Dict] = field( default_factory=list )
-    tables: Dict[str, Activity] = field( default_factory=list )
-#    tables: List[TinyTable] = field( default_factory=list )
-
-ctx = ApplicationContext()
+    def all_activities( self ) -> List[Activity]:
+        return list( self.activities().values() )
 
 def test_read_db():
     ctx.pp( db_live_path )
-
-def test_factory():
-    ctx.timeit()
-
-    copy_file( local_fs, 'activities.json', mem_fs, 'activities.json' )
-    ctx.timeit()
-
-    # a2 = factory.dump( a2, Activity )
-
-    return
-
-    d = loads( mem_fs.readbytes( 'activities.json' ) )
-    ctx.timeit()
-
-    db = factory.load( d, TinyDatabase )
-    ctx.timeit()
-
-#ctx.pp( factory.dump( TinyDatabase(), TinyDatabase ) )
 
 def test_dump_factory():
     activity_schema = Schema( exclude=[ 'doc_id', 'type' ], omit_default=True )
@@ -94,19 +75,22 @@ def test_load_factory():
 
     activity_schema = Schema( exclude=[ 'doc_id', 'type' ], omit_default=True )
     tiny_database_schema = Schema(
-        name_mapping={'tables': '_default'}
+        skip_internal = False,
+        unknown='tables',
+#        name_mapping={'tables': '_default'}
     )
 
     factory = Factory(
         debug_path=True,
         schemas={
-            TinyDatabase: tiny_database_schema,
+            ActivityDatabase: tiny_database_schema,
             Activity: activity_schema,
         }
     )
 
-    obj = factory.load( json, TinyDatabase )
-    ctx.pp( obj.tables.get( '1' ) )
+    obj = factory.load(json, ActivityDatabase)
+    _all = obj.all_activities()
+    ctx.pp( obj.activities().get( 111 ) )
 
 def test_dump_wizard():
     obj = Activity( doc_id=1, time=datetime.utcnow(), time_end=datetime.utcnow() )
