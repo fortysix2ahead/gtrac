@@ -12,6 +12,8 @@ from fs import open_fs
 from fs.copy import copy_fs, copy_file
 from pathlib import Path
 from orjson import loads
+from rule_engine import Rule, Context
+from rule_engine.ast import StringExpression, Statement, SymbolExpression, ComparisonExpression
 from tinydb import TinyDB
 
 from tracs.activity import Activity
@@ -109,8 +111,25 @@ def test_load_factory():
 
     ctx.timeit( message='load via factory' )
 
-    _all = obj.all_activities()
+    _all = obj.activities()
     ctx.pp( obj.activities().get( 111 ) )
+
+    return _all
+
+def test_rules():
+    _all = test_load_factory()
+    thing = _all.get(3594)
+
+    rule = Rule( 'name == "Kammlauf"' )
+    result = rule.matches( thing )
+
+    context = Context()
+    left = SymbolExpression( context, 'name' )
+    right = StringExpression( context, 'Kammlauf' )
+    expr = ComparisonExpression( context, 'eq', left, right )
+    expr.reduce()
+
+    print( expr.evaluate( thing ) )
 
 def test_dump_wizard():
     obj = Activity( doc_id=1, time=datetime.utcnow(), time_end=datetime.utcnow() )
