@@ -170,24 +170,27 @@ class PolarActivity( Activity ):
 @dataclass
 class PolarFlowExercise:
 
-	isTest: bool = field( default=False )
+	isTest: Optional[bool] = field( default=False )
 	title: str = field( default=None )
 	type: str = field( default=None )
 	listItemId: int = field( default=None )
-	hasTrainingTarget: bool = field( default=False )
+	hasTrainingTarget: Optional[bool] = field( default=False )
 	timestamp: int = field( default=None )
-	start: int = field( default=None )
-	end: int = field( default=None )
+	start: Optional[Union[int, str]] = field( default=None )
+	end: Optional[int] = field( default=None )
 	allDay: bool = field( default=False )
-	iconUrl: str = field( default=None )
+	iconUrl: Optional[str] = field( default=None )
 	url: str = field( default=None )
+	backgroundColor: Optional[str] = field( default=None )
 	borderColor: str = field( default=None )
 	textColor: str = field( default=None )
+	className: Optional[str] = field( default=None )
 	datetime: str = field( default=None ) # 2011-04-28T17:48:10.000Z
 	eventType: str = field( default=None )
 	duration: int = field( default=None )
 	distance: float = field( default=None )
 	calories: int = field( default=None )
+	index: Optional[int] = field( default=None )
 
 	@property
 	def is_multipart( self ):
@@ -203,12 +206,15 @@ class PolarFlowExercise:
 			return int( match('.*/rr/(\d+)', self.url )[1])
 		return 0
 
+	def get_type( self ) -> ActivityTypes:
+		return TYPES.get( self.iconUrl.rsplit( '/', 1 )[1], Types.unknown ) if self.iconUrl else Types.unknown
+
 	def as_activity( self ) -> Activity:
 		return Activity(
 			local_id=self.local_id,
 			uid = f'{SERVICE_NAME}:{self.local_id}',
 			name = self.title,
-			type = _type_of( self.raw ),
+			type = self.get_type(),
 			time = parse( self.datetime, ignoretz=True ).replace( tzinfo=tzlocal() ).astimezone( UTC ),
 			localtime = parse( self.datetime, ignoretz=True ).replace( tzinfo=tzlocal() ),
 			distance = self.distance,
