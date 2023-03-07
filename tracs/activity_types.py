@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 from enum import Enum
 
 class ActivityTypes( Enum ):
@@ -62,11 +64,19 @@ class ActivityTypes( Enum ):
 	unknown = 'unknown'
 
 	@classmethod
-	def get( cls, value: str ) -> Enum:
+	def get( cls, value: str ) -> ActivityTypes:
 		for item in cls.items():
 			if item[1] == value:
 				return cls[item[0]]
 		return cls['unknown']
+
+	@classmethod
+	def from_str( cls, s: str ) -> ActivityTypes:
+		return cls.get( s )
+
+	@classmethod
+	def to_str( cls, t: ActivityTypes ) -> str:
+		return t.value
 
 	@classmethod
 	def items( cls ):

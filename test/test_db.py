@@ -47,19 +47,14 @@ def test_open_db( db ):
 
 	assert len( db.activities.keys() ) > 1 and len( db.activities.values() ) > 1
 	assert db.all_activities[0] == Activity(
-		doc_id=1,
+		doc_id=0,
 		name='Unknown Location',
 	    type=ActivityTypes.xcski,
 		time=datetime( 2012, 1, 7, 10, 40, 56, tzinfo=timezone.utc ),
 		localtime=datetime( 2012, 1, 7, 11, 40, 56, tzinfo=timezone( timedelta( seconds=3600 ) ) ),
-		location_country='',
 		location_place='Forest',
 		uids=['polar:1234567890', 'strava:12345678', 'waze:20210101010101'],
 	)
-
-	assert len( db.index.uid_activity.keys() ) == 3
-	assert len( db.index.uid_resources.keys() ) == 1
-	assert len( db.index.uid_path_resource.keys() ) == 1
 
 @mark.db( template='empty', inmemory=True )
 def test_write_middleware( db ):

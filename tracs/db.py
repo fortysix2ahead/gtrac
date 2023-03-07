@@ -22,7 +22,8 @@ from click import confirm
 from logging import getLogger
 from pathlib import Path
 
-from dataclass_factory import Schema, Factory
+from dataclass_factory import Factory
+from dataclass_factory import Schema as FactorySchema
 from fs.copy import copy_file
 from fs.copy import copy_file_if
 from fs.memoryfs import MemoryFS
@@ -41,6 +42,7 @@ from tinydb.table import Document
 from tinydb.table import Table
 
 from .activity import Activity
+from .activity_types import ActivityTypes
 from .resources import Resource
 from .resources import ResourceGroup
 from .config import CLASSIFIER
@@ -69,18 +71,10 @@ SCHEMA_NAME = 'schema.json'
 DB_FILES = [ACTIVITIES_NAME, INDEX_NAME, METADATA_NAME, RESOURCES_NAME, SCHEMA_NAME]
 
 @dataclass
-class DbSchema:
+class Schema:
 
 	version: int = field( default_factory=dict )
 	# unknown: Dict = field( default_factory=dict )
-
-	@classmethod
-	def schema( cls ) -> Schema:
-		return Schema(
-			# name_mapping={ 'version': ( '_default', '1', 'version' ) },
-			skip_internal=False,
-			unknown='unknown',
-		)
 
 @dataclass
 class ActivityDatabase:
@@ -166,6 +160,9 @@ class ActivityDb:
 		# setup db file system
 		self._setup_db_filesystem()
 
+		# initialize db factory
+		self._init_db_factory()
+
 		# initialize file systems
 		self._init_db_filesystem()
 
@@ -202,12 +199,25 @@ class ActivityDb:
 			else:
 				copy_file( self.pkgfs, f'/{f}', self.memfs, f'/{f}', preserve_time=True )
 
+	def _init_db_factory( self ):
+		self._factory = Factory(
+			debug_path=True,
+			schemas={
+				# name_mapping={}
+				Activity: FactorySchema( exclude=['doc_id'], omit_default=True, skip_internal=False, unknown='unknown' ),
+				ActivityTypes: FactorySchema( parser=ActivityTypes.from_str, serializer=ActivityTypes.to_str ),
+				Schema: FactorySchema( skip_internal=False ),
+				# tiny db compatibility:
+				# Schema: FactorySchema( name_mapping={ 'version': ( '_default', '1', 'version' ) }, skip_internal=False, unknown='unknown' ),
+			}
+		)
+
 	def _load_db( self ):
 		json = loads( self.memfs.readbytes( SCHEMA_NAME ) )
-		self._schema = Factory( schemas={ DbSchema: DbSchema.schema() } ).load( json, DbSchema )
+		self._schema = self._factory.load( json, Schema )
 
 		json = loads( self.memfs.readbytes( ACTIVITIES_NAME ) )
-		self._activities = Factory( schemas={ Activity: Activity.schema() } ).load( json, Dict[int, Activity] )
+		self._activities = self._factory.load( json, Dict[int, Activity] )
 
 	# close db: persist changes to disk (if there are changes)
 
@@ -242,7 +252,7 @@ class ActivityDb:
 		return self._metadata_db
 
 	@property
-	def schema( self ) -> DbSchema:
+	def schema( self ) -> Schema:
 		return self._schema
 
 	@property

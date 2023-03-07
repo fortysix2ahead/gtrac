@@ -15,7 +15,6 @@ from logging import getLogger
 from typing import List
 from typing import Optional
 
-from dataclass_factory import Schema
 from tzlocal import get_localzone_name
 
 from .activity_types import ActivityTypes
@@ -45,7 +44,7 @@ class Activity( BaseDocument ):
 
 	local_id: int = field( default=None, metadata= { PROTECTED: True, FILTERABLE: True } )  # same as raw_id
 
-	name: str = field( default=None, metadata={ FILTERABLE: True } ) # activity name
+	name: Optional[str] = field( default=None, metadata={ FILTERABLE: True } ) # activity name
 	type: ActivityTypes = field( default=None, metadata={ FILTERABLE: True } ) # activity type
 	description: str = field( default=None, metadata={ FILTERABLE: True } ) # description
 	tags: List[str] = field( default_factory=list, metadata={ FILTERABLE: True } ) # list of tags
@@ -76,7 +75,7 @@ class Activity( BaseDocument ):
 	speed: float = field( default=None, metadata={ FILTERABLE: True } ) #
 	speed_max: float = field( default=None, metadata={ FILTERABLE: True } ) #
 
-	heartrate: float = field( default=None, metadata={ FILTERABLE: True } ) #
+	heartrate: Optional[float] = field( default=None, metadata={ FILTERABLE: True } ) #
 	heartrate_max: float = field( default=None, metadata={ FILTERABLE: True } ) #
 	heartrate_min: float = field( default=None, metadata={ FILTERABLE: True } ) #
 	calories: float = field( default=None, metadata={ FILTERABLE: True } ) #
@@ -93,16 +92,6 @@ class Activity( BaseDocument ):
 	#parent_uid: str = field( default=None, metadata={ PROTECTED: True } )
 
 	#is_group: bool = field( init=False, default=False, metadata={ PERSIST: False } ) # todo: for backward compatibility
-
-	@classmethod
-	def schema( cls ) -> Schema:
-		return Schema(
-			exclude=['doc_id', 'type'],
-			omit_default=True,
-			name_mapping={},
-			skip_internal=False,
-			unknown='unknown',
-		)
 
 	@property
 	def parent( self ) -> Optional[Activity]:
