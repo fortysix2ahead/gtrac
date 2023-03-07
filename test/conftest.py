@@ -25,7 +25,7 @@ from tracs.service import Service
 
 from .bikecitizens_server import bikecitizens_server
 from .bikecitizens_server import bikecitizens_server_thread
-from .helpers import cleanup as cleanup_path
+from .helpers import cleanup as cleanup_path, get_db
 from .helpers import get_db_as_json
 from .helpers import get_file_as_json
 from .helpers import get_file_db
@@ -50,16 +50,12 @@ def db( request ) -> ActivityDb:
 	if marker := request.node.get_closest_marker( 'db' ):
 		template = marker.kwargs.get( 'template' )
 		library_template = marker.kwargs.get( 'library' )
-		inmemory = marker.kwargs.get( 'inmemory', True )
-		writable = marker.kwargs.get( 'writable', False )
+		read_only = marker.kwargs.get( 'read_only', True )
 		cleanup = marker.kwargs.get( 'cleanup', True )
 	else:
 		return None
 
-	if inmemory:
-		db = get_inmemory_db( library=library_template ) if library_template else get_inmemory_db( template=template )
-	else:
-		db = get_file_db( library=library_template, writable=writable ) if library_template else get_file_db( template=template, writable=writable )
+	db = get_db( template=template, read_only=read_only )
 
 	# set base path in services
 	if library_template:
@@ -69,7 +65,7 @@ def db( request ) -> ActivityDb:
 
 	yield db
 
-	if cleanup and not inmemory and writable:
+	if cleanup and not read_only:
 		cleanup_path( db.path )
 
 @fixture

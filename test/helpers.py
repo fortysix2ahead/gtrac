@@ -136,12 +136,11 @@ def get_config_path( name: str, writable: bool = False ) -> Path:
 			config_path = writable_config_path
 		return config_path
 
-def get_db_path( template_name: str = None, library_name: str = None, writable: bool = False ) -> DbPath:
+def get_db_path( template_name: str = None, library_name: str = None, read_only: bool = False ) -> DbPath:
 	"""
 	Creates/returns an existing db and returns a tuple consisting of [parent_path, db_path, meta_path]
 
 	:param template_name: template db name
-	:param writable: if True copies the template and creates new db in var/run, if False returns template directly
 	:return: Tuple of [parent_path, db_path, meta_path]
 	"""
 	with path( 'test', '__init__.py' ) as p:
@@ -150,14 +149,24 @@ def get_db_path( template_name: str = None, library_name: str = None, writable: 
 		elif library_name:
 			db_path = DbPath( parent = Path( p.parent, LIBRARIES, library_name ) )
 
-		if not writable:
+		if read_only:
 			return db_path
 		else:
 			dest_path = var_run_path()
 			dest_path.mkdir( exist_ok=True )
 			copytree( db_path.parent, dest_path, dirs_exist_ok=True )
-			db_path = DbPath( dest_path )
-			return db_path
+			return DbPath( dest_path )
+
+def get_db( template: str = None, read_only: bool = False ) -> Optional[ActivityDb]:
+	"""
+	Returns an in-memory db initialized from the provided template db.
+
+	:param template: template db or None
+	:param read_only: read_only flag
+	:return: db
+	"""
+	db_path = get_db_path( template_name=template, read_only=read_only )
+	return ActivityDb( path=db_path.parent, read_only=read_only )
 
 def get_inmemory_db( template: str = None, library: str = None ) -> Optional[ActivityDb]:
 	"""

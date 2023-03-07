@@ -1,3 +1,6 @@
+
+from __future__ import annotations
+
 from dataclasses import dataclass
 from dataclasses import field
 from dataclasses import InitVar
@@ -6,7 +9,7 @@ from datetime import timezone
 from importlib.resources import path as resource_path
 from itertools import chain
 from shutil import copy
-from typing import Any
+from typing import Any, ClassVar, Set
 from typing import cast
 from typing import Dict
 from typing import List
@@ -18,6 +21,14 @@ from typing import Union
 from click import confirm
 from logging import getLogger
 from pathlib import Path
+
+from dataclass_factory import Schema, Factory
+from fs.copy import copy_file
+from fs.copy import copy_file_if
+from fs.memoryfs import MemoryFS
+from fs.multifs import MultiFS
+from fs.osfs import OSFS
+from orjson import loads
 from rich import box
 from rich.pretty import pretty_repr as pp
 from rich.table import Table as RichTable
@@ -26,7 +37,6 @@ from tinydb import TinyDB
 from tinydb import Query
 from tinydb.operations import delete
 from tinydb.operations import set as set_field
-from tinydb.storages import JSONStorage
 from tinydb.table import Document
 from tinydb.table import Table
 
@@ -37,9 +47,7 @@ from .config import CLASSIFIER
 from .config import KEY_GROUPS
 from .config import console
 from .config import APPNAME
-from .config import TABLE_NAME_DEFAULT
 from .config import KEY_SERVICE
-from .config import KEY_VERSION
 from .db_storage import DataClassStorage
 from .filters import Filter
 from .filters import classifier as classifier_filter
@@ -56,6 +64,33 @@ ACTIVITIES_NAME = 'activities.json'
 METADATA_NAME = 'metadata.json'
 RESOURCES_NAME = 'resources.json'
 SCHEMA_NAME = 'schema.json'
+
+DB_FILES = [ACTIVITIES_NAME, METADATA_NAME, RESOURCES_NAME, SCHEMA_NAME]
+
+@dataclass
+class DbSchema:
+
+	version: int = field( default_factory=dict )
+	# unknown: Dict = field( default_factory=dict )
+
+	@classmethod
+	def schema( cls ) -> Schema:
+		return Schema(
+			# name_mapping={ 'version': ( '_default', '1', 'version' ) },
+			skip_internal=False,
+			unknown='unknown',
+		)
+
+@dataclass
+class ActivityDatabase:
+
+	tables: Dict[str, Dict[int, Activity]] = field( default_factory=list )
+
+	def activities( self ) -> Dict[int, Activity]:
+		return self.tables.get( '_default' )
+
+	def all_activities( self ) -> List[Activity]:
+		return list( self.activities().values() )
 
 @dataclass
 class ActivityIndex:
@@ -114,71 +149,74 @@ class DbIndex:
 
 class ActivityDb:
 
-	def __init__( self, path: Path = None, activities_name: str = None, metadata_name: str = None, resources_name: str = None, schema_name: str = None, pretend: bool = False ):
+	def __init__( self, path: Optional[Path] = None, read_only: bool = False ):
 		"""
 		Creates an activity db, consisting of tiny db instances (meta + activities + resources + schema).
 
-		:param path: directory containing dbs
-		:param pretend: pretend mode - allows write operations, but does not persist anything to disk
-		:param cache: enable db caching
-		:param passthrough: plain mode, opens activity db without middleware
+		:param path: directory containing db files
+		:param read_only: read-only mode - does not allow write operations
 		"""
 
-		# names
-		self._activities_name = activities_name if activities_name else ACTIVITIES_NAME
-		self._metadata_name = metadata_name if metadata_name else METADATA_NAME
-		self._resources_name = resources_name if resources_name else RESOURCES_NAME
-		self._schema_name = schema_name if schema_name else SCHEMA_NAME
-
+		self._db_path = path
+		self._read_only = read_only
 		with resource_path( __package__, '__init__.py' ) as pkg_path:
-			self._db_resource_path = Path( pkg_path.parent, 'db' )
-			if path:
-				self._activities_path = Path( path, self._activities_name )
-				self._metadata_path = Path( path, self._metadata_name )
-				self._resources_path = Path( path, self._resources_name )
-				self._schema_path = Path( path, self._schema_name )
+			self._db_resource_path = Path( pkg_path.parent, 'resources', 'db' )
 
-				path.mkdir( parents=True, exist_ok=True )
+		# setup db file system
+		self._setup_db_filesystem()
 
-				if not self._schema_path.exists():
-					copy( Path( self._db_resource_path, SCHEMA_NAME ), self._schema_path )
-				if not self._activities_path.exists():
-					copy( Path( self._db_resource_path, ACTIVITIES_NAME ), self._activities_path )
-				if not self._metadata_path.exists():
-					copy( Path( self._db_resource_path, METADATA_NAME ), self._metadata_path )
-				if not self._resources_path.exists():
-					copy( Path( self._db_resource_path, RESOURCES_NAME ), self._resources_path )
-			else:
-				self._activities_path = Path( self._db_resource_path, ACTIVITIES_NAME )
-				self._resources_path = Path( self._db_resource_path, RESOURCES_NAME )
-				self._metadata_path = Path( self._db_resource_path, METADATA_NAME )
-				self._schema_path = Path( self._db_resource_path, SCHEMA_NAME )
+		# initialize file systems
+		self._init_db_filesystem()
 
-				pretend = True  # turn on in-memory mode when path is not provided
-
-		# init schema db
-		self._default_schema: TinyDB = TinyDB( storage=JSONStorage, path=Path( self._db_resource_path, SCHEMA_NAME ), access_mode='r' )
-		self._default_schema_version = self._default_schema.all()[0][KEY_VERSION]
-		self._schema: TinyDB = TinyDB( storage=JSONStorage, path=self._schema_path, access_mode='r' )
-		self._schema_version = self._schema.all()[0][KEY_VERSION]
-
-		# init activities db
-		self._db: TinyDB = TinyDB( storage=DataClassStorage, path=self._activities_path, read_only=pretend, passthrough=True )
-		self._storage: DataClassStorage = cast( DataClassStorage, self._db.storage )
-		self._activities = self.db.table( TABLE_NAME_DEFAULT )
-		self._activities.document_class = Activity
-
-		# init resources db
-		self._resources_db: TinyDB = TinyDB( storage=DataClassStorage, path=self._resources_path, read_only=pretend, passthrough=True )
-		self._resources = self._resources_db.table( TABLE_NAME_DEFAULT )
-		self._resources.document_class = Resource
-
-		# init resources db
-		self._metadata_db: TinyDB = TinyDB( storage=JSONStorage, path=self._metadata_path, access_mode='r' )
-		self._metadata = self._metadata_db.table( TABLE_NAME_DEFAULT )
+		# load content from disk
+		self._load_db()
 
 		# index
-		self._index = DbIndex( self._activities, self._resources )
+		# self._index = DbIndex( self._activities, self._resources )
+
+	def _setup_db_filesystem( self ):
+		self.dbfs = MultiFS()
+
+		# use resources from internal package
+		self.dbfs.add_fs( 'pkg', OSFS( root_path=str(self._db_resource_path) ), write=False )
+		self.pkgfs = self.dbfs.get_fs( 'pkg' )
+
+		# operating system FS
+		if self._db_path:
+			self.dbfs.add_fs( 'os', OSFS( root_path=str( self._db_path ) ), write=False )
+			self.osfs = self.dbfs.get_fs( 'os' )
+		else:
+			self.osfs = None
+
+		# memory FS as top layer
+		self.dbfs.add_fs( 'mem', MemoryFS(), write=True )
+		self.memfs = self.dbfs.get_fs( 'mem' )
+
+	def _init_db_filesystem( self ):
+		for f in DB_FILES:
+			if self.osfs:
+				if not self._read_only:
+					copy_file_if( self.pkgfs, f'/{f}', self.osfs, f'/{f}', 'not_exists', preserve_time=True )
+				copy_file( self.osfs, f'/{f}', self.memfs, f'/{f}', preserve_time=True )
+			else:
+				copy_file( self.pkgfs, f'/{f}', self.memfs, f'/{f}', preserve_time=True )
+
+	def _load_db( self ):
+		json = loads( self.memfs.readbytes( SCHEMA_NAME ) )
+		self._schema = Factory( schemas={ DbSchema: DbSchema.schema() } ).load( json, DbSchema )
+
+		json = loads( self.memfs.readbytes( ACTIVITIES_NAME ) )
+		self._activities = Factory( schemas={ Activity: Activity.schema() } ).load( json, Dict[int, Activity] )
+
+	# close db: persist changes to disk (if there are changes)
+
+	def close( self ):
+		if self._read_only:
+			return
+
+		for f in DB_FILES:
+			if self.osfs:
+				copy_file_if( self.memfs, f'/{f}', self.osfs, f'/{f}', 'newer' )
 
 	# ---- DB Properties --------------------------------------------------------
 
@@ -203,12 +241,8 @@ class ActivityDb:
 		return self._metadata_db
 
 	@property
-	def schema_db( self ) -> TinyDB:
+	def schema( self ) -> DbSchema:
 		return self._schema
-
-	@property
-	def default_schema_db( self ) -> TinyDB:
-		return self._default_schema
 
 	@property
 	def metadata( self ) -> Table:
@@ -243,20 +277,16 @@ class ActivityDb:
 		return cast( DataClassStorage, self._db.storage )
 
 	@property
-	def activities( self ) -> Table:
+	def activities( self ) -> Dict[int, Activity]:
 		return self._activities
+
+	@property
+	def all_activities( self ) -> List[Activity]:
+		return list( self._activities.values() )
 
 	@property
 	def resources( self ) -> Table:
 		return self._resources
-
-	@property
-	def schema( self ) -> int:
-		return self._schema_version
-
-	@property
-	def default_schema( self ) -> int:
-		return self._default_schema_version
 
 	# ---- DB Operations --------------------------------------------------------
 
@@ -324,9 +354,6 @@ class ActivityDb:
 
 		:return: list containing all activities
 		"""
-		return cast( List[Activity], self.activities.all() )
-
-	def all_activities( self ) -> List[Activity]:
 		return cast( List[Activity], self.activities.all() )
 
 	def all_resources( self ) -> List[Resource]:
@@ -457,14 +484,6 @@ class ActivityDb:
 				query = query & q
 
 		return self._activities.search( query )
-
-	# close all
-
-	def close( self ):
-		self._db.close()
-		self._resources_db.close()
-		self._metadata_db.close()
-		self._schema.close()
 
 # ---- DB Factory ---
 

@@ -15,6 +15,7 @@ from logging import getLogger
 from typing import List
 from typing import Optional
 
+from dataclass_factory import Schema
 from tzlocal import get_localzone_name
 
 from .activity_types import ActivityTypes
@@ -92,6 +93,16 @@ class Activity( BaseDocument ):
 	#parent_uid: str = field( default=None, metadata={ PROTECTED: True } )
 
 	#is_group: bool = field( init=False, default=False, metadata={ PERSIST: False } ) # todo: for backward compatibility
+
+	@classmethod
+	def schema( cls ) -> Schema:
+		return Schema(
+			exclude=['doc_id', 'type'],
+			omit_default=True,
+			name_mapping={},
+			skip_internal=False,
+			unknown='unknown',
+		)
 
 	@property
 	def parent( self ) -> Optional[Activity]:
