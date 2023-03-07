@@ -166,6 +166,56 @@ class PolarActivity( Activity ):
 	def is_multipart( self ):
 		return _is_multipart_id( self.raw.get( 'iconUrl' ) )
 
+@resourcetype( type=POLAR_FLOW_TYPE, summary=True )
+@dataclass
+class PolarFlowExercise:
+
+	isTest: bool = field( default=False )
+	title: str = field( default=None )
+	type: str = field( default=None )
+	listItemId: int = field( default=None )
+	hasTrainingTarget: bool = field( default=False )
+	timestamp: int = field( default=None )
+	start: int = field( default=None )
+	end: int = field( default=None )
+	allDay: bool = field( default=False )
+	iconUrl: str = field( default=None )
+	url: str = field( default=None )
+	borderColor: str = field( default=None )
+	textColor: str = field( default=None )
+	datetime: str = field( default=None ) # 2011-04-28T17:48:10.000Z
+	eventType: str = field( default=None )
+	duration: int = field( default=None )
+	distance: float = field( default=None )
+	calories: int = field( default=None )
+
+	@property
+	def is_multipart( self ):
+		return _is_multipart_id( self.iconUrl )
+
+	@property
+	def local_id( self ) -> int:
+		if self.eventType == 'exercise' or self.eventType == 'fitnessData':
+			return self.listItemId
+		elif self.eventType == 'orthostaticTest':
+			return int( match('.*id=(\d+).*', self.url )[1] )
+		elif self.eventType == 'rrTest':
+			return int( match('.*/rr/(\d+)', self.url )[1])
+		return 0
+
+	def as_activity( self ) -> Activity:
+		return Activity(
+			local_id=self.local_id,
+			uid = f'{SERVICE_NAME}:{self.local_id}',
+			name = self.title,
+			type = _type_of( self.raw ),
+			time = parse( self.datetime, ignoretz=True ).replace( tzinfo=tzlocal() ).astimezone( UTC ),
+			localtime = parse( self.datetime, ignoretz=True ).replace( tzinfo=tzlocal() ),
+			distance = self.distance,
+			duration = stt( self.duration / 1000 ) if self.duration else None,
+			calories = self.calories,
+		)
+
 @resourcetype( type=POLAR_EXERCISE_DATA_TYPE, summary=True )
 class PolarExerciseDataActivity( Activity ):
 
