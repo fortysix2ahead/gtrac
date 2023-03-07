@@ -1,12 +1,10 @@
 {
-	"_default": {
-		"1": {
-			"name": null,
-			"path": "1234567890.raw.json",
-			"type": "application/json+polar",
-      "source": null,
-			"status": 200,
-			"uid": "polar:1234567890"
-		}
+	"1": {
+		"name": null,
+		"path": "1234567890.raw.json",
+		"type": "application/json+polar",
+    "source": null,
+		"status": 200,
+		"uid": "polar:1234567890"
 	}
 }

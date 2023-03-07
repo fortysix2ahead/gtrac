@@ -61,11 +61,12 @@ from .resources import ResourceType
 log = getLogger( __name__ )
 
 ACTIVITIES_NAME = 'activities.json'
+INDEX_NAME = 'index.json'
 METADATA_NAME = 'metadata.json'
 RESOURCES_NAME = 'resources.json'
 SCHEMA_NAME = 'schema.json'
 
-DB_FILES = [ACTIVITIES_NAME, METADATA_NAME, RESOURCES_NAME, SCHEMA_NAME]
+DB_FILES = [ACTIVITIES_NAME, INDEX_NAME, METADATA_NAME, RESOURCES_NAME, SCHEMA_NAME]
 
 @dataclass
 class DbSchema:

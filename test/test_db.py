@@ -17,28 +17,28 @@ from .helpers import get_db_path
 def test_new_db_without_path():
 	db = ActivityDb( path=None )
 	assert db.pkgfs is not None and db.osfs is None and db.memfs is not None
-	assert db.memfs.listdir( '/' ) == ['activities.json', 'metadata.json', 'resources.json', 'schema.json']
+	assert db.memfs.listdir( '/' ) == ['activities.json', 'index.json', 'metadata.json', 'resources.json', 'schema.json']
 	assert db.schema.version == 12
 
 	db = ActivityDb( path=None, read_only=True )
 	assert db.pkgfs is not None and db.osfs is None and db.memfs is not None
-	assert db.memfs.listdir( '/' ) == ['activities.json', 'metadata.json', 'resources.json', 'schema.json']
+	assert db.memfs.listdir( '/' ) == ['activities.json', 'index.json', 'metadata.json', 'resources.json', 'schema.json']
 
 	db = ActivityDb( path=None, read_only=False )
 	assert db.pkgfs is not None and db.osfs is None and db.memfs is not None
-	assert db.memfs.listdir( '/' ) == ['activities.json', 'metadata.json', 'resources.json', 'schema.json']
+	assert db.memfs.listdir( '/' ) == ['activities.json', 'index.json', 'metadata.json', 'resources.json', 'schema.json']
 
 def test_new_db_with_path():
 	db_path = get_db_path( 'empty', read_only=True )
 	db = ActivityDb( path=db_path.parent, read_only=False )
 	assert db.pkgfs is not None and db.osfs is not None and db.memfs is not None
-	assert db.memfs.listdir( '/' ) == ['activities.json', 'metadata.json', 'resources.json', 'schema.json']
+	assert db.memfs.listdir( '/' ) == ['activities.json', 'index.json', 'metadata.json', 'resources.json', 'schema.json']
 	assert db.schema.version == 12
 
 	db_path = get_db_path( 'empty', read_only=False )
 	db = ActivityDb( path=db_path.parent, read_only=True )
 	assert db.pkgfs is not None and db.osfs is not None and db.memfs is not None
-	assert db.memfs.listdir( '/' ) == ['activities.json', 'metadata.json', 'resources.json', 'schema.json']
+	assert db.memfs.listdir( '/' ) == ['activities.json', 'index.json', 'metadata.json', 'resources.json', 'schema.json']
 	assert db.schema.version == 12
 
 @mark.db( template='default', read_only=True )

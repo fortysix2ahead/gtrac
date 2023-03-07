@@ -45,5 +45,15 @@
 		"uids": [
 			"waze:20210101010101"
 		]
+	},
+	"100": {
+		"name": null,
+		"heartrate": null,
+		"location": "",
+		"time": "2021-01-11T12:00:00+00:00",
+		"type": "drive",
+		"uids": [
+			"polar:123456"
+		]
 	}
 }
