@@ -240,10 +240,6 @@ class ActivityDb:
 		return self._index
 
 	@property
-	def activities_db( self ) -> TinyDB:
-		return self._db
-
-	@property
 	def resources_db( self ) -> TinyDB:
 		return self._resources_db
 
@@ -288,12 +284,16 @@ class ActivityDb:
 		return cast( DataClassStorage, self._db.storage )
 
 	@property
-	def activities( self ) -> Dict[int, Activity]:
+	def activity_map( self ) -> Dict[int, Activity]:
 		return self._activities
 
 	@property
-	def all_activities( self ) -> List[Activity]:
+	def activities( self ) -> List[Activity]:
 		return list( self._activities.values() )
+
+	@property
+	def activity_keys( self ) -> List[int]:
+		return sorted( list( self._activities.keys() ) )
 
 	@property
 	def resources( self ) -> Table:
@@ -301,49 +301,34 @@ class ActivityDb:
 
 	# ---- DB Operations --------------------------------------------------------
 
-	def insert( self, docs: Union[Activity, List[Activity]] ) -> Union[int, List[int]]:
-		docs = [docs] if isinstance( docs, Activity ) else docs
+	# noinspection PyMethodMayBeStatic
+	def _next_id( self, d: Dict ) -> int:
+		keys = sorted( d.keys() )
+		all_keys = range( 0, keys[-1] + 2 ) if keys else [0]
+		return set( all_keys ).difference( set( keys ) ).pop()
 
-		doc_ids = self.activities.insert_multiple( docs )
-		for doc, doc_id in zip( docs, doc_ids ):
-			doc.doc_id = doc_id
+	# insert activities
 
-		return doc_ids if len( doc_ids ) > 1 else doc_ids[0]
+	def insert( self, *activities ) -> Union[int, List[int]]:
+		ids = []
+		for a in activities:
+			a.id = self._next_id( self._activities )
+			self._activities[a.id] = a
+			ids.append( a.id )
+		return ids[0] if len( ids ) == 1 else ids
 
 	def insert_activity( self, activity: Activity ) -> int:
-		doc_id = self.activities.insert( activity )
-		activity.doc_id = doc_id
-		return doc_id
+		return self.insert( activity )
 
 	def insert_activities( self, activities: List[Activity] ) -> List[int]:
-		doc_ids = self.activities.insert_multiple( activities )
-		for doc, doc_id in zip( activities, doc_ids ):
-			doc.doc_id = doc_id
-		return doc_ids
+		return self.insert( *activities )
+
+	# insert resources
 
 	def insert_resource( self, r: Resource ) -> int:
 		return self.resources.insert( r )
 
-	def upsert_resource( self, r: Resource ) -> List[int]:
-		return self.resources.upsert( r, (Query().uid == r.uid) & (Query().path == r.path) )
-
-	def upsert_activity( self, a: Activity, doc_id: Optional[int] = None, uid: Optional[str] = None ) -> None:
-		if doc_id is not None and doc_id > 0:
-			self.activities.upsert( Document( dict( a ), doc_id=doc_id ) )
-		elif a.doc_id > 0:
-			self.activities.upsert( Document( dict( a ), doc_id=a.doc_id ) )
-		elif uid is not None:
-			self.activities.upsert( dict( a ), cond=Query().uids.any( [ uid ] ) )
-		elif a.uid is not None:
-			self.activities.upsert( dict( a ), cond=Query().uids.any( [ a.uid ] ) )
-		elif a.uids is not None:
-			self.activities.upsert( dict( a ), cond=Query().uids.test( lambda v: set( a.uids ) == set( v ) ) )
-
-	def update( self, a: Activity ) -> None:
-		self.activities.update( dict( a ), doc_ids=[a.doc_id] )
-
-	def update_resource( self, r: Resource ) -> None:
-		self.resources.update( dict( r ), doc_ids=[r.doc_id] )
+	# remove items
 
 	def remove( self, a: Activity ) -> None:
 		self._activities.remove( doc_ids=[a.doc_id] )

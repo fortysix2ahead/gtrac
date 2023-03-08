@@ -45,8 +45,8 @@ def test_new_db_with_path():
 def test_open_db( db ):
 	assert db.schema.version == 12
 
-	assert len( db.activities.keys() ) > 1 and len( db.activities.values() ) > 1
-	assert db.all_activities[0] == Activity(
+	assert len( db.activity_keys ) > 1 and len( db.activities ) > 1
+	assert db.activities[0] == Activity(
 		doc_id=0,
 		name='Unknown Location',
 	    type=ActivityTypes.xcski,
@@ -56,40 +56,23 @@ def test_open_db( db ):
 		uids=['polar:1234567890', 'strava:12345678', 'waze:20210101010101'],
 	)
 
-@mark.db( template='empty', inmemory=True )
-def test_write_middleware( db ):
-	a = StravaActivity( raw = { 'start_date': datetime.utcnow().isoformat() } )
-	assert type( a['time'] ) is datetime
-	assert type( a.get( 'time' ) ) is datetime
-
-	db.insert( a )
-	a = db.get( id = 1 )
-	assert type( a['time'] ) is datetime
-	assert type( a.get( 'time' ) ) is datetime
-
-@mark.db( template='empty', inmemory=False, writable=True )
-def test_write_to_file( db ):
-	a = StravaActivity( raw = { 'start_date': datetime.utcnow().isoformat() } )
-	db.insert( a )
-
-	a = db.get( id = 1 )
-	assert type( a['time'] ) is datetime
-	assert type( a.get( 'time' ) ) is datetime
-
-@mark.db( template='empty', inmemory=True )
+@mark.db( template='empty', read_only=True )
 def test_insert( db ):
-	number_in_db = len( db.activities.all() )
-	a = Activity( raw_id = 1000 )
-	doc_id = db.insert( a )
-	assert len( db.activities.all() ) == number_in_db + 1
-	assert a.doc_id == doc_id
+	assert len( db.activities ) == 0
+	id = db.insert( Activity() )
+	assert len( db.activities ) == 1 and id == 0
+	ids = db.insert( Activity(), Activity() )
+	assert len( db.activities ) == 3 and ids == [1, 2]
+	assert db.activity_keys == [0, 1, 2]
 
-	number_in_db = len( db.activities.all() )
-	a1 = Activity( raw_id = 1001 )
-	a2 = Activity( raw_id = 1002 )
-	doc_ids = db.insert( [a1, a2] )
-	assert len( db.activities.all() ) == number_in_db + 2
-	assert a1.doc_id == doc_ids[0] and a2.doc_id == doc_ids[1]
+	# artificial insert
+	db.activity_map[4] = Activity()
+	assert db.insert( Activity() ) == 3
+	assert db.activity_map[3].id == 3
+
+	# artificial removal
+	del( db.activity_map[0] )
+	assert db.insert( Activity() ) == 0
 
 @mark.db( template='default', inmemory=True )
 def test_contains( db ):
