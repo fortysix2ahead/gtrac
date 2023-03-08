@@ -85,7 +85,7 @@ def cli( ctx, configuration, library, force, verbose, pretend, debug ):
 
 	ctx.obj = instance.ctx # save newly created context object
 
-	migrate_application( ctx.obj, None ) # check if migration is necessary
+	# migrate_application( ctx.obj, None ) # check if migration is necessary
 
 @cli.command( hidden=True )
 @option( '-b', '--backup', is_flag=True, required=False, help='creates a backup of the internal database' )

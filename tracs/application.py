@@ -95,7 +95,7 @@ class Application( object ):
 		self._setup_file_logging( ctx )
 
 		# ---- open db from config_dir ----------------------------------------------
-		ctx.db = ActivityDb( path=ctx.db_dir, pretend=ctx.pretend )
+		ctx.db = ActivityDb( path=ctx.db_dir, read_only=ctx.pretend )
 
 		# load plugins
 		from .registry import load as load_plugins
@@ -108,10 +108,7 @@ class Application( object ):
 		UCFG.reconfigure( ctx.config )
 
 		# ---- register cleanup functions ----
-		register_atexit( ctx.db.activities_db.close )
-		register_atexit( ctx.db.resources_db.close )
-		register_atexit( ctx.db.metadata_db.close )
-		register_atexit( ctx.db.schema_db.close )
+		register_atexit( ctx.db.close )
 		register_atexit( ctx.dump_state )
 
 	# noinspection PyMethodMayBeStatic

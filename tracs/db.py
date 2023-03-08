@@ -221,13 +221,14 @@ class ActivityDb:
 
 	# close db: persist changes to disk (if there are changes)
 
-	def close( self ):
-		if self._read_only:
+	def save( self ):
+		if self._read_only or self.osfs is None:
 			return
-
 		for f in DB_FILES:
-			if self.osfs:
-				copy_file_if( self.memfs, f'/{f}', self.osfs, f'/{f}', 'newer' )
+			copy_file_if( self.memfs, f'/{f}', self.osfs, f'/{f}', 'newer' )
+
+	def close( self ):
+		self.save()
 
 	# ---- DB Properties --------------------------------------------------------
 
@@ -410,7 +411,7 @@ class ActivityDb:
 
 	def find( self, filters: Union[List[str], List[Filter], str, Filter] = None ) -> [Activity]:
 		parsed_filters = parse_filters( filters or [] )
-		all_activities = self.activities.all()
+		all_activities = self.activities
 		for f in parsed_filters:
 			all_activities = filter( f, all_activities )
 		return all_activities
