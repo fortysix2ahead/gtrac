@@ -18,7 +18,7 @@ from tracs.rules_parser import RULE_PATTERN
 
 def test_rule_engine():
 	rule = Rule( 'heartrate == 180' )
-	a = Activity( heartrate=180, time=datetime.utcnow() )
+	a = Activity( heartrate=180, time=datetime.utcnow(), tags=['morning', 'salomon', 'tired'] )
 	assert rule.matches( a )
 
 	rule = Rule( 'heartrate_max == 180' )
@@ -41,6 +41,9 @@ def test_rule_engine():
 	assert Rule( 'year == 2023', context=context ).matches( a )
 	assert Rule( 'heartrate == 180 and year == 2023', context=context ).matches( a )
 	assert not Rule( 'heartrate == 170 and year == 2023', context=context ).matches( a )
+
+	assert Rule( '"tired" in tags', context=context ).matches( a )
+	assert not Rule( '"evening" in tags', context=context ).matches( a )
 
 def test_rule_pattern():
 	# special cases
