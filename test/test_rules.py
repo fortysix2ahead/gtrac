@@ -1,26 +1,20 @@
-
 from datetime import datetime
 from re import match
 from typing import cast
 
-from dataclass_factory import Factory
-from dataclass_factory import Schema
-from rich.console import Console
+from pytest import raises
 from rule_engine import Context
 from rule_engine import resolve_attribute
 from rule_engine import Rule
 
-from pytest import raises
-
 from tracs.activity import Activity
-from tracs.resources import Resource
-from tracs.rules_parser import RULE_PATTERN
 from tracs.rules_parser import INT_LIST_PATTERN
 from tracs.rules_parser import INT_PATTERN
 from tracs.rules_parser import INT_RANGE_PATTERN
 from tracs.rules_parser import KEYWORD_PATTERN
 from tracs.rules_parser import normalize
 from tracs.rules_parser import parse_rule
+from tracs.rules_parser import RULE_PATTERN
 
 def test_rule_engine():
 	rule = Rule( 'heartrate == 180' )
@@ -41,10 +35,12 @@ def test_rule_engine():
 			return cast( Activity, thing ).time.year
 		else:
 			return resolve_attribute( thing, name )
+
 	context = Context( default_value=None, resolver=resolve_year )
 	assert Rule( 'heartrate == 180', context=context ).matches( a )
 	assert Rule( 'year == 2023', context=context ).matches( a )
-
+	assert Rule( 'heartrate == 180 and year == 2023', context=context ).matches( a )
+	assert not Rule( 'heartrate == 170 and year == 2023', context=context ).matches( a )
 
 def test_rule_pattern():
 	# special cases
@@ -85,13 +81,11 @@ def test_rule_pattern():
 	assert match( RULE_PATTERN, 'name!~"^.*Run$"' )
 
 def test_normalize():
-
 	assert normalize( '1000' ) == 'id==1000'
 	assert normalize( 'id:1000' ) == 'id==1000'
 	assert normalize( 'id=1000' ) == 'id==1000'
 
 def test_parse():
-
 	with raises( RuntimeError ):
 		assert (r := parse_rule( 'unknown:1000' ))
 
