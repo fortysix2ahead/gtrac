@@ -18,7 +18,7 @@ from tracs.rules_parser import RULE_PATTERN
 
 def test_rule_engine():
 	rule = Rule( 'heartrate == 180' )
-	a = Activity( heartrate=180, time=datetime.utcnow(), tags=['morning', 'salomon', 'tired'] )
+	a = Activity( heartrate=180, time=datetime.utcnow(), tags=['morning', 'salomon', 'tired'], uids=['polar:1234', 'strava:3456'] )
 	assert rule.matches( a )
 
 	rule = Rule( 'heartrate_max == 180' )
@@ -33,6 +33,8 @@ def test_rule_engine():
 	def resolve_year( thing, name ):
 		if name == 'year':
 			return cast( Activity, thing ).time.year
+		elif name == 'classifiers' and type( thing ) is tuple:
+			return list( map( lambda s: s.split( ':', 1 )[0], thing ) )
 		else:
 			return resolve_attribute( thing, name )
 
@@ -44,6 +46,10 @@ def test_rule_engine():
 
 	assert Rule( '"tired" in tags', context=context ).matches( a )
 	assert not Rule( '"evening" in tags', context=context ).matches( a )
+
+	assert Rule( '"polar:1234" in uids', context=context ).matches( a )
+	assert not Rule( '"polar" in uids', context=context ).matches( a )
+	assert Rule( '"polar" in uids.classifiers', context=context ).matches( a )
 
 def test_rule_pattern():
 	# special cases
