@@ -1,9 +1,13 @@
 
+from datetime import datetime
 from re import match
+from typing import cast
 
 from dataclass_factory import Factory
 from dataclass_factory import Schema
 from rich.console import Console
+from rule_engine import Context
+from rule_engine import resolve_attribute
 from rule_engine import Rule
 
 from pytest import raises
@@ -20,17 +24,27 @@ from tracs.rules_parser import parse_rule
 
 def test_rule_engine():
 	rule = Rule( 'heartrate == 180' )
-	a = Activity()
-	a.heartrate = 180
-	print( rule.matches( a ) )
+	a = Activity( heartrate=180, time=datetime.utcnow() )
+	assert rule.matches( a )
 
-	c = Console()
-	r = Resource( type='json', path='1234.json', uid='polar:1234' )
+	rule = Rule( 'heartrate_max == 180' )
+	assert not rule.matches( a )
 
-	rs = Schema( exclude=['raw', 'content', 'text', 'resources'], omit_default=True )
-	f = Factory( schemas={ Resource: rs }, debug_path=True )
+	# how to get around a SymbolResolutionError:
+	context = Context( default_value=None )
+	rule = Rule( 'year == 2023', context=context )
+	assert not rule.matches( a )
 
-	c.print( f.dump( r, Resource ) )
+	# how to use a custom resolver
+	def resolve_year( thing, name ):
+		if name == 'year':
+			return cast( Activity, thing ).time.year
+		else:
+			return resolve_attribute( thing, name )
+	context = Context( default_value=None, resolver=resolve_year )
+	assert Rule( 'heartrate == 180', context=context ).matches( a )
+	assert Rule( 'year == 2023', context=context ).matches( a )
+
 
 def test_rule_pattern():
 	# special cases
