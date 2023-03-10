@@ -47,7 +47,7 @@ def list_activities( activities: List[Activity], sort: str = False, reverse: boo
 		table.add_column( f'[blue]{h}' )
 
 	for a in activities:
-		row = [ fmt( getattr( a, f ) ) for f in list_fields ]
+		row = [ fmt( getattr( a, f ) ) if hasattr( a, f ) else None for f in list_fields ]
 		table.add_row( *row )
 		# table.add_row( pp( a.doc_id ), a.name, fmt( a.type ), fmt( a.localtime ), pp( a.uids ) )
 

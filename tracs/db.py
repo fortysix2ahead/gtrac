@@ -59,6 +59,7 @@ from .filters import raw_id as raw_id_filter
 from .filters import uid as uid_filter
 from .registry import Registry
 from .resources import ResourceType
+from .rules_parser import parse_rules
 
 log = getLogger( __name__ )
 
@@ -410,11 +411,10 @@ class ActivityDb:
 	# ----
 
 	def find( self, filters: Union[List[str], List[Filter], str, Filter] = None ) -> [Activity]:
-		parsed_filters = parse_filters( filters or [] )
 		all_activities = self.activities
-		for f in parsed_filters:
-			all_activities = filter( f, all_activities )
-		return all_activities
+		for r in parse_rules( *filters ):
+			all_activities = filter( r.evaluate, all_activities )
+		return list( all_activities )
 
 	def find_by_classifier( self, classifier: str ) -> [Activity]:
 		return self.find( classifier_filter( classifier ) )
