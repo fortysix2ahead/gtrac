@@ -1,6 +1,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from logging import getLogger
 from re import match
 from typing import Callable
@@ -30,6 +31,10 @@ RULE_PATTERN = '^(\w+)(==|!=|=~|!~|>=|<=|>|<|=|:)([\w\"].+)$'
 
 RULES: Dict[str, Type[Rule]] = {
 	'id': NumberEqRule
+}
+
+KEYWORDS: Dict[str, Callable] = {
+	'thisyear': lambda s: f'year == {datetime.utcnow().year}',
 }
 
 NORMALIZERS: Dict[str, Callable] = {
@@ -69,6 +74,13 @@ def normalize( rule: str ) -> str:
 
 	if m := match( INT_PATTERN, rule ): # integer number only
 		normalized_rule = f'id == {rule}'
+
+	elif m := match( KEYWORD_PATTERN, rule ):  # keywords
+		if rule in KEYWORDS:
+			normalized_rule = KEYWORDS[rule]( rule )
+		else:
+			raise RuleSyntaxError( f'syntax error: unsupported keyword "{rule}"' )
+
 	elif m := match( RULE_PATTERN, rule ): #
 		left, op, right = m.groups()
 		if op == '=':
@@ -78,6 +90,7 @@ def normalize( rule: str ) -> str:
 				normalized_rule = NORMALIZERS[left]( right )
 			else:
 				normalized_rule = f'{left} == {right}'
+
 	else:
 		raise RuleSyntaxError( f'syntax error in expression "{rule}"' )
 

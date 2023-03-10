@@ -119,6 +119,7 @@ def test_evaluate():
 	assert parse_rule( 'id=1000' ).evaluate( a )
 	assert parse_rule( f'year={datetime.utcnow().year}' ).evaluate( a )
 	assert parse_rule( 'classifier:polar' ).evaluate( a )
+	assert parse_rule( 'thisyear' ).evaluate( a )
 
 	with raises( SymbolResolutionError ):
 		parse_rule( 'invalid=1000' ).evaluate( a )
