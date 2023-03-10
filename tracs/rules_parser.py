@@ -35,12 +35,19 @@ RULES: Dict[str, Type[Rule]] = {
 
 KEYWORDS: Dict[str, Callable] = {
 	'thisyear': lambda s: f'year == {datetime.utcnow().year}',
+	# todo: this needs to be detected automatically
+	'bikecitizens': lambda s: f'"bikecitizens" in classifiers',
+	'local': lambda s: f'"local" in classifiers',
+	'polar': lambda s: f'"polar" in classifiers',
+	'strava': lambda s: f'"strava" in classifiers',
+	'waze': lambda s: f'"waze" in classifiers',
 }
 
 NORMALIZERS: Dict[str, Callable] = {
 	'classifier': lambda s: f'"{s}" in classifiers',
 }
 
+# custom field/attribute resolvers, needed to access "virtual fields" which do not exist
 RESOLVERS: Dict[str, Callable] = {
 	'classifiers': lambda a: list( map( lambda s: s.split( ':', 1 )[0], a.uids ) ),
 	'year': lambda a: a.time.year
