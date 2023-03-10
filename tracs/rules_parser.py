@@ -24,6 +24,10 @@ INT_PATTERN = '^(?P<value>\d+)$'
 INT_LIST_PATTERN = '^(?P<values>(\d+,)+(\d+))$'
 INT_RANGE_PATTERN = '^(?P<range_from>\d+)?\.\.(?P<range_to>\d+)?$'
 
+NUMBER_PATTERN = '^(?P<value>\d+(\.\d+)?)$'
+
+QUOTED_STRING_PATTERN = '^"(?P<value>.*)"$'
+
 KEYWORD_PATTERN = '^[a-zA-Z][\w-]*$'
 
 SHORT_RULE_PATTERN = r'^(\w+)(:|=)([\w\"].+)$' # short version: id=10 or id:10 for convenience, value must begin with alphanum or "
@@ -33,6 +37,7 @@ RULES: Dict[str, Type[Rule]] = {
 	'id': NumberEqRule
 }
 
+# mapping of keywords to normalized expressions
 KEYWORDS: Dict[str, Callable] = {
 	'thisyear': lambda s: f'year == {datetime.utcnow().year}',
 	# todo: this needs to be detected automatically
@@ -43,18 +48,20 @@ KEYWORDS: Dict[str, Callable] = {
 	'waze': lambda s: f'"waze" in classifiers',
 }
 
+# normalizers transform a field/value pair into a valid normalized expression
 NORMALIZERS: Dict[str, Callable] = {
 	'classifier': lambda s: f'"{s}" in classifiers',
 }
 
 # custom field/attribute resolvers, needed to access "virtual fields" which do not exist
 RESOLVERS: Dict[str, Callable] = {
-	'classifiers': lambda a: list( map( lambda s: s.split( ':', 1 )[0], a.uids ) ),
-	'year': lambda a: a.time.year
+	'classifiers': lambda t, n: list( map( lambda s: s.split( ':', 1 )[0], t.uids ) ), # virtual attribute of uids
+	'lowercase': lambda t, n: t.lower(), # lowercase attribute of strings
+	'year': lambda t, n: t.time.year # year attribute of datetime objects
 }
 
 def resolve_custom_attribute( thing: Any, name: str ):
-	return RESOLVERS[name]( thing ) if name in RESOLVERS.keys() else resolve_attribute( thing, name )
+	return RESOLVERS[name]( thing, name ) if name in RESOLVERS.keys() else resolve_attribute( thing, name )
 
 # CONTEXT = Context( default_value=None, resolver=resolve_custom_attribute )
 CONTEXT = Context( resolver=resolve_custom_attribute )
@@ -91,12 +98,22 @@ def normalize( rule: str ) -> str:
 	elif m := match( RULE_PATTERN, rule ): #
 		left, op, right = m.groups()
 		if op == '=':
-			normalized_rule = f'{left} == {right}'
+			if match( NUMBER_PATTERN, right ):
+				normalized_rule = f'{left} == {right}'
+			elif match( QUOTED_STRING_PATTERN, right ):
+				normalized_rule = f'{left} == {right}'
+			else:
+				normalized_rule = f'{left} == "{right}"'
+
 		elif op == ':':
 			if left in NORMALIZERS:
 				normalized_rule = NORMALIZERS[left]( right )
-			else:
+			elif match( NUMBER_PATTERN, right ):
 				normalized_rule = f'{left} == {right}'
+			elif match (QUOTED_STRING_PATTERN, right):
+				normalized_rule = f'{right.lower()} in {left}.lowercase'
+			else:
+				normalized_rule = f'"{right.lower()}" in {left}.lowercase'
 
 	else:
 		raise RuleSyntaxError( f'syntax error in expression "{rule}"' )

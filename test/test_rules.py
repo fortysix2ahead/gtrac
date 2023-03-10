@@ -110,16 +110,29 @@ def test_parse():
 	assert Rule( 'unknown == 1000' ).evaluate( Activity( id=1000 ) )
 
 def test_evaluate():
+	now = datetime.utcnow()
 	a = Activity(
 		id = 1000,
-		time = datetime.utcnow(),
+		name = "Berlin",
+		description = "Morning Run in Berlin",
+		time = now,
 		uids = ['polar:123456', 'strava:123456']
 	)
 
 	assert parse_rule( 'id=1000' ).evaluate( a )
-	assert parse_rule( f'year={datetime.utcnow().year}' ).evaluate( a )
+	assert parse_rule( f'year={now.year}' ).evaluate( a )
 	assert parse_rule( 'classifier:polar' ).evaluate( a )
 	assert parse_rule( 'thisyear' ).evaluate( a )
+
+	assert parse_rule( 'name=Berlin' ).evaluate( a )
+	assert not parse_rule( 'name=berlin' ).evaluate( a )
+
+	assert parse_rule( 'description="Morning Run in Berlin"' ).evaluate( a )
+	assert not parse_rule( 'description="morning run in berlin"' ).evaluate( a )
+
+	assert parse_rule( 'name:berlin' ).evaluate( a )
+	assert not parse_rule( 'name:hamburg' ).evaluate( a )
+	assert parse_rule( 'description:"morning run"' ).evaluate( a )
 
 	with raises( SymbolResolutionError ):
 		parse_rule( 'invalid=1000' ).evaluate( a )
