@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from logging import getLogger
 from re import match
+from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import List
@@ -14,7 +15,6 @@ from rule_engine import resolve_attribute
 from rule_engine import Rule as DefaultRule
 from rule_engine import RuleSyntaxError
 
-from tracs.activity import Activity
 from tracs.rules import Rule
 from tracs.rules import NumberEqRule
 
@@ -46,7 +46,7 @@ RESOLVERS: Dict[str, Callable] = {
 	'year': lambda a: a.time.year
 }
 
-def resolve_custom_attribute( thing: Activity, name: str ):
+def resolve_custom_attribute( thing: Any, name: str ):
 	return RESOLVERS[name]( thing ) if name in RESOLVERS.keys() else resolve_attribute( thing, name )
 
 # CONTEXT = Context( default_value=None, resolver=resolve_custom_attribute )

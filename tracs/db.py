@@ -182,6 +182,7 @@ class ActivityDb:
 
 		# operating system FS
 		if self._db_path:
+			self._db_path.mkdir( parents=True, exist_ok=True )
 			self.dbfs.add_fs( 'os', OSFS( root_path=str( self._db_path ) ), write=False )
 			self.osfs = self.dbfs.get_fs( 'os' )
 		else:
