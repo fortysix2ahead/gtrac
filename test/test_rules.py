@@ -6,6 +6,8 @@ from pytest import raises
 from rule_engine import Context
 from rule_engine import resolve_attribute
 from rule_engine import Rule
+from rule_engine import RuleSyntaxError
+from rule_engine import SymbolResolutionError
 
 from tracs.activity import Activity
 from tracs.rules_parser import INT_LIST_PATTERN
@@ -90,9 +92,9 @@ def test_rule_pattern():
 	assert match( RULE_PATTERN, 'name!~"^.*Run$"' )
 
 def test_normalize():
-	assert normalize( '1000' ) == 'id==1000'
-	assert normalize( 'id:1000' ) == 'id==1000'
-	assert normalize( 'id=1000' ) == 'id==1000'
+	assert normalize( '1000' ) == 'id == 1000'
+	assert normalize( 'id:1000' ) == 'id == 1000'
+	assert normalize( 'id=1000' ) == 'id == 1000'
 
 def test_parse():
 	with raises( RuntimeError ):
@@ -105,3 +107,20 @@ def test_parse():
 
 	# test against activity
 	assert r.evaluate( Activity( id=1000 ) )
+	assert Rule( 'unknown == 1000' ).evaluate( Activity( id=1000 ) )
+
+def test_evaluate():
+	a = Activity(
+		id = 1000,
+		time = datetime.utcnow(),
+		uids = ['polar:123456', 'strava:123456']
+	)
+
+	assert parse_rule( 'id=1000' ).evaluate( a )
+	assert parse_rule( f'year={datetime.utcnow().year}' ).evaluate( a )
+	assert parse_rule( 'classifier:polar' ).evaluate( a )
+
+	with raises( SymbolResolutionError ):
+		parse_rule( 'invalid=1000' ).evaluate( a )
+
+	# RuleSyntaxError should never happen ...
