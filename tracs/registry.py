@@ -34,12 +34,14 @@ NS_PLUGINS = 'tracs.plugins'
 
 class EventTypes( Enum ):
 
+	activity_field_resolver_registered = 'activity_field_resolver_registered'
 	plugin_loaded = 'plugin_loaded'
 	resource_loaded = 'resource_loaded'
 	service_created = 'service_created'
 
 class Registry:
 
+	activity_field_resolvers = {}
 	classifier: str = KEY_CLASSIFER
 	ctx: ApplicationContext = None
 	document_classes: Dict[str, Type] = {}
@@ -108,6 +110,12 @@ class Registry:
 				return key
 
 		return None
+
+	# field resolvers
+	@classmethod
+	def register_activity_field_resolver( cls, field: str, fn: Callable ) -> None:
+		Registry.activity_field_resolvers[field] = fn
+		Registry.notify( EventTypes.activity_field_resolver_registered, field=field, resolver=fn )
 
 	# event handling
 
