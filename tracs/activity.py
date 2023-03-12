@@ -8,6 +8,7 @@ from dataclasses import fields
 from dataclasses import InitVar
 from datetime import datetime, time
 from typing import Any
+from typing import Callable
 from typing import Dict
 from typing import Union
 
@@ -29,6 +30,17 @@ from .utils import fromisoformat
 from .utils import sum_times
 
 log = getLogger( __name__ )
+
+@dataclass
+class VirtualFields:
+
+	resolvers: Dict[str, Callable] = field( default_factory=dict, init=False )
+
+	def __getattribute__( self, name: str ) -> Any:
+		if name in self.resolvers.keys():
+			return self.resolvers[name]()
+		else:
+			return super().__getattribute__( name )
 
 @dataclass
 class Activity( BaseDocument ):
@@ -83,6 +95,8 @@ class Activity( BaseDocument ):
 	metadata: Dict = field( init=False, default_factory=dict, metadata={ PROTECTED: True, PERSIST: False } )
 	resources: List[Resource] = field( init=True, default_factory=list, metadata={ PROTECTED: True, PERSIST: False } )
 	parts: List = field( init=True, default_factory=list, metadata={ PROTECTED: True } )
+
+	__vf__: VirtualFields = field( init=False, default=VirtualFields(), hash=False, compare=False )
 
 	others: InitVar = field( default=None )
 	other_parts: InitVar = field( default=None )

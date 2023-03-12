@@ -12,6 +12,7 @@ from rule_engine import Rule
 from rule_engine import SymbolResolutionError
 
 from tracs.activity import Activity
+from tracs.rules_parser import DATE_PATTERN
 from tracs.rules_parser import INT_LIST_PATTERN
 from tracs.rules_parser import INT_PATTERN
 from tracs.rules_parser import INT_RANGE_PATTERN
@@ -21,6 +22,7 @@ from tracs.rules_parser import parse_rule
 from tracs.rules_parser import RANGE_PATTERN
 from tracs.rules_parser import RESOLVERS
 from tracs.rules_parser import RULE_PATTERN
+from tracs.rules_parser import TIME_PATTERN
 
 NOW = datetime.utcnow()
 
@@ -81,6 +83,13 @@ def test_rule_pattern():
 	assert match( RANGE_PATTERN, '100.4..100.9' )
 	assert match( RANGE_PATTERN, '2020-01-01..2020-06-30' )
 	assert match( RANGE_PATTERN, '10:00:00..11:00:00' )
+
+	assert not match( DATE_PATTERN, '2022' )
+	assert not match( DATE_PATTERN, '2022-03' )
+	assert match( DATE_PATTERN, '2022-03-13' )
+	assert not match( TIME_PATTERN, '13' )
+	assert not match( TIME_PATTERN, '13:10' )
+	assert match( TIME_PATTERN, '13:10:42' )
 
 	# keywords, must begin with a letter and may contain letters, numbers, dash und underscores
 
@@ -180,7 +189,11 @@ def test_evaluate_date_time():
 	from arrow import arrow
 	from dateutil.parser import parse
 
-	assert parse_eval( 'date=2023', A1 )
+	p = parse( '2022a' )
+
+	assert parse_eval( 'date=2023-01-13', A1 )
+	assert parse_eval( 'time=10:00:42', A1 )
+	assert parse_eval( 'date:2023', A1 )
 
 # helper
 

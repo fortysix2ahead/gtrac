@@ -33,6 +33,9 @@ KEYWORD_PATTERN = '^[a-zA-Z][\w-]*$'
 
 RANGE_PATTERN = '^(?P<range_from>\d[\d\.\:-]+)?(\.\.)(?P<range_to>\d[\d\.\:-]+)?$'
 
+DATE_PATTERN = '^(?P<year>[12]\d\d\d)-(?P<month>[01]\d)-(?P<day>[0-3]\d)$'
+TIME_PATTERN = '^(?P<hour>[0-1]\d|2[0-4]):(?P<minute>[0-5]\d):(?P<second>[0-5]\d)$'
+
 SHORT_RULE_PATTERN = r'^(\w+)(:|=)([\w\"\.].+)$' # short version: id=10 or id:10 for convenience, value must begin with alphanum or "
 RULE_PATTERN = '^(\w+)(==|!=|=~|!~|>=|<=|>|<|=|:)([\w\"\.].+)$'
 
@@ -48,11 +51,11 @@ KEYWORDS: Dict[str, Callable] = {
 	'lastyear': lambda s: f'year == {datetime.utcnow().year - 1}',
 	'thisyear': lambda s: f'year == {datetime.utcnow().year}',
 	# todo: this needs to be detected automatically
-	'bikecitizens': lambda s: f'"bikecitizens" in classifiers',
-	'local': lambda s: f'"local" in classifiers',
-	'polar': lambda s: f'"polar" in classifiers',
-	'strava': lambda s: f'"strava" in classifiers',
-	'waze': lambda s: f'"waze" in classifiers',
+	'bikecitizens': lambda s: f'"bikecitizens" in __classifiers__',
+	'local': lambda s: f'"local" in __classifiers__',
+	'polar': lambda s: f'"polar" in __classifiers__',
+	'strava': lambda s: f'"strava" in __classifiers__',
+	'waze': lambda s: f'"waze" in __classifiers__',
 }
 
 # normalizers transform a field/value pair into a valid normalized expression
@@ -61,13 +64,15 @@ NORMALIZERS: Dict[str, Callable] = {
 	'classifier': lambda s: f'"{s}" in __classifiers__',
 }
 
-# custom field/attribute resolvers, needed to access "virtual fields" which do not exist
+# custom resolvers, needed to access "virtual fields" which do not exist
+# the key represents the name of the virtual field, the value is a function which calculates the actual value
 RESOLVERS: Dict[str, Callable] = {
-	# helper for uid evaluation
+	# date/time fields
 	'weekday': lambda t, n: t.time.day, # day attribute of datetime objects
 	'day': lambda t, n: t.time.day, # day attribute of datetime objects
 	'month': lambda t, n: t.time.month, # month attribute of datetime objects
 	'year': lambda t, n: t.time.year, # year attribute of datetime objects
+	'date': lambda t, n: t.time.date(), # date
 	# internal helper attributes, which are not intended to be used directly
 	'__classifiers__': lambda t, n: list( map( lambda s: s.split( ':', 1 )[0], t.uids ) ), # virtual attribute of uids
 	'__date__': lambda t, n: t.time.date(), # date
