@@ -38,6 +38,7 @@ RULES: Dict[str, Type[Rule]] = {
 }
 
 # mapping of keywords to normalized expressions
+# this enables operations like 'list thisyear'
 KEYWORDS: Dict[str, Callable] = {
 	'thisyear': lambda s: f'year == {datetime.utcnow().year}',
 	# todo: this needs to be detected automatically
@@ -49,6 +50,7 @@ KEYWORDS: Dict[str, Callable] = {
 }
 
 # normalizers transform a field/value pair into a valid normalized expression
+# this enables operations like 'list classifier:polar' where ':' does not evaluate to '=='
 NORMALIZERS: Dict[str, Callable] = {
 	'classifier': lambda s: f'"{s}" in classifiers',
 }
@@ -56,7 +58,6 @@ NORMALIZERS: Dict[str, Callable] = {
 # custom field/attribute resolvers, needed to access "virtual fields" which do not exist
 RESOLVERS: Dict[str, Callable] = {
 	'classifiers': lambda t, n: list( map( lambda s: s.split( ':', 1 )[0], t.uids ) ), # virtual attribute of uids
-	'lowercase': lambda t, n: t.lower() if t else None, # lowercase attribute of strings
 	'year': lambda t, n: t.time.year # year attribute of datetime objects
 }
 
