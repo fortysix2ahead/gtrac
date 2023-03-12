@@ -1,24 +1,37 @@
+
 from datetime import datetime
-from pprint import pprint
 from re import match
 from typing import cast
 
+from dateutil.tz import UTC
 from pytest import raises
+from rich.pretty import pprint
 from rule_engine import Context
 from rule_engine import resolve_attribute
 from rule_engine import Rule
-from rule_engine import RuleSyntaxError
 from rule_engine import SymbolResolutionError
 
 from tracs.activity import Activity
-from tracs.rules_parser import CONTEXT
 from tracs.rules_parser import INT_LIST_PATTERN
 from tracs.rules_parser import INT_PATTERN
 from tracs.rules_parser import INT_RANGE_PATTERN
 from tracs.rules_parser import KEYWORD_PATTERN
 from tracs.rules_parser import normalize
 from tracs.rules_parser import parse_rule
+from tracs.rules_parser import RANGE_PATTERN
+from tracs.rules_parser import RESOLVERS
 from tracs.rules_parser import RULE_PATTERN
+
+NOW = datetime.utcnow()
+
+A1 = Activity(
+	id=1000,
+	name="Berlin",
+	description="Morning Run in Berlin",
+	time=datetime( 2023, 1, 13, 10, 0, 42, tzinfo=UTC ),
+	heartrate=160,
+	uids=['polar:123456', 'strava:123456']
+)
 
 def test_rule_engine():
 	rule = Rule( 'heartrate == 180' )
@@ -62,9 +75,12 @@ def test_rule_pattern():
 	assert match( INT_LIST_PATTERN, '1000,1001,1002' )
 	assert not match( INT_LIST_PATTERN, '1000,1001,1002,' )
 
-	assert match( INT_RANGE_PATTERN, '1000..1002' )
-	assert match( INT_RANGE_PATTERN, '1000..' )
-	assert match( INT_RANGE_PATTERN, '..1002' )
+	assert match( RANGE_PATTERN, '1000..1002' )
+	assert match( RANGE_PATTERN, '1000..' )
+	assert match( RANGE_PATTERN, '..1002' )
+	assert match( RANGE_PATTERN, '100.4..100.9' )
+	assert match( RANGE_PATTERN, '2020-01-01..2020-06-30' )
+	assert match( RANGE_PATTERN, '10:00:00..11:00:00' )
 
 	# keywords, must begin with a letter and may contain letters, numbers, dash und underscores
 
@@ -112,14 +128,7 @@ def test_parse():
 	assert Rule( 'unknown == 1000' ).evaluate( Activity( id=1000 ) )
 
 def test_evaluate():
-	now = datetime.utcnow()
 	a = Activity(
-		id = 1000,
-		name = "Berlin",
-		description = "Morning Run in Berlin",
-		location_place = None,
-		time = now,
-		uids = ['polar:123456', 'strava:123456']
 	)
 
 	al = [
@@ -133,7 +142,7 @@ def test_evaluate():
 	]
 
 	assert parse_rule( 'id=1000' ).evaluate( a )
-	assert parse_rule( f'year={now.year}' ).evaluate( a )
+	assert parse_rule( f'year={NOW.year}' ).evaluate( a )
 	assert parse_rule( 'classifier:polar' ).evaluate( a )
 	assert parse_rule( 'thisyear' ).evaluate( a )
 
@@ -154,3 +163,30 @@ def test_evaluate():
 		parse_rule( 'invalid=1000' ).evaluate( a )
 
 	# RuleSyntaxError should never happen ...
+
+def test_range():
+	assert not parse_eval( 'id=999..1001', A1 )
+	assert parse_eval( 'id:999..1001', A1 )
+	assert parse_eval( 'id:999.0..1001', A1 ) # mixed int/float works as well
+	assert parse_eval( 'id:999..', A1 )
+	assert parse_eval( 'id:..1001', A1 )
+	assert not parse_eval( 'id:800..900', A1 )
+	assert not parse_eval( 'id:..900', A1 )
+	assert not parse_eval( 'id:1001..', A1 )
+
+	assert parse_eval( 'heartrate:100.0..200.0', A1 )
+
+def test_evaluate_date_time():
+	from arrow import arrow
+	from dateutil.parser import parse
+
+	assert parse_eval( 'date=2023', A1 )
+
+# helper
+
+def parse_eval( rule: str, thing: Activity ) -> bool:
+	return parse_rule( rule ).evaluate( thing )
+
+def test_resolvers():
+	for key, val in RESOLVERS.items():
+		pprint( f'{key}: {val( A1, key )}' )

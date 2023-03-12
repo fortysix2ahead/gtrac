@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from logging import getLogger
 from re import match
+from sys import maxsize
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -30,8 +31,10 @@ QUOTED_STRING_PATTERN = '^"(?P<value>.*)"$'
 
 KEYWORD_PATTERN = '^[a-zA-Z][\w-]*$'
 
-SHORT_RULE_PATTERN = r'^(\w+)(:|=)([\w\"].+)$' # short version: id=10 or id:10 for convenience, value must begin with alphanum or "
-RULE_PATTERN = '^(\w+)(==|!=|=~|!~|>=|<=|>|<|=|:)([\w\"].+)$'
+RANGE_PATTERN = '^(?P<range_from>\d[\d\.\:-]+)?(\.\.)(?P<range_to>\d[\d\.\:-]+)?$'
+
+SHORT_RULE_PATTERN = r'^(\w+)(:|=)([\w\"\.].+)$' # short version: id=10 or id:10 for convenience, value must begin with alphanum or "
+RULE_PATTERN = '^(\w+)(==|!=|=~|!~|>=|<=|>|<|=|:)([\w\"\.].+)$'
 
 RULES: Dict[str, Type[Rule]] = {
 	'id': NumberEqRule
@@ -40,6 +43,9 @@ RULES: Dict[str, Type[Rule]] = {
 # mapping of keywords to normalized expressions
 # this enables operations like 'list thisyear'
 KEYWORDS: Dict[str, Callable] = {
+	# date related keywords
+	# thisweek, lastweek, today, yesterday
+	'lastyear': lambda s: f'year == {datetime.utcnow().year - 1}',
 	'thisyear': lambda s: f'year == {datetime.utcnow().year}',
 	# todo: this needs to be detected automatically
 	'bikecitizens': lambda s: f'"bikecitizens" in classifiers',
@@ -52,13 +58,20 @@ KEYWORDS: Dict[str, Callable] = {
 # normalizers transform a field/value pair into a valid normalized expression
 # this enables operations like 'list classifier:polar' where ':' does not evaluate to '=='
 NORMALIZERS: Dict[str, Callable] = {
-	'classifier': lambda s: f'"{s}" in classifiers',
+	'classifier': lambda s: f'"{s}" in __classifiers__',
 }
 
 # custom field/attribute resolvers, needed to access "virtual fields" which do not exist
 RESOLVERS: Dict[str, Callable] = {
-	'classifiers': lambda t, n: list( map( lambda s: s.split( ':', 1 )[0], t.uids ) ), # virtual attribute of uids
-	'year': lambda t, n: t.time.year # year attribute of datetime objects
+	# helper for uid evaluation
+	'weekday': lambda t, n: t.time.day, # day attribute of datetime objects
+	'day': lambda t, n: t.time.day, # day attribute of datetime objects
+	'month': lambda t, n: t.time.month, # month attribute of datetime objects
+	'year': lambda t, n: t.time.year, # year attribute of datetime objects
+	# internal helper attributes, which are not intended to be used directly
+	'__classifiers__': lambda t, n: list( map( lambda s: s.split( ':', 1 )[0], t.uids ) ), # virtual attribute of uids
+	'__date__': lambda t, n: t.time.date(), # date
+	'__time__': lambda t, n: t.time.time(), # time
 }
 
 def resolve_custom_attribute( thing: Any, name: str ):
@@ -98,10 +111,9 @@ def normalize( rule: str ) -> str:
 
 	elif m := match( RULE_PATTERN, rule ): #
 		left, op, right = m.groups()
+
 		if op == '=':
-			if match( NUMBER_PATTERN, right ):
-				normalized_rule = f'{left} == {right}'
-			elif match( QUOTED_STRING_PATTERN, right ):
+			if match( NUMBER_PATTERN, right ) or match( QUOTED_STRING_PATTERN, right ):
 				normalized_rule = f'{left} == {right}'
 			else:
 				normalized_rule = f'{left} == "{right}"'
@@ -113,14 +125,23 @@ def normalize( rule: str ) -> str:
 				normalized_rule = f'{left} == {right}'
 			elif match (QUOTED_STRING_PATTERN, right):
 				normalized_rule = f'{left} != null and {right.lower()} in {left}.as_lower'
+			elif rm := match( RANGE_PATTERN, right ):
+				left_range, range_op, right_range = rm.groups()
+
+				right_range = maxsize if right_range is None and match( NUMBER_PATTERN, left_range ) else right_range
+				left_range = 0 if left_range is None and match( NUMBER_PATTERN, right_range ) else left_range
+
+				normalized_rule = f'{left} >= {left_range} and {left} <= {right_range}'
 			else:
 				normalized_rule = f'{left} != null and "{right.lower()}" in {left}.as_lower'
+
+		else:
+			normalized_rule = f'{left} {op} {right}'
 
 	else:
 		raise RuleSyntaxError( f'syntax error in expression "{rule}"' )
 
-	if normalized_rule != rule:
-		log.debug( f'normalized rule {rule} to {normalized_rule}' )
+	log.debug( f'normalized rule {rule} to {normalized_rule}' )
 
 	return normalized_rule
 
