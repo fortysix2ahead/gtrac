@@ -96,7 +96,7 @@ class Activity( BaseDocument ):
 	resources: List[Resource] = field( init=True, default_factory=list, metadata={ PROTECTED: True, PERSIST: False } )
 	parts: List = field( init=True, default_factory=list, metadata={ PROTECTED: True } )
 
-	__vf__: VirtualFields = field( init=False, default=VirtualFields(), hash=False, compare=False )
+	# __vf__: VirtualFields = field( init=False, default=VirtualFields(), hash=False, compare=False )
 
 	others: InitVar = field( default=None )
 	other_parts: InitVar = field( default=None )

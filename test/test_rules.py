@@ -13,6 +13,7 @@ from rule_engine import SymbolResolutionError
 
 from tracs.activity import Activity
 from tracs.rules_parser import DATE_PATTERN
+from tracs.rules_parser import FUZZY_DATE_PATTERN
 from tracs.rules_parser import INT_LIST_PATTERN
 from tracs.rules_parser import INT_PATTERN
 from tracs.rules_parser import INT_RANGE_PATTERN
@@ -87,6 +88,10 @@ def test_rule_pattern():
 	assert not match( DATE_PATTERN, '2022' )
 	assert not match( DATE_PATTERN, '2022-03' )
 	assert match( DATE_PATTERN, '2022-03-13' )
+	assert match( FUZZY_DATE_PATTERN, '2022' )
+	assert match( FUZZY_DATE_PATTERN, '2022-03' )
+	assert match( FUZZY_DATE_PATTERN, '2022-03-13' )
+
 	assert not match( TIME_PATTERN, '13' )
 	assert not match( TIME_PATTERN, '13:10' )
 	assert match( TIME_PATTERN, '13:10:42' )
@@ -189,11 +194,15 @@ def test_evaluate_date_time():
 	from arrow import arrow
 	from dateutil.parser import parse
 
-	p = parse( '2022a' )
-
 	assert parse_eval( 'date=2023-01-13', A1 )
-	assert parse_eval( 'time=10:00:42', A1 )
 	assert parse_eval( 'date:2023', A1 )
+	assert not parse_eval( 'date:2022', A1 )
+	assert parse_eval( 'date:2023-01', A1 )
+	assert not parse_eval( 'date:2022-01', A1 )
+	assert parse_eval( 'date:2023-01-13', A1 )
+	assert not parse_eval( 'date:2022-01-13', A1 )
+
+	# assert parse_eval( 'time=10:00:42', A1 )
 
 # helper
 

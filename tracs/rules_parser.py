@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from datetime import time
 from logging import getLogger
 from re import match
 from sys import maxsize
@@ -11,6 +12,7 @@ from typing import Dict
 from typing import List
 from typing import Type
 
+from arrow import Arrow
 from rule_engine import Context
 from rule_engine import resolve_attribute
 from rule_engine import Rule as DefaultRule
@@ -33,7 +35,10 @@ KEYWORD_PATTERN = '^[a-zA-Z][\w-]*$'
 
 RANGE_PATTERN = '^(?P<range_from>\d[\d\.\:-]+)?(\.\.)(?P<range_to>\d[\d\.\:-]+)?$'
 
+DATE_YEAR_PATTERN = '^(?P<year>[12]\d\d\d))$'
+DATE_MONTH_PATTERN = '^(?P<year>[12]\d\d\d)-(?P<month>[01]\d)$'
 DATE_PATTERN = '^(?P<year>[12]\d\d\d)-(?P<month>[01]\d)-(?P<day>[0-3]\d)$'
+FUZZY_DATE_PATTERN = '^(?P<year>[12]\d\d\d)(-(?P<month>[01]\d))?(-(?P<day>[0-3]\d))?$'
 TIME_PATTERN = '^(?P<hour>[0-1]\d|2[0-4]):(?P<minute>[0-5]\d):(?P<second>[0-5]\d)$'
 
 SHORT_RULE_PATTERN = r'^(\w+)(:|=)([\w\"\.].+)$' # short version: id=10 or id:10 for convenience, value must begin with alphanum or "
@@ -79,6 +84,11 @@ RESOLVERS: Dict[str, Callable] = {
 	'__time__': lambda t, n: t.time.time(), # time
 }
 
+RESOLVER_TYPES: Dict[str, Type] = {
+	'date': datetime,
+	'time': time,
+}
+
 def resolve_custom_attribute( thing: Any, name: str ):
 	return RESOLVERS[name]( thing, name ) if name in RESOLVERS.keys() else resolve_attribute( thing, name )
 
@@ -120,6 +130,10 @@ def normalize( rule: str ) -> str:
 		if op == '=':
 			if match( NUMBER_PATTERN, right ) or match( QUOTED_STRING_PATTERN, right ):
 				normalized_rule = f'{left} == {right}'
+			elif RESOLVER_TYPES.get( left ) is datetime and match( DATE_PATTERN, right ):
+				normalized_rule = f'{left} == d"{right}"'
+			elif RESOLVER_TYPES.get( left ) is time and match( TIME_PATTERN, right ):
+				normalized_rule = f'{left} == t"{right}"'
 			else:
 				normalized_rule = f'{left} == "{right}"'
 
@@ -127,9 +141,27 @@ def normalize( rule: str ) -> str:
 			if left in NORMALIZERS:
 				normalized_rule = NORMALIZERS[left]( right )
 			elif match( NUMBER_PATTERN, right ):
-				normalized_rule = f'{left} == {right}'
+				# datetime years are caught by this regex already ...
+				if RESOLVER_TYPES.get( left ) is datetime:
+					normalized_rule = f'{left} >= d"{right}-01-01" and {left} <= d"{right}-12-31"'
+				else:
+					normalized_rule = f'{left} == {right}'
+
 			elif match (QUOTED_STRING_PATTERN, right):
 				normalized_rule = f'{left} != null and {right.lower()} in {left}.as_lower'
+
+			elif RESOLVER_TYPES.get( left ) is datetime:
+				if dm := match( DATE_MONTH_PATTERN, right ):
+					year, month = dm.groups()
+					floor = f'{year}-{month}-01'
+					ceil = Arrow( int( year ), int( month ), 15 ).ceil( 'month' ).format( 'YYYY-MM-DD' )
+					normalized_rule = f'{left} >= d"{floor}" and {left} <= d"{ceil}"'
+				elif dm := match( DATE_PATTERN, right ):
+					year, month, day = dm.groups()
+					floor = f'{year}-{month}-{day}'
+					ceil = Arrow( int( year ), int( month ), int( day ) ).ceil( 'day' ).format( 'YYYY-MM-DD' )
+					normalized_rule = f'{left} >= d"{floor}" and {left} <= d"{ceil}"'
+
 			elif rm := match( RANGE_PATTERN, right ):
 				left_range, range_op, right_range = rm.groups()
 
