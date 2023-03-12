@@ -49,10 +49,10 @@ class Activity( BaseDocument ):
 	description: str = field( default=None, metadata={ FILTERABLE: True } ) # description
 	tags: List[str] = field( default_factory=list, metadata={ FILTERABLE: True } ) # list of tags
 	equipment: List[str] = field( default_factory=list, metadata={ FILTERABLE: True } ) # list of equipment tags
-	location_country: str = field( default=None, metadata={ FILTERABLE: True, FILTER_ALIAS: [ 'country' ] } ) #
-	location_state: str = field( default=None, metadata={ FILTERABLE: True, FILTER_ALIAS: [ 'state' ] } ) #
-	location_city: str = field( default=None, metadata={ FILTERABLE: True, FILTER_ALIAS: [ 'city' ] } ) #
-	location_place: str = field( default=None, metadata={ FILTERABLE: True, FILTER_ALIAS: [ 'place' ] } ) #
+	location_country: Optional[str] = field( default=None, metadata={ FILTERABLE: True, FILTER_ALIAS: [ 'country' ] } ) #
+	location_state: Optional[str] = field( default=None, metadata={ FILTERABLE: True, FILTER_ALIAS: [ 'state' ] } ) #
+	location_city: Optional[str] = field( default=None, metadata={ FILTERABLE: True, FILTER_ALIAS: [ 'city' ] } ) #
+	location_place: Optional[str] = field( default=None, metadata={ FILTERABLE: True, FILTER_ALIAS: [ 'place' ] } ) #
 	location_latitude_start: float = field( default=None, metadata={ FILTERABLE: True } ) #
 	location_longitude_start: float = field( default=None, metadata={ FILTERABLE: True } ) #
 	location_latitude_end: float = field( default=None, metadata={ FILTERABLE: True } ) #

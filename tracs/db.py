@@ -8,8 +8,10 @@ from datetime import datetime
 from datetime import timezone
 from importlib.resources import path as resource_path
 from itertools import chain
+from logging import getLogger
+from pathlib import Path
 from shutil import copy
-from typing import Any, ClassVar, Set
+from typing import Any
 from typing import cast
 from typing import Dict
 from typing import List
@@ -19,9 +21,6 @@ from typing import Type
 from typing import Union
 
 from click import confirm
-from logging import getLogger
-from pathlib import Path
-
 from dataclass_factory import Factory
 from dataclass_factory import Schema as FactorySchema
 from fs.copy import copy_file
@@ -33,9 +32,8 @@ from orjson import loads
 from rich import box
 from rich.pretty import pretty_repr as pp
 from rich.table import Table as RichTable
-
-from tinydb import TinyDB
 from tinydb import Query
+from tinydb import TinyDB
 from tinydb.operations import delete
 from tinydb.operations import set as set_field
 from tinydb.table import Document
@@ -43,21 +41,21 @@ from tinydb.table import Table
 
 from .activity import Activity
 from .activity_types import ActivityTypes
-from .resources import Resource
-from .resources import ResourceGroup
-from .config import CLASSIFIER
-from .config import KEY_GROUPS
-from .config import console
 from .config import APPNAME
+from .config import CLASSIFIER
+from .config import console
+from .config import KEY_GROUPS
 from .config import KEY_SERVICE
 from .db_storage import DataClassStorage
-from .filters import Filter
 from .filters import classifier as classifier_filter
 from .filters import false as false_filter
+from .filters import Filter
 from .filters import parse_filters
 from .filters import raw_id as raw_id_filter
 from .filters import uid as uid_filter
 from .registry import Registry
+from .resources import Resource
+from .resources import ResourceGroup
 from .resources import ResourceType
 from .rules_parser import parse_rules
 
@@ -414,7 +412,8 @@ class ActivityDb:
 	def find( self, filters: Union[List[str], List[Filter], str, Filter] = None ) -> [Activity]:
 		all_activities = self.activities
 		for r in parse_rules( *filters ):
-			all_activities = filter( r.evaluate, all_activities )
+			# all_activities = filter( r.evaluate, all_activities )
+			all_activities = r.filter( all_activities )
 		return list( all_activities )
 
 	def find_by_classifier( self, classifier: str ) -> [Activity]:

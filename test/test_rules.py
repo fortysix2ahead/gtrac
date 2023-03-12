@@ -1,4 +1,5 @@
 from datetime import datetime
+from pprint import pprint
 from re import match
 from typing import cast
 
@@ -10,6 +11,7 @@ from rule_engine import RuleSyntaxError
 from rule_engine import SymbolResolutionError
 
 from tracs.activity import Activity
+from tracs.rules_parser import CONTEXT
 from tracs.rules_parser import INT_LIST_PATTERN
 from tracs.rules_parser import INT_PATTERN
 from tracs.rules_parser import INT_RANGE_PATTERN
@@ -115,9 +117,20 @@ def test_evaluate():
 		id = 1000,
 		name = "Berlin",
 		description = "Morning Run in Berlin",
+		location_place = None,
 		time = now,
 		uids = ['polar:123456', 'strava:123456']
 	)
+
+	al = [
+		Activity(
+			id = 1000,
+			name = 'Berlin',
+		),
+		Activity(
+			id = 1001,
+		)
+	]
 
 	assert parse_rule( 'id=1000' ).evaluate( a )
 	assert parse_rule( f'year={now.year}' ).evaluate( a )
@@ -133,6 +146,9 @@ def test_evaluate():
 	assert parse_rule( 'name:berlin' ).evaluate( a )
 	assert not parse_rule( 'name:hamburg' ).evaluate( a )
 	assert parse_rule( 'description:"morning run"' ).evaluate( a )
+
+	assert list( parse_rule( 'name:berlin' ).filter( al ) ) == [ al[0] ]
+	assert not parse_rule( 'location_place:hamburg' ).evaluate( a )
 
 	with raises( SymbolResolutionError ):
 		parse_rule( 'invalid=1000' ).evaluate( a )

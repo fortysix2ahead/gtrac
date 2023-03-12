@@ -56,7 +56,7 @@ NORMALIZERS: Dict[str, Callable] = {
 # custom field/attribute resolvers, needed to access "virtual fields" which do not exist
 RESOLVERS: Dict[str, Callable] = {
 	'classifiers': lambda t, n: list( map( lambda s: s.split( ':', 1 )[0], t.uids ) ), # virtual attribute of uids
-	'lowercase': lambda t, n: t.lower(), # lowercase attribute of strings
+	'lowercase': lambda t, n: t.lower() if t else None, # lowercase attribute of strings
 	'year': lambda t, n: t.time.year # year attribute of datetime objects
 }
 
@@ -70,10 +70,10 @@ CONTEXT = Context( resolver=resolve_custom_attribute )
 
 # rules parser
 
-def parse_rules( *rules: str ) -> List[Rule]:
+def parse_rules( *rules: str ) -> List[DefaultRule]:
 	return [parse_rule( r ) for r in rules]
 
-def parse_rule( rule: str ) -> Rule:
+def parse_rule( rule: str ) -> DefaultRule:
 
 	rule: str = normalize( rule ) # normalize rule, used for preprocessing special cases
 	rule: str = preprocess( rule ) # preprocess, not used at the moment
@@ -111,9 +111,9 @@ def normalize( rule: str ) -> str:
 			elif match( NUMBER_PATTERN, right ):
 				normalized_rule = f'{left} == {right}'
 			elif match (QUOTED_STRING_PATTERN, right):
-				normalized_rule = f'{right.lower()} in {left}.lowercase'
+				normalized_rule = f'{left} != null and {right.lower()} in {left}.as_lower'
 			else:
-				normalized_rule = f'"{right.lower()}" in {left}.lowercase'
+				normalized_rule = f'{left} != null and "{right.lower()}" in {left}.as_lower'
 
 	else:
 		raise RuleSyntaxError( f'syntax error in expression "{rule}"' )
