@@ -161,8 +161,8 @@ def ls( ctx: ApplicationContext, sort, reverse, format_name, filters ):
 
 @cli.command( help='shows details about activities and resources' )
 @option( '-f', '--format', 'format_name', is_flag=False, required=False, type=str, hidden=True, help='uses the format with the provided name when printing', metavar='FORMAT' )
-@option( '-r', '--raw', is_flag=True, required=False, help='display raw data' )
-@option( '-s', '--resource', is_flag=True, required=False, hidden=True, default=False, help='treat filters as URLs for resources' )
+@option( '-w', '--raw', is_flag=True, required=False, help='display raw data' )
+@option( '-r', '--resource', is_flag=True, required=False, hidden=True, default=False, help='treat filters as URLs for resources' )
 @argument('filters', nargs=-1)
 @pass_obj
 def show( ctx: ApplicationContext, filters, raw, format_name, resource ):

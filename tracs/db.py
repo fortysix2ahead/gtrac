@@ -293,7 +293,7 @@ class ActivityDb:
 		return sorted( list( self._activities.keys() ) )
 
 	@property
-	def resources( self ) -> Table:
+	def resources( self ) -> Dict[int, Resource]:
 		return self._resources
 
 	# ---- DB Operations --------------------------------------------------------
@@ -388,7 +388,7 @@ class ActivityDb:
 		return activity
 
 	def get_resource( self, id: int ) -> Optional[Resource]:
-		return self.resources.get( doc_id=id )
+		return self.resources.get( id )
 
 	def get_resources_by_uid( self, uid ) -> List[Resource]:
 		return cast( List[Resource], self.resources.search( Query()['uid'] == uid ) or [] )
@@ -437,11 +437,9 @@ class ActivityDb:
 
 	def find_resources( self, uid: str, path: str = None ) -> List[Resource]:
 		if path:
-			resources = self.resources.search( (Query()['uid'] == uid) & (Query()['path'] == path) )
+			return [ r for r in self.resources.values() if r.uid == uid and r.path == path ]
 		else:
-			resources = self.resources.search( Query()['uid'] == uid )
-
-		return cast( List[Resource], resources )
+			return [ r for r in self.resources.values() if r.uid == uid ]
 
 	def find_all_resources( self, uids: List[str] ) -> List[Resource]:
 		return list( chain( *[self.resources.search( Query()['uid'] == uid ) for uid in uids] ) )

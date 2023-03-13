@@ -103,6 +103,10 @@ class Activity:
 	force: InitVar = field( default=False )
 
 	@classmethod
+	def fields( cls ) -> List[Field]:
+		return list( fields( Activity ) )
+
+	@classmethod
 	def fieldnames( cls ) -> List[str]:
 		return [f.name for f in fields( Activity )]
 

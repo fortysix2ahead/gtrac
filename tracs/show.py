@@ -122,7 +122,7 @@ def show_activity( activities: [Activity], ctx: ApplicationContext, display_raw:
 						overlay_path_exists = f'[bright_green] {overlay_sign}[/bright_green]' if overlay_path.exists() else ''
 
 						absolute_path = str( overlay_path ) if overlay_path.exists() else str( resource_path )
-						table.add_row( pp( r.doc_id ), f'{r.path} {path_exists}{overlay_path_exists}', absolute_path, r.type )
+						table.add_row( pp( r.id ), f'{r.path} {path_exists}{overlay_path_exists}', absolute_path, r.type )
 
 						# resource_url = Registry.services.get( r.classifier ).url_for( resource=r )
 						# table.add_row( pp( r.doc_id ), f'{r.path} {path_exists}{overlay_path_exists}', absolute_path, r.type, resource_url )
