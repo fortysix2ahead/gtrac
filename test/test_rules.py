@@ -12,11 +12,11 @@ from rule_engine import Rule
 from rule_engine import SymbolResolutionError
 
 from tracs.activity import Activity
+from tracs.activity_types import ActivityTypes
 from tracs.rules_parser import DATE_PATTERN
 from tracs.rules_parser import FUZZY_DATE_PATTERN
 from tracs.rules_parser import INT_LIST_PATTERN
 from tracs.rules_parser import INT_PATTERN
-from tracs.rules_parser import INT_RANGE_PATTERN
 from tracs.rules_parser import KEYWORD_PATTERN
 from tracs.rules_parser import normalize
 from tracs.rules_parser import parse_rule
@@ -31,6 +31,7 @@ A1 = Activity(
 	id=1000,
 	name="Berlin",
 	description="Morning Run in Berlin",
+	type=ActivityTypes.run,
 	time=datetime( 2023, 1, 13, 10, 0, 42, tzinfo=UTC ),
 	heartrate=160,
 	uids=['polar:123456', 'strava:123456']
@@ -142,9 +143,6 @@ def test_parse():
 	assert Rule( 'unknown == 1000' ).evaluate( Activity( id=1000 ) )
 
 def test_evaluate():
-	a = Activity(
-	)
-
 	al = [
 		Activity(
 			id = 1000,
@@ -155,28 +153,32 @@ def test_evaluate():
 		)
 	]
 
-	assert parse_rule( 'id=1000' ).evaluate( a )
-	assert parse_rule( f'year={NOW.year}' ).evaluate( a )
-	assert parse_rule( 'classifier:polar' ).evaluate( a )
-	assert parse_rule( 'thisyear' ).evaluate( a )
+	assert parse_rule( 'id=1000' ).evaluate( A1 )
+	assert parse_rule( f'year={NOW.year}' ).evaluate( A1 )
+	assert parse_rule( 'classifier:polar' ).evaluate( A1 )
+	assert parse_rule( 'thisyear' ).evaluate( A1 )
 
-	assert parse_rule( 'name=Berlin' ).evaluate( a )
-	assert not parse_rule( 'name=berlin' ).evaluate( a )
+	assert parse_rule( 'name=Berlin' ).evaluate( A1 )
+	assert not parse_rule( 'name=berlin' ).evaluate( A1 )
 
-	assert parse_rule( 'description="Morning Run in Berlin"' ).evaluate( a )
-	assert not parse_rule( 'description="morning run in berlin"' ).evaluate( a )
+	assert parse_rule( 'description="Morning Run in Berlin"' ).evaluate( A1 )
+	assert not parse_rule( 'description="morning run in berlin"' ).evaluate( A1 )
 
-	assert parse_rule( 'name:berlin' ).evaluate( a )
-	assert not parse_rule( 'name:hamburg' ).evaluate( a )
-	assert parse_rule( 'description:"morning run"' ).evaluate( a )
+	assert parse_rule( 'name:berlin' ).evaluate( A1 )
+	assert not parse_rule( 'name:hamburg' ).evaluate( A1 )
+	assert parse_rule( 'description:"morning run"' ).evaluate( A1 )
 
 	assert list( parse_rule( 'name:berlin' ).filter( al ) ) == [ al[0] ]
-	assert not parse_rule( 'location_place:hamburg' ).evaluate( a )
+	assert not parse_rule( 'location_place:hamburg' ).evaluate( A1 )
 
 	with raises( SymbolResolutionError ):
-		parse_rule( 'invalid=1000' ).evaluate( a )
+		parse_rule( 'invalid=1000' ).evaluate( A1 )
 
 	# RuleSyntaxError should never happen ...
+
+def test_type():
+	assert parse_eval( 'type=run', A1 )
+	assert parse_eval( 'type:run', A1 )
 
 def test_range():
 	assert not parse_eval( 'id=999..1001', A1 )
