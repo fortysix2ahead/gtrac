@@ -6,7 +6,6 @@ from sys import exit
 from sys import modules
 
 from rich.prompt import Confirm
-from tinydb import TinyDB
 
 from .config import ApplicationContext
 from .db import ACTIVITIES_NAME
@@ -14,7 +13,6 @@ from .db import ActivityDb
 from .db import METADATA_NAME
 from .db import RESOURCES_NAME
 from .db import SCHEMA_NAME
-from .db_storage import DataClassStorage
 from .plugins.handlers import JSONHandler
 from .utils import timestring
 

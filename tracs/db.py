@@ -45,7 +45,6 @@ from .config import CLASSIFIER
 from .config import console
 from .config import KEY_GROUPS
 from .config import KEY_SERVICE
-from .db_storage import DataClassStorage
 from .filters import classifier as classifier_filter
 from .filters import false as false_filter
 from .filters import Filter
@@ -216,6 +215,8 @@ class ActivityDb:
 
 	# close db: persist changes to disk (if there are changes)
 
+	# json flags: options = OPT_APPEND_NEWLINE | OPT_INDENT_2 | OPT_SORT_KEYS
+
 	def save( self ):
 		if self._read_only or self.osfs is None:
 			return
@@ -274,10 +275,6 @@ class ActivityDb:
 	@property
 	def schema_path( self ) -> Path:
 		return self._schema_path
-
-	@property
-	def storage( self ) -> DataClassStorage:
-		return cast( DataClassStorage, self._db.storage )
 
 	@property
 	def activity_map( self ) -> Dict[int, Activity]:
@@ -493,12 +490,6 @@ def document_cls( doc: Union[Dict, Document], doc_id: int ) -> Type:
 
 def document_factory( doc: Union[Dict, Document], doc_id: int ) -> Document:
 	return document_cls( doc, doc_id )( doc, doc_id )
-
-def create_metadb( path: Path = None, use_memory_storage: bool = False ) -> TinyDB:
-	return TinyDB( storage=DataClassStorage, path=path, read_only=use_memory_storage, passthrough=False )
-
-def create_db( path: Path = None, use_memory_storage: bool = False, passthrough=False ) -> TinyDB:
-	return TinyDB( storage=DataClassStorage, path=path, read_only=use_memory_storage, passthrough=passthrough )
 
 # ---- DB Operations ----
 
