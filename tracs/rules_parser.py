@@ -85,7 +85,7 @@ RESOLVERS: Dict[str, Callable] = {
 	'year': lambda t, n: t.time.year, # year attribute of datetime objects
 	'date': lambda t, n: t.time.date(), # date
 	# activity type
-	'type': lambda t, n: t.type.value,
+	'type': lambda t, n: t.type.value if t.type else None,
 	# internal helper attributes, which are not intended to be used directly
 	'__classifiers__': lambda t, n: list( map( lambda s: s.split( ':', 1 )[0], t.uids ) ), # virtual attribute of uids
 	'__date__': lambda t, n: t.time.date(), # date
