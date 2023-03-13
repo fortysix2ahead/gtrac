@@ -101,7 +101,8 @@ class ResourceType:
 
 @dataclass
 class Resource:
-	name: str = field( default=None )
+
+	name: Optional[str] = field( default=None )
 	type: str = field( default=None )
 	path: str = field( default=None )
 	source: str = field( default=None )
@@ -117,7 +118,6 @@ class Resource:
 	resources: List[Resource] = field( default_factory=list, repr=False )
 
 	def __post_init__( self, text: str ):
-		super().__post_init__()
 		self.content = text.encode( encoding='UTF-8' ) if text else self.content
 
 	def __hash__( self ):

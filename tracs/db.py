@@ -208,6 +208,9 @@ class ActivityDb:
 		json = loads( self.memfs.readbytes( SCHEMA_NAME ) )
 		self._schema = self._factory.load( json, Schema )
 
+		json = loads( self.memfs.readbytes( RESOURCES_NAME ) )
+		self._resources = self._factory.load( json, Dict[int, Resource] )
+
 		json = loads( self.memfs.readbytes( ACTIVITIES_NAME ) )
 		self._activities = self._factory.load( json, Dict[int, Activity] )
 
