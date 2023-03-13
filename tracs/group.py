@@ -18,7 +18,6 @@ from .activity_types import ActivityTypes
 from .config import ApplicationContext
 from .config import KEY_GROUPS as GROUPS
 from .config import console
-from .dataclasses import as_dict
 from .ui import Choice
 from .ui import diff_table2
 from .utils import seconds_to_time

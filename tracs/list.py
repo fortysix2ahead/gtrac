@@ -13,10 +13,6 @@ from rich.table import Table
 from .activity import Activity
 from .config import ApplicationContext
 from .config import console
-from .dataclasses import FILTERABLE
-from .dataclasses import FILTER_ALIAS
-from .dataclasses import PERSIST
-from .dataclasses import PROTECTED
 from .registry import Registry
 from .utils import fmt
 from .utils import red

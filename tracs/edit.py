@@ -6,7 +6,6 @@ from typing import Tuple
 
 from .activity import Activity
 from .config import ApplicationContext
-from .dataclasses import PROTECTED
 from .inout import load_all_resources
 from .inout import open_activities
 from .ui import Choice

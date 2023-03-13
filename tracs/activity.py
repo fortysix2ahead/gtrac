@@ -19,11 +19,6 @@ from typing import Optional
 from tzlocal import get_localzone_name
 
 from .activity_types import ActivityTypes
-from .dataclasses import BaseDocument
-from .dataclasses import FILTERABLE
-from .dataclasses import FILTER_ALIAS
-from .dataclasses import PERSIST
-from .dataclasses import PROTECTED
 from .resources import Resource
 from .resources import ResourceGroup
 from .utils import fromisoformat
@@ -43,69 +38,69 @@ class VirtualFields:
 			return super().__getattribute__( name )
 
 @dataclass
-class Activity( BaseDocument ):
+class Activity:
 
-	classifier: str = field( default=None, metadata={ PROTECTED: True, FILTERABLE: True, FILTER_ALIAS: [ 'service', 'source' ] } ) # classifier of this activity, only used in subclasses
-	uid: str = field( default=None, metadata={ PROTECTED: True, FILTERABLE: True } ) # unique id of this activity in the form of <classifier:number>, only used in subclasses
-	uids: List[str] = field( default_factory=list, metadata={ PROTECTED: True, FILTERABLE: True } ) # uids of activities which belong to this activity
+	id: int = field( default=0 )
 
-	raw: Any = field( default=None, metadata={ PERSIST: False, PROTECTED: True } )  # structured raw data used for initialization from external data
-	raw_id: int = field( default=None, metadata= { PROTECTED: True, FILTERABLE: True } )  # raw id as raw data might not contain all data necessary
-	raw_name: str = field( default=None, metadata={ PERSIST: False, PROTECTED: True } )  # same as raw id
-	raw_data: Union[str, bytes] = field( default=None, metadata={ PERSIST: False, PROTECTED: True } )  # serialized version of raw, can be i.e. str or bytes
+	classifier: str = field( default=None ) # classifier of this activity, only used in subclasses
+	uid: str = field( default=None ) # unique id of this activity in the form of <classifier:number>, only used in subclasses
+	uids: List[str] = field( default_factory=list ) # uids of activities which belong to this activity
 
-	local_id: int = field( default=None, metadata= { PROTECTED: True, FILTERABLE: True } )  # same as raw_id
+	raw: Any = field( default=None )  # structured raw data used for initialization from external data
+	raw_id: int = field( default=None )  # raw id as raw data might not contain all data necessary
+	raw_name: str = field( default=None )  # same as raw id
+	raw_data: Union[str, bytes] = field( default=None )  # serialized version of raw, can be i.e. str or bytes
 
-	name: Optional[str] = field( default=None, metadata={ FILTERABLE: True } ) # activity name
-	type: ActivityTypes = field( default=None, metadata={ FILTERABLE: True } ) # activity type
-	description: str = field( default=None, metadata={ FILTERABLE: True } ) # description
-	tags: List[str] = field( default_factory=list, metadata={ FILTERABLE: True } ) # list of tags
-	equipment: List[str] = field( default_factory=list, metadata={ FILTERABLE: True } ) # list of equipment tags
-	location_country: Optional[str] = field( default=None, metadata={ FILTERABLE: True, FILTER_ALIAS: [ 'country' ] } ) #
-	location_state: Optional[str] = field( default=None, metadata={ FILTERABLE: True, FILTER_ALIAS: [ 'state' ] } ) #
-	location_city: Optional[str] = field( default=None, metadata={ FILTERABLE: True, FILTER_ALIAS: [ 'city' ] } ) #
-	location_place: Optional[str] = field( default=None, metadata={ FILTERABLE: True, FILTER_ALIAS: [ 'place' ] } ) #
-	location_latitude_start: float = field( default=None, metadata={ FILTERABLE: True } ) #
-	location_longitude_start: float = field( default=None, metadata={ FILTERABLE: True } ) #
-	location_latitude_end: float = field( default=None, metadata={ FILTERABLE: True } ) #
-	location_longitude_end: float = field( default=None, metadata={ FILTERABLE: True } ) #
-	route: str = field( default=None, metadata={ FILTERABLE: True } ) #
+	local_id: int = field( default=None )  # same as raw_id
 
-	time: datetime = field( default=None, metadata={ FILTERABLE: True, FILTER_ALIAS: [ 'date', 'datetime' ] } ) # activity time (UTC)
-	time_end: datetime = field( default=None, metadata={ FILTERABLE: True } ) # activity end time (UTC)
-	localtime: datetime = field( default=None, metadata={ FILTERABLE: True } ) # activity time (local)
-	localtime_end: datetime = field( default=None, metadata={ FILTERABLE: True } ) # activity end time (local)
-	timezone: str = field( default=get_localzone_name(), metadata={ FILTERABLE: True } ) # timezone of the activity, local timezone by default
-	duration: time = field( default=None, metadata={ FILTERABLE: True } ) #
-	duration_moving: time = field( default=None, metadata={ FILTERABLE: True } ) #
+	name: Optional[str] = field( default=None ) # activity name
+	type: ActivityTypes = field( default=None ) # activity type
+	description: str = field( default=None ) # description
+	tags: List[str] = field( default_factory=list ) # list of tags
+	equipment: List[str] = field( default_factory=list ) # list of equipment tags
 
-	distance: float = field( default=None, metadata={ FILTERABLE: True } ) #
-	ascent: float = field( default=None, metadata={ FILTERABLE: True } ) #
-	descent: float = field( default=None, metadata={ FILTERABLE: True } ) #
-	elevation_max: float = field( default=None, metadata={ FILTERABLE: True } ) #
-	elevation_min: float = field( default=None, metadata={ FILTERABLE: True } ) #
-	speed: float = field( default=None, metadata={ FILTERABLE: True } ) #
-	speed_max: float = field( default=None, metadata={ FILTERABLE: True } ) #
+	location_country: Optional[str] = field( default=None ) #
+	location_state: Optional[str] = field( default=None ) #
+	location_city: Optional[str] = field( default=None ) #
+	location_place: Optional[str] = field( default=None ) #
+	location_latitude_start: float = field( default=None ) #
+	location_longitude_start: float = field( default=None ) #
+	location_latitude_end: float = field( default=None ) #
+	location_longitude_end: float = field( default=None ) #
+	route: str = field( default=None ) #
 
-	heartrate: Optional[float] = field( default=None, metadata={ FILTERABLE: True } ) #
-	heartrate_max: float = field( default=None, metadata={ FILTERABLE: True } ) #
-	heartrate_min: float = field( default=None, metadata={ FILTERABLE: True } ) #
-	calories: float = field( default=None, metadata={ FILTERABLE: True } ) #
+	time: datetime = field( default=None ) # activity time (UTC)
+	time_end: datetime = field( default=None ) # activity end time (UTC)
+	localtime: datetime = field( default=None ) # activity time (local)
+	localtime_end: datetime = field( default=None ) # activity end time (local)
+	timezone: str = field( default=get_localzone_name() ) # timezone of the activity, local timezone by default
+	duration: time = field( default=None ) #
+	duration_moving: time = field( default=None ) #
 
-	metadata: Dict = field( init=False, default_factory=dict, metadata={ PROTECTED: True, PERSIST: False } )
-	resources: List[Resource] = field( init=True, default_factory=list, metadata={ PROTECTED: True, PERSIST: False } )
-	parts: List = field( init=True, default_factory=list, metadata={ PROTECTED: True } )
+	distance: float = field( default=None ) #
+	ascent: float = field( default=None ) #
+	descent: float = field( default=None ) #
+	elevation_max: float = field( default=None ) #
+	elevation_min: float = field( default=None ) #
+	speed: float = field( default=None ) #
+	speed_max: float = field( default=None ) #
 
+	heartrate: Optional[float] = field( default=None ) #
+	heartrate_max: float = field( default=None ) #
+	heartrate_min: float = field( default=None ) #
+	calories: float = field( default=None ) #
+
+	__metadata__: Dict[str, Any] = field( init=False, default_factory=dict )
+	resources: List[Resource] = field( init=True, default_factory=list )
+	parts: List = field( init=True, default_factory=list )
+
+	__dirty__: bool = field( init=False, default=False, repr=False )
+	__parent_id__: int = field( init=False, default=0 )
 	# __vf__: VirtualFields = field( init=False, default=VirtualFields(), hash=False, compare=False )
 
 	others: InitVar = field( default=None )
 	other_parts: InitVar = field( default=None )
 	force: InitVar = field( default=False )
-
-	#parent_id: int = field( default=None, metadata={ PROTECTED: True } )
-	#parent_uid: str = field( default=None, metadata={ PROTECTED: True } )
-
-	#is_group: bool = field( init=False, default=False, metadata={ PERSIST: False } ) # todo: for backward compatibility
 
 	@property
 	def parent( self ) -> Optional[Activity]:
@@ -124,8 +119,6 @@ class Activity( BaseDocument ):
 		return self.type.abbreviation if self.type else ':question_mark:'
 
 	def __post_init__( self, others: List[Activity], other_parts: List[Activity], force: bool ):
-		super().__post_init__()
-
 		if self.raw:
 			self.__raw_init__( self.raw )
 		elif others:

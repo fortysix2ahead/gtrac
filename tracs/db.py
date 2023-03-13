@@ -194,9 +194,10 @@ class ActivityDb:
 		self._factory = Factory(
 			debug_path=True,
 			schemas={
-				# name_mapping={}
-				Activity: FactorySchema( exclude=['doc_id'], omit_default=True, skip_internal=False, unknown='unknown' ),
+				# name_mapping={}, exclude=['doc_id']
+				Activity: FactorySchema( omit_default=True, skip_internal=True, unknown='unknown' ),
 				ActivityTypes: FactorySchema( parser=ActivityTypes.from_str, serializer=ActivityTypes.to_str ),
+				Resource: FactorySchema( omit_default=True, skip_internal=True, unknown='unknown' ),
 				Schema: FactorySchema( skip_internal=False ),
 				# tiny db compatibility:
 				# Schema: FactorySchema( name_mapping={ 'version': ( '_default', '1', 'version' ) }, skip_internal=False, unknown='unknown' ),

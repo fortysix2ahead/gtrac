@@ -29,21 +29,12 @@ from tinydb.queries import Query
 from tinydb.queries import QueryLike
 
 from .activity import Activity
-from .dataclasses import FILTERABLE
-from .dataclasses import FILTER_ALIAS
 from .registry import Registry
 
 log = getLogger( __name__ )
 
 TYPES = {}
 ALIASES = {}
-
-for f in Activity.fields():
-	if f.metadata.get( FILTERABLE, False ):
-		TYPES[f.name] = f.type
-		for alias in f.metadata.get( FILTER_ALIAS, [] ):
-			TYPES[alias] = f.type
-			ALIASES[alias] = f.name
 
 @dataclass
 class Filter( QueryLike ):

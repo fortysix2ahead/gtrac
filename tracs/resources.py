@@ -13,10 +13,6 @@ from typing import Tuple
 from typing import Type
 from urllib.parse import urlparse
 
-from tracs.dataclasses import BaseDocument
-from tracs.dataclasses import PERSIST
-from tracs.dataclasses import PROTECTED
-
 # todo: not sure if we still need the status
 class ResourceStatus( Enum ):
 	UNKNOWN = 100
@@ -104,21 +100,21 @@ class ResourceType:
 			return self.suffix
 
 @dataclass
-class Resource( BaseDocument ):
+class Resource:
 	name: str = field( default=None )
 	type: str = field( default=None )
 	path: str = field( default=None )
 	source: str = field( default=None )
-	status: int = field( default=None, metadata={ PERSIST: False } )
-	summary: bool = field( default=False, metadata={ PERSIST: False } )
+	status: int = field( default=None )
+	summary: bool = field( default=False )
 	uid: str = field( default=None )
 
 	# additional field holding data of a resource, used when loading, but won't be persisted in db
-	raw: Any = field( default=None, repr=False, metadata={ PERSIST: False, PROTECTED: True } )  # structured data making up this resource
-	content: bytes = field( default=None, repr=False, metadata={ PERSIST: False, PROTECTED: True } )  # raw content as bytes
-	text: InitVar = field( default=None, repr=False, metadata={ PERSIST: False, PROTECTED: True } )  # decoded content as string, to be removed
+	raw: Any = field( default=None, repr=False )  # structured data making up this resource
+	content: bytes = field( default=None, repr=False )  # raw content as bytes
+	text: InitVar = field( default=None, repr=False )  # decoded content as string, to be removed
 
-	resources: List[Resource] = field( default_factory=list, repr=False, metadata={ PERSIST: False, PROTECTED: True } )
+	resources: List[Resource] = field( default_factory=list, repr=False )
 
 	def __post_init__( self, text: str ):
 		super().__post_init__()

@@ -31,7 +31,6 @@ from .resources import Resource
 from .config import ApplicationConfig as cfg
 from .config import ApplicationContext
 from .config import cs
-from .dataclasses import as_dict
 from .db import ActivityDb
 from .registry import Registry
 from .plugins.gpx import GPX_TYPE
