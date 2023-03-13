@@ -19,6 +19,7 @@ from tracs.rules_parser import INT_LIST_PATTERN
 from tracs.rules_parser import INT_PATTERN
 from tracs.rules_parser import KEYWORD_PATTERN
 from tracs.rules_parser import normalize
+from tracs.rules_parser import parse_date_range_as_str
 from tracs.rules_parser import parse_rule
 from tracs.rules_parser import RANGE_PATTERN
 from tracs.rules_parser import RESOLVERS
@@ -192,7 +193,7 @@ def test_range():
 
 	assert parse_eval( 'heartrate:100.0..200.0', A1 )
 
-def test_evaluate_date_time():
+def test_date_time():
 	from arrow import arrow
 	from dateutil.parser import parse
 
@@ -204,7 +205,26 @@ def test_evaluate_date_time():
 	assert parse_eval( 'date:2023-01-13', A1 )
 	assert not parse_eval( 'date:2022-01-13', A1 )
 
+	assert parse_eval( 'date:2022..2023', A1 )
+	assert parse_eval( 'date:2022..', A1 )
+	assert parse_eval( 'date:..2023', A1 )
+	assert parse_eval( 'date:2023-01-12..2023-02', A1 )
+
 	# assert parse_eval( 'time=10:00:42', A1 )
+
+def test_parse_date_range():
+
+	assert parse_date_range_as_str( '2022..2023' ) == ('2022-01-01', '2023-12-31')
+	assert parse_date_range_as_str( '2022..' ) == ('2022-01-01', '9999-12-31')
+	assert parse_date_range_as_str( '..2023' ) == ('0001-01-01', '2023-12-31')
+
+	assert parse_date_range_as_str( '2022-03..2022-03' ) == ('2022-03-01', '2022-03-31')
+	assert parse_date_range_as_str( '..2022-03' ) == ('0001-01-01', '2022-03-31')
+	assert parse_date_range_as_str( '2022-03..' ) == ('2022-03-01', '9999-12-31')
+
+	assert parse_date_range_as_str( '2022-03-15..2022-03-16' ) == ('2022-03-15', '2022-03-16')
+	assert parse_date_range_as_str( '..2022-03-16' ) == ('0001-01-01', '2022-03-16')
+	assert parse_date_range_as_str( '2022-03-15..' ) == ('2022-03-15', '9999-12-31')
 
 # helper
 

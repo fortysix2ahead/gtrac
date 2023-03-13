@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from datetime import datetime
 from datetime import time
+from decimal import Decimal
+from decimal import InvalidOperation
 from logging import getLogger
 from re import match
 from sys import maxsize
@@ -10,9 +12,10 @@ from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import List
+from typing import Tuple
 from typing import Type
 
-from arrow import Arrow
+from arrow import get as getarrow
 from rule_engine import Context
 from rule_engine import resolve_attribute
 from rule_engine import Rule as DefaultRule
@@ -35,9 +38,11 @@ KEYWORD_PATTERN = '^[a-zA-Z][\w-]*$'
 
 RANGE_PATTERN = '^(?P<range_from>\d[\d\.\:-]+)?(\.\.)(?P<range_to>\d[\d\.\:-]+)?$'
 
-DATE_YEAR_PATTERN = '^(?P<year>[12]\d\d\d))$'
-DATE_MONTH_PATTERN = '^(?P<year>[12]\d\d\d)-(?P<month>[01]\d)$'
 DATE_PATTERN = '^(?P<year>[12]\d\d\d)-(?P<month>[01]\d)-(?P<day>[0-3]\d)$'
+DATE_YEAR_PATTERN = '^(?P<year>[12]\d\d\d)$'
+DATE_YEAR_MONTH_PATTERN = '^(?P<year>[12]\d\d\d)-(?P<month>[01]\d)$'
+DATE_YEAR_MONTH_DAY_PATTERN = DATE_PATTERN
+
 FUZZY_DATE_PATTERN = '^(?P<year>[12]\d\d\d)(-(?P<month>[01]\d))?(-(?P<day>[0-3]\d))?$'
 TIME_PATTERN = '^(?P<hour>[0-1]\d|2[0-4]):(?P<minute>[0-5]\d):(?P<second>[0-5]\d)$'
 
@@ -116,12 +121,12 @@ def parse_rule( rule: str ) -> DefaultRule:
 
 def normalize( rule: str ) -> str:
 
-	normalized_rule = rule
+	normalized_rule = None
 
-	if m := match( INT_PATTERN, rule ): # integer number only
+	if match( INT_PATTERN, rule ): # integer number only
 		normalized_rule = f'id == {rule}'
 
-	elif m := match( KEYWORD_PATTERN, rule ):  # keywords
+	elif match( KEYWORD_PATTERN, rule ):  # keywords
 		if rule in KEYWORDS:
 			normalized_rule = KEYWORDS[rule]( rule )
 		else:
@@ -129,13 +134,12 @@ def normalize( rule: str ) -> str:
 
 	elif m := match( RULE_PATTERN, rule ): #
 		left, op, right = m.groups()
-
 		if op == '=':
 			if match( NUMBER_PATTERN, right ) or match( QUOTED_STRING_PATTERN, right ):
 				normalized_rule = f'{left} == {right}'
-			elif RESOLVER_TYPES.get( left ) is datetime and match( DATE_PATTERN, right ):
+			elif match( DATE_PATTERN, right ) and RESOLVER_TYPES.get( left ) is datetime:
 				normalized_rule = f'{left} == d"{right}"'
-			elif RESOLVER_TYPES.get( left ) is time and match( TIME_PATTERN, right ):
+			elif match( TIME_PATTERN, right ) and RESOLVER_TYPES.get( left ) is time:
 				normalized_rule = f'{left} == t"{right}"'
 			else:
 				normalized_rule = f'{left} == "{right}"'
@@ -143,42 +147,37 @@ def normalize( rule: str ) -> str:
 		elif op == ':':
 			if left in NORMALIZERS:
 				normalized_rule = NORMALIZERS[left]( right )
+
 			elif match( NUMBER_PATTERN, right ):
-				# datetime years are caught by this regex already ...
-				if RESOLVER_TYPES.get( left ) is datetime:
-					normalized_rule = f'{left} >= d"{right}-01-01" and {left} <= d"{right}-12-31"'
+				if RESOLVER_TYPES.get( left ) is datetime: # years are caught by this regex already ...
+					normalized_rule = f'{left} >= d"{parse_floor_str( right )}" and {left} <= d"{parse_ceil_str( right )}"'
 				else:
 					normalized_rule = f'{left} == {right}'
 
 			elif match (QUOTED_STRING_PATTERN, right):
 				normalized_rule = f'{left} != null and {right.lower()} in {left}.as_lower'
 
-			elif RESOLVER_TYPES.get( left ) is datetime:
-				if dm := match( DATE_MONTH_PATTERN, right ):
-					year, month = dm.groups()
-					floor = f'{year}-{month}-01'
-					ceil = Arrow( int( year ), int( month ), 15 ).ceil( 'month' ).format( 'YYYY-MM-DD' )
-					normalized_rule = f'{left} >= d"{floor}" and {left} <= d"{ceil}"'
-				elif dm := match( DATE_PATTERN, right ):
-					year, month, day = dm.groups()
-					floor = f'{year}-{month}-{day}'
-					ceil = Arrow( int( year ), int( month ), int( day ) ).ceil( 'day' ).format( 'YYYY-MM-DD' )
-					normalized_rule = f'{left} >= d"{floor}" and {left} <= d"{ceil}"'
+			elif match( DATE_YEAR_MONTH_PATTERN, right ) and RESOLVER_TYPES.get( left ) is datetime:
+				normalized_rule = f'{left} >= d"{parse_floor_str( right )}" and {left} <= d"{parse_ceil_str( right )}"'
 
-			elif rm := match( RANGE_PATTERN, right ):
-				left_range, range_op, right_range = rm.groups()
+			elif match( DATE_YEAR_MONTH_DAY_PATTERN, right ) and RESOLVER_TYPES.get( left ) is datetime:
+				normalized_rule = f'{left} >= d"{parse_floor_str( right )}" and {left} <= d"{parse_ceil_str( right )}"'
 
-				right_range = maxsize if right_range is None and match( NUMBER_PATTERN, left_range ) else right_range
-				left_range = 0 if left_range is None and match( NUMBER_PATTERN, right_range ) else left_range
+			elif match( RANGE_PATTERN, right ):
+				if RESOLVER_TYPES.get( left ) is datetime:
+					range_from, range_to = parse_date_range_as_str( right )
+					normalized_rule = f'{left} >= d"{range_from}" and {left} <= d"{range_to}"'
+				else:
+					range_from, range_to = parse_number_range( right )
+					normalized_rule = f'{left} >= {range_from} and {left} <= {range_to}'
 
-				normalized_rule = f'{left} >= {left_range} and {left} <= {right_range}'
 			else:
 				normalized_rule = f'{left} != null and "{right.lower()}" in {left}.as_lower'
 
 		else:
 			normalized_rule = f'{left} {op} {right}'
 
-	else:
+	if not normalized_rule:
 		raise RuleSyntaxError( f'syntax error in expression "{rule}"' )
 
 	log.debug( f'normalized rule {rule} to {normalized_rule}' )
@@ -230,3 +229,55 @@ def postprocess( rule: DefaultRule ) -> DefaultRule:
 		log.debug( f'postprocessed rule {rule} to {postprocessed_rule}' )
 
 	return postprocessed_rule
+
+# helper
+
+def parse_number_range( s: str ) -> Tuple[str, str]:
+	left, right = s.split( '..', maxsplit=1 )
+	try:
+		range_from = Decimal( left )
+	except( TypeError, InvalidOperation ):
+		range_from = Decimal( ~maxsize )
+
+	try:
+		range_to = Decimal( right )
+	except( TypeError, InvalidOperation ):
+		range_to = Decimal( maxsize )
+
+	return str( range_from ), str( range_to )
+
+def parse_date_range_as_str( r: str ) -> Tuple[str, str]:
+	range_from, range_to = parse_date_range( r )
+	return range_from.strftime( '%Y-%m-%d' ), range_to.strftime( '%Y-%m-%d' )
+
+def parse_date_range( r: str ) -> Tuple[datetime, datetime]:
+	left, right = r.split( '..', maxsplit=1 )
+	return parse_floor( left ), parse_ceil( right )
+
+def parse_floor_str( s: str ) -> str:
+	return parse_floor( s ).strftime( '%Y-%m-%d' )
+
+def parse_floor( s: str ) -> datetime:
+	if match( DATE_YEAR_PATTERN, s ):
+		dt = getarrow( s ).floor( 'year' ).datetime
+	elif match( DATE_YEAR_MONTH_PATTERN, s ):
+		dt = getarrow( s ).floor( 'month' ).datetime
+	elif match( DATE_YEAR_MONTH_DAY_PATTERN, s ):
+		dt = getarrow( s ).floor( 'day' ).datetime
+	else:
+		dt = datetime.min
+	return dt
+
+def parse_ceil_str( s: str ) -> str:
+	return parse_ceil( s ).strftime( '%Y-%m-%d' )
+
+def parse_ceil( s: str ) -> datetime:
+	if match( DATE_YEAR_PATTERN, s ):
+		dt = getarrow( s ).ceil( 'year' ).datetime
+	elif match( DATE_YEAR_MONTH_PATTERN, s ):
+		dt = getarrow( s ).ceil( 'month' ).datetime
+	elif match( DATE_YEAR_MONTH_DAY_PATTERN, s ):
+		dt = getarrow( s ).ceil( 'day' ).datetime
+	else:
+		dt = datetime.max
+	return dt
