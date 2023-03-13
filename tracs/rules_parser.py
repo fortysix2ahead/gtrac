@@ -16,6 +16,7 @@ from typing import Tuple
 from typing import Type
 
 from arrow import get as getarrow
+from dateutil.tz import UTC
 from rule_engine import Context
 from rule_engine import resolve_attribute
 from rule_engine import Rule as DefaultRule
@@ -259,25 +260,25 @@ def parse_floor_str( s: str ) -> str:
 
 def parse_floor( s: str ) -> datetime:
 	if match( DATE_YEAR_PATTERN, s ):
-		dt = getarrow( s ).floor( 'year' ).datetime
+		dt = getarrow( s ).floor( 'year' )
 	elif match( DATE_YEAR_MONTH_PATTERN, s ):
-		dt = getarrow( s ).floor( 'month' ).datetime
+		dt = getarrow( s ).floor( 'month' )
 	elif match( DATE_YEAR_MONTH_DAY_PATTERN, s ):
-		dt = getarrow( s ).floor( 'day' ).datetime
+		dt = getarrow( s ).floor( 'day' )
 	else:
-		dt = datetime.min
-	return dt
+		dt = getarrow( 1, 1, 1 )
+	return dt.datetime.astimezone( UTC )
 
 def parse_ceil_str( s: str ) -> str:
 	return parse_ceil( s ).strftime( '%Y-%m-%d' )
 
 def parse_ceil( s: str ) -> datetime:
 	if match( DATE_YEAR_PATTERN, s ):
-		dt = getarrow( s ).ceil( 'year' ).datetime
+		dt = getarrow( s ).ceil( 'year' )
 	elif match( DATE_YEAR_MONTH_PATTERN, s ):
-		dt = getarrow( s ).ceil( 'month' ).datetime
+		dt = getarrow( s ).ceil( 'month' )
 	elif match( DATE_YEAR_MONTH_DAY_PATTERN, s ):
-		dt = getarrow( s ).ceil( 'day' ).datetime
+		dt = getarrow( s ).ceil( 'day' )
 	else:
-		dt = datetime.max
-	return dt
+		dt = getarrow( 9999, 12, 31 )
+	return dt.datetime.astimezone( UTC )
