@@ -2,6 +2,7 @@
 from datetime import date
 from datetime import datetime
 from datetime import time
+from datetime import timedelta
 from datetime import timezone
 from typing import List
 from urllib.parse import urlparse
@@ -85,6 +86,11 @@ def test_toisoformat():
 	assert toisoformat( time( 10, 20, 30 ) ) == '10:20:30'
 	assert toisoformat( '2020-02-01T10:20:30+00:00' ) == '2020-02-01T10:20:30+00:00'
 	assert toisoformat( 'invalid' ) == 'invalid'
+
+	assert toisoformat( timedelta( seconds=32 ) ) == '00:00:32'
+	assert toisoformat( timedelta( hours=17, minutes=8, seconds=32 ) ) == '17:08:32'
+	assert toisoformat( timedelta( days=1, hours=2, minutes=8, seconds=32 ) ) == '01:02:08:32'
+	assert toisoformat( timedelta( hours=26, minutes=8, seconds=32 ) ) == '01:02:08:32'
 
 def test_as_time():
 	ts = 946684800 # new year 2000 UTC

@@ -178,6 +178,11 @@ def fromisoformat( value ) -> Optional[datetime] or Optional[time]:
 def toisoformat( value ) -> Optional[str]:
 	if type( value ) in [time, datetime]:
 		return value.isoformat()
+	elif type( value ) is timedelta:
+		if value.days > 0:
+			return (datetime.min + value - timedelta( days=1 )).strftime( '%d:%H:%M:%S' ) # hmpf ...
+		else:
+			return (datetime.min + value).strftime( '%H:%M:%S' )
 	return value # todo: or return None?
 
 def serialize( value ) -> Optional[str]:
