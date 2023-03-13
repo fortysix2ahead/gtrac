@@ -102,6 +102,10 @@ class Activity:
 	other_parts: InitVar = field( default=None )
 	force: InitVar = field( default=False )
 
+	@classmethod
+	def fieldnames( cls ) -> List[str]:
+		return [f.name for f in fields( Activity )]
+
 	@property
 	def parent( self ) -> Optional[Activity]:
 		return None
