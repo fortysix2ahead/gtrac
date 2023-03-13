@@ -6,7 +6,6 @@ from dataclasses import field
 from dataclasses import InitVar
 from datetime import datetime
 from datetime import timezone
-from importlib.resources import path as resource_path
 from itertools import chain
 from logging import getLogger
 from pathlib import Path
@@ -67,24 +66,19 @@ METADATA_NAME = 'metadata.json'
 RESOURCES_NAME = 'resources.json'
 SCHEMA_NAME = 'schema.json'
 
-DB_FILES = [ACTIVITIES_NAME, INDEX_NAME, METADATA_NAME, RESOURCES_NAME, SCHEMA_NAME]
+DB_FILES = {
+	ACTIVITIES_NAME: '{}',
+	INDEX_NAME: '{}',
+	METADATA_NAME: '{}',
+	RESOURCES_NAME: '{}',
+	SCHEMA_NAME: '{"version": 12}'
+}
 
 @dataclass
 class Schema:
 
 	version: int = field( default_factory=dict )
 	# unknown: Dict = field( default_factory=dict )
-
-@dataclass
-class ActivityDatabase:
-
-	tables: Dict[str, Dict[int, Activity]] = field( default_factory=list )
-
-	def activities( self ) -> Dict[int, Activity]:
-		return self.tables.get( '_default' )
-
-	def all_activities( self ) -> List[Activity]:
-		return list( self.activities().values() )
 
 @dataclass
 class ActivityIndex:
@@ -153,8 +147,6 @@ class ActivityDb:
 
 		self._db_path = path
 		self._read_only = read_only
-		with resource_path( __package__, '__init__.py' ) as pkg_path:
-			self._db_resource_path = Path( pkg_path.parent, 'resources', 'db' )
 
 		# setup db file system
 		self._setup_db_filesystem()
@@ -172,12 +164,11 @@ class ActivityDb:
 		# self._index = DbIndex( self._activities, self._resources )
 
 	def _setup_db_filesystem( self ):
+		self.pkgfs = MemoryFS()
+		for filename, contents in DB_FILES.items():
+			self.pkgfs.writetext( f'/{filename}', contents )
+
 		self.dbfs = MultiFS()
-
-		# use resources from internal package
-		self.dbfs.add_fs( 'pkg', OSFS( root_path=str(self._db_resource_path) ), write=False )
-		self.pkgfs = self.dbfs.get_fs( 'pkg' )
-
 		# operating system FS
 		if self._db_path:
 			self._db_path.mkdir( parents=True, exist_ok=True )
