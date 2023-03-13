@@ -209,9 +209,13 @@ class ActivityDb:
 
 		json = loads( self.memfs.readbytes( RESOURCES_NAME ) )
 		self._resources = self._factory.load( json, Dict[int, Resource] )
+		for id, resource in self._resources.items():
+			resource.id = id
 
 		json = loads( self.memfs.readbytes( ACTIVITIES_NAME ) )
 		self._activities = self._factory.load( json, Dict[int, Activity] )
+		for id, activity in self._activities.items():
+			activity.id = id
 
 	# close db: persist changes to disk (if there are changes)
 

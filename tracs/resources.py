@@ -102,6 +102,8 @@ class ResourceType:
 @dataclass
 class Resource:
 
+	id: int = field( default=0 )
+
 	name: Optional[str] = field( default=None )
 	type: str = field( default=None )
 	path: str = field( default=None )
