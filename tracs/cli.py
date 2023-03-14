@@ -213,6 +213,7 @@ def edit( identifier ):
 @pass_obj
 def rename( ctx: ApplicationContext, filters: str ):
 	rename_activities( list( ctx.db.find( filters ) ), ctx, ctx.force, ctx.pretend )
+	ctx.db.commit()
 
 @cli.command( help='reimports activities' )
 @option( '-o', '--offset', is_flag=False, required=False, help='offset for correcting value for time' )

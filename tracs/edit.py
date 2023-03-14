@@ -51,7 +51,6 @@ def rename_activities( activities: [Activity], ctx: ApplicationContext, force: b
 				open_activities( [a], ctx.db )
 			else:
 				a.name = answer
-				ctx.db.update( a )
 				log.debug( f'renamed activity {a.id} to {answer}' )
 				break
 
