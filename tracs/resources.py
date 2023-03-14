@@ -119,11 +119,17 @@ class Resource:
 
 	resources: List[Resource] = field( default_factory=list, repr=False )
 
+	__parent_activity__: List = field( default_factory=list, repr=False )
+
 	def __post_init__( self, text: str ):
 		self.content = text.encode( encoding='UTF-8' ) if text else self.content
 
 	def __hash__( self ):
 		return hash( (self.uid, self.path) )
+
+	@property
+	def parent_activity( self ) -> Any: # todo: would be nice to return Activity here ...
+		return self.__parent_activity__
 
 	@property
 	def classifier( self ) -> str:

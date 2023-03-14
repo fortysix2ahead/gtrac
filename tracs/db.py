@@ -168,6 +168,9 @@ class ActivityDb:
 		# load content from disk
 		self._load_db()
 
+		# experimental: setup relations between resources and activities
+		self._relate()
+
 		# index
 		# self._index = DbIndex( self._activities, self._resources )
 
@@ -247,6 +250,12 @@ class ActivityDb:
 		for id, activity in self._activities.items():
 			activity.id = id
 
+	def _relate( self ):
+		for r in self.resources:
+			a = self.get_by_uid( r.uid )
+			a.__resources__.append( r )
+			r.__parent_activity__ = a
+
 	def commit( self ):
 		self.commit_resources()
 		self.commit_activities()
@@ -287,28 +296,14 @@ class ActivityDb:
 		return self.dbfs.get_fs( OVERLAY )
 
 	@property
-	def db( self ) -> TinyDB:
-		return self._db
-
-	@property
-	def index( self ) -> DbIndex:
-		return self._index
-
-	@property
-	def resources_db( self ) -> TinyDB:
-		return self._resources_db
-
-	@property
-	def metadata_db( self ) -> TinyDB:
-		return self._metadata_db
-
-	@property
 	def schema( self ) -> Schema:
 		return self._schema
 
 	@property
 	def metadata( self ) -> Table:
 		return self._metadata
+
+	# path properties
 
 	@property
 	def path( self ) -> Path:
@@ -334,6 +329,8 @@ class ActivityDb:
 	def schema_path( self ) -> Path:
 		return self._schema_path
 
+	# properties for content access
+
 	@property
 	def activity_map( self ) -> Dict[int, Activity]:
 		return self._activities
@@ -347,8 +344,16 @@ class ActivityDb:
 		return sorted( list( self._activities.keys() ) )
 
 	@property
-	def resources( self ) -> Dict[int, Resource]:
+	def resource_map( self ) -> Dict[int, Resource]:
 		return self._resources
+
+	@property
+	def resources( self ) -> List[Resource]:
+		return list( self._resources.values() )
+
+	@property
+	def resource_keys( self ) -> List[int]:
+		return sorted( list( self._resources.keys() ) )
 
 	# ---- DB Operations --------------------------------------------------------
 
@@ -433,13 +438,16 @@ class ActivityDb:
 		return None
 
 	def get_by_id( self, id: int ) -> Optional[Activity]:
-		return self.activities.get( doc_id=id )
+		"""
+		Returns the activity with the provided id.
+		"""
+		return self.activity_map.get( id )
 
 	def get_by_uid( self, uid: str, include_resources: bool = False ) -> Optional[Activity]:
-		activity = cast( Activity, next( a for a in self.activities.all() if uid_filter( uid )( a ) ) )
-		if activity and include_resources:
-			activity.resources = self.get_resources_by_uid( uid )
-		return activity
+		"""
+		Returns the activity with the provided uid contained in its uids list.
+		"""
+		return next( (a for a in self.activities if uid in a.uids), None )
 
 	def get_resource( self, id: int ) -> Optional[Resource]:
 		return self.resources.get( id )

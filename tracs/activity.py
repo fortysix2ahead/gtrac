@@ -22,19 +22,18 @@ from tzlocal import get_localzone_name
 from .activity_types import ActivityTypes
 from .resources import Resource
 from .resources import ResourceGroup
-from .utils import fromisoformat
 from .utils import sum_times
 
 log = getLogger( __name__ )
 
 @dataclass
-class VirtualFields:
+class Fields:
 
 	__resolvers__: ClassVar[Dict[str, Callable]] = field( default={} )
 
 	def __getattribute__( self, name: str ) -> Any:
-		if name in VirtualFields.__resolvers__.keys():
-			return VirtualFields.__resolvers__[name]()
+		if name in Fields.__resolvers__.keys():
+			return Fields.__resolvers__[name]()
 		else:
 			return super().__getattribute__( name )
 
@@ -91,7 +90,7 @@ class Activity:
 	heartrate_min: Optional[int] = field( default=None ) #
 	calories: Optional[int] = field( default=None ) #
 
-	resources: List[Resource] = field( init=True, default_factory=list )
+	# resources: List[Resource] = field( init=True, default_factory=list )
 	parts: List = field( init=True, default_factory=list )
 
 	others: InitVar = field( default=None )
@@ -102,9 +101,12 @@ class Activity:
 	__metadata__: Dict[str, Any] = field( init=False, default_factory=dict )
 	__parts__: List[Activity] = field( init=False, default_factory=list, repr=False )
 	__resources__: List[Resource] = field( init=False, default_factory=list, repr=False )
+	__parent__: Activity = field( init=False, default=0 )
 	__parent_id__: int = field( init=False, default=0 )
 
-	__vf__: VirtualFields = field( init=False, default=VirtualFields(), hash=False, compare=False )
+	__vf__: Fields = field( init=False, default=Fields(), hash=False, compare=False )
+
+	# class methods
 
 	@classmethod
 	def fields( cls ) -> List[Field]:
@@ -114,21 +116,36 @@ class Activity:
 	def fieldnames( cls ) -> List[str]:
 		return [f.name for f in fields( Activity )]
 
-	@property
-	def parent( self ) -> Optional[Activity]:
-		return None
+	# additional properties
 
 	@property
-	def parent_ref( self ) -> int:
-		return 0
+	def vf( self ) -> Fields:
+		return self.__vf__
+
+	@property
+	def resources( self ) -> List[Resource]:
+		return self.__resources__
+
+	@property
+	def parent( self ) -> Optional[Activity]:
+		return self.__parent__
+
+	@property
+	def parent_id( self ) -> int:
+		return self.__parent_id__
 
 	@property
 	def is_multipart( self ) -> bool:
-		return False
+		return True if len( self.parts ) > 0 else False
 
-	@property
-	def abbreviated_type( self ) -> str:
-		return self.type.abbreviation if self.type else ':question_mark:'
+	# additional methods
+
+	def append_resource( self, resource: Resource ) -> None:
+		self.__resources__.append( resource )
+		resource.__parent_activity__ = self
+
+	def resources_for( self, classifier: str ) -> List[Resource]:
+		return [r for r in self.resources if r.uid.startswith( f'{classifier}:' )]
 
 	def __post_init__( self, others: List[Activity], other_parts: List[Activity], force: bool ):
 		if self.raw:
@@ -137,17 +154,6 @@ class Activity:
 			self.__init_from_others__( others, force )
 		elif other_parts:
 			self.__init_from_parts__( other_parts, force )
-
-	def __unserialize__( self, f: Optional[Field], k: str, v: Any ) -> Any:
-		k = f.name if f else k
-		if k == 'type':
-			return v if isinstance( v, ActivityTypes ) else ActivityTypes.get( v )
-		elif k in [ 'time', 'time_end', 'localtime', 'localtime_end' ]:
-			return fromisoformat( v )
-		elif k in [ 'duration', 'duration_moving' ]:
-			return fromisoformat( v )
-		else:
-			return v
 
 	def __raw_init__( self, raw: Any ) -> None:
 		"""
@@ -234,20 +240,3 @@ class Activity:
 
 	def resource_group( self ) -> ResourceGroup:
 		return ResourceGroup( resources=self.resources )
-
-@dataclass
-class MultipartActivity( Activity ):
-
-	parts: List[Activity] = field( default_factory=list, metadata={ 'persist_as': '_parts' } )
-
-#	@property
-#	def parts( self ) -> Mapping:
-#		return self._access_map( KEY_PARTS )
-
-	@property
-	def part_for( self ) -> List[int]:
-		return self.parts.get( 'ids', [] )
-
-	@property
-	def part_of( self ) -> Optional[int]:
-		return self.parts.get( 'parent', None )
