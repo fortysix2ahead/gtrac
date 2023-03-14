@@ -59,13 +59,9 @@ def tag_activities( activities: List[Activity], tags: List[str], force: bool = F
 	for a in activities:
 		a.tags = sorted( list( set( a.tags ).union( set( tags ) ) ) )
 
-def untag_activities( activities: List[Activity], tags: Tuple[str], force: bool = False, pretend: bool = False, ctx: ApplicationContext = None ) -> None:
+def untag_activities( activities: List[Activity], tags: List[str], force: bool = False, pretend: bool = False, ctx: ApplicationContext = None ) -> None:
 	for a in activities:
-		if tags:
-			for t in tags:
-				a.tags.remove( t )
-			a.tags = sorted( list( set( a.tags ) ) )
-			ctx.db.update( a )
+		a.tags = [t for t in a.tags if t not in tags]
 
 def equip_activities( activities: List[Activity], equipments: List[str], force: bool = False, pretend: bool = False, ctx: ApplicationContext = None ) -> None:
 	for a in activities:
