@@ -281,11 +281,13 @@ def equip( ctx: ApplicationContext, filters, equipments ):
 	ctx.db.commit()
 
 @cli.command( help='Removes equipment from activities' )
-@option( '-e', '--equipment', is_flag=False, required=True, multiple=True, help='equipment to remove from an activity' )
+@option( '-e', '--equipment', 'equipments', is_flag=False, required=True, multiple=True, help='equipment to remove from an activity' )
 @argument( 'filters', nargs=-1 )
 @pass_obj
-def unequip( ctx: ApplicationContext, filters, equipment ):
-	unequip_activities( list( ctx.db.find( filters ) ), equipment=equipment, ctx=ctx )
+def unequip( ctx: ApplicationContext, filters, equipments ):
+	equipments = list( set( chain( *[ e.split( ',' ) for e in equipments ] ) ) )
+	unequip_activities( list( ctx.db.find( filters ) ), equipments=equipments, ctx=ctx )
+	ctx.db.commit()
 
 @cli.command( help='application setup' )
 @argument( 'services', nargs=-1 )
