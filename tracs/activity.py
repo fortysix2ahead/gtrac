@@ -54,7 +54,7 @@ class Activity:
 	local_id: int = field( default=None )  # same as raw_id
 
 	name: Optional[str] = field( default=None ) # activity name
-	type: ActivityTypes = field( default=None ) # activity type
+	type: Optional[ActivityTypes] = field( default=None ) # activity type
 	description: str = field( default=None ) # description
 	tags: List[str] = field( default_factory=list ) # list of tags
 	equipment: List[str] = field( default_factory=list ) # list of equipment tags
@@ -70,25 +70,25 @@ class Activity:
 	route: str = field( default=None ) #
 
 	time: datetime = field( default=None ) # activity time (UTC)
-	time_end: datetime = field( default=None ) # activity end time (UTC)
+	time_end: Optional[datetime] = field( default=None ) # activity end time (UTC)
 	localtime: datetime = field( default=None ) # activity time (local)
-	localtime_end: datetime = field( default=None ) # activity end time (local)
+	localtime_end: Optional[datetime] = field( default=None ) # activity end time (local)
 	timezone: str = field( default=get_localzone_name() ) # timezone of the activity, local timezone by default
-	duration: time = field( default=None ) #
-	duration_moving: time = field( default=None ) #
+	duration: Optional[time] = field( default=None ) #
+	duration_moving: Optional[time] = field( default=None ) #
 
-	distance: float = field( default=None ) #
-	ascent: float = field( default=None ) #
-	descent: float = field( default=None ) #
-	elevation_max: float = field( default=None ) #
-	elevation_min: float = field( default=None ) #
-	speed: float = field( default=None ) #
-	speed_max: float = field( default=None ) #
+	distance: Optional[float] = field( default=None ) #
+	ascent: Optional[float] = field( default=None ) #
+	descent: Optional[float] = field( default=None ) #
+	elevation_max: Optional[float] = field( default=None ) #
+	elevation_min: Optional[float] = field( default=None ) #
+	speed: Optional[float] = field( default=None ) #
+	speed_max: Optional[float] = field( default=None ) #
 
-	heartrate: Optional[float] = field( default=None ) #
-	heartrate_max: float = field( default=None ) #
-	heartrate_min: float = field( default=None ) #
-	calories: float = field( default=None ) #
+	heartrate: Optional[int] = field( default=None ) #
+	heartrate_max: Optional[int] = field( default=None ) #
+	heartrate_min: Optional[int] = field( default=None ) #
+	calories: Optional[int] = field( default=None ) #
 
 	__metadata__: Dict[str, Any] = field( init=False, default_factory=dict )
 	resources: List[Resource] = field( init=True, default_factory=list )

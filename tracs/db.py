@@ -10,6 +10,7 @@ from itertools import chain
 from logging import getLogger
 from pathlib import Path
 from shutil import copy
+from sys import exit as sysexit
 from typing import Any
 from typing import cast
 from typing import Dict
@@ -22,12 +23,18 @@ from typing import Union
 from click import confirm
 from dataclass_factory import Factory
 from dataclass_factory import Schema as FactorySchema
+from fs.base import FS
 from fs.copy import copy_file
 from fs.copy import copy_file_if
+from fs.errors import CreateFailed
 from fs.memoryfs import MemoryFS
 from fs.multifs import MultiFS
 from fs.osfs import OSFS
+from orjson import dumps
 from orjson import loads
+from orjson import OPT_APPEND_NEWLINE
+from orjson import OPT_INDENT_2
+from orjson import OPT_SORT_KEYS
 from rich import box
 from rich.pretty import pretty_repr as pp
 from rich.table import Table as RichTable
@@ -59,6 +66,8 @@ from .rules_parser import parse_rules
 
 log = getLogger( __name__ )
 
+ORJSON_OPTIONS = OPT_APPEND_NEWLINE | OPT_INDENT_2 | OPT_SORT_KEYS
+
 ACTIVITIES_NAME = 'activities.json'
 INDEX_NAME = 'index.json'
 METADATA_NAME = 'metadata.json'
@@ -72,6 +81,9 @@ DB_FILES = {
 	RESOURCES_NAME: '{}',
 	SCHEMA_NAME: '{"version": 12}'
 }
+
+UNDERLAY = 'underlay'
+OVERLAY = 'overlay'
 
 @dataclass
 class Schema:
@@ -147,14 +159,11 @@ class ActivityDb:
 		self._db_path = path
 		self._read_only = read_only
 
-		# setup db file system
-		self._setup_db_filesystem()
+		# initialize db file system(s)
+		self._init_db_filesystem()
 
 		# initialize db factory
 		self._init_db_factory()
-
-		# initialize file systems
-		self._init_db_filesystem()
 
 		# load content from disk
 		self._load_db()
@@ -162,75 +171,120 @@ class ActivityDb:
 		# index
 		# self._index = DbIndex( self._activities, self._resources )
 
-	def _setup_db_filesystem( self ):
-		self.pkgfs = MemoryFS()
-		for filename, contents in DB_FILES.items():
-			self.pkgfs.writetext( f'/{filename}', contents )
-
-		self.dbfs = MultiFS()
-		# operating system FS
-		if self._db_path:
-			self._db_path.mkdir( parents=True, exist_ok=True )
-			self.dbfs.add_fs( 'os', OSFS( root_path=str( self._db_path ) ), write=False )
-			self.osfs = self.dbfs.get_fs( 'os' )
-		else:
-			self.osfs = None
-
-		# memory FS as top layer
-		self.dbfs.add_fs( 'mem', MemoryFS(), write=True )
-		self.memfs = self.dbfs.get_fs( 'mem' )
-
 	def _init_db_filesystem( self ):
-		for f in DB_FILES:
-			if self.osfs:
-				if not self._read_only:
-					copy_file_if( self.pkgfs, f'/{f}', self.osfs, f'/{f}', 'not_exists', preserve_time=True )
-				copy_file( self.osfs, f'/{f}', self.memfs, f'/{f}', preserve_time=True )
+		self.dbfs = MultiFS() # multi fs composed of os/memory + memory
+
+		# operating system fs as underlay (resp. memory when no path is provided)
+		if self._db_path:
+			if self._read_only:
+				self._init_readonly_filesystem( self.dbfs, self._db_path )
 			else:
-				copy_file( self.pkgfs, f'/{f}', self.memfs, f'/{f}', preserve_time=True )
+				self._init_filesystem( self.dbfs, self._db_path )
+
+		else:
+			self._init_inmemory_filesystem( self.dbfs )
+
+	def _init_filesystem( self, dbfs: MultiFS, os_path: Path ):
+		self._db_path.mkdir( parents=True, exist_ok=True )
+		self.osfs = OSFS( root_path=str( self._db_path ) )
+		dbfs.add_fs( UNDERLAY, OSFS( root_path=str( self._db_path ) ), write=False )
+		dbfs.add_fs( OVERLAY, MemoryFS(), write=True )
+
+		for file, content in DB_FILES.items():
+			if not self.underlay_fs.exists( f'/{file}' ):
+				self.underlay_fs.writetext( f'/{file}', content )
+			# copy_file_if( self.pkgfs, f'/{f}', self.underlay_fs, f'/{f}', 'not_exists', preserve_time=True )
+
+		# todo: this is probably not needed?
+		for f in DB_FILES.keys():
+			copy_file( self.underlay_fs, f'/{f}', self.overlay_fs, f'/{f}', preserve_time=True )
+
+	def _init_readonly_filesystem( self, dbfs: MultiFS, os_path: Path ):
+		if not os_path.exists():
+			log.error( f'error opening db from {self._db_path} in read-only mode: path does not exist' )
+			sysexit( -1 )
+
+		self.osfs = OSFS( root_path=str( self._db_path ) )
+		dbfs.add_fs( UNDERLAY, MemoryFS(), write=False )
+		dbfs.add_fs( OVERLAY, MemoryFS(), write=True )
+
+		for f in DB_FILES.keys():
+			copy_file( self.osfs, f'/{f}', self.underlay_fs, f'/{f}', preserve_time=True )
+
+	# for development only ...
+	def _init_inmemory_filesystem( self, dbfs: MultiFS ):
+		dbfs.add_fs( UNDERLAY, MemoryFS(), write=False )
+		dbfs.add_fs( OVERLAY, MemoryFS(), write=True )
+
+		for file, content in DB_FILES.items():
+			self.underlay_fs.writetext( f'/{file}', content )
 
 	def _init_db_factory( self ):
 		self._factory = Factory(
 			debug_path=True,
 			schemas={
-				# name_mapping={}, exclude=['doc_id']
-				Activity: FactorySchema( omit_default=True, skip_internal=True, unknown='unknown' ),
+				# name_mapping={}
+				Activity: FactorySchema( exclude=['id'], omit_default=True, skip_internal=True, unknown='unknown' ),
 				ActivityTypes: FactorySchema( parser=ActivityTypes.from_str, serializer=ActivityTypes.to_str ),
-				Resource: FactorySchema( omit_default=True, skip_internal=True, unknown='unknown' ),
-				Schema: FactorySchema( skip_internal=False ),
+				Resource: FactorySchema( exclude=['id'], omit_default=True, skip_internal=True, unknown='unknown' ),
+				Schema: FactorySchema( skip_internal=True ),
 				# tiny db compatibility:
 				# Schema: FactorySchema( name_mapping={ 'version': ( '_default', '1', 'version' ) }, skip_internal=False, unknown='unknown' ),
 			}
 		)
 
 	def _load_db( self ):
-		json = loads( self.memfs.readbytes( SCHEMA_NAME ) )
+		json = loads( self.overlay_fs.readbytes( SCHEMA_NAME ) )
 		self._schema = self._factory.load( json, Schema )
 
-		json = loads( self.memfs.readbytes( RESOURCES_NAME ) )
+		json = loads( self.overlay_fs.readbytes( RESOURCES_NAME ) )
 		self._resources = self._factory.load( json, Dict[int, Resource] )
 		for id, resource in self._resources.items():
 			resource.id = id
 
-		json = loads( self.memfs.readbytes( ACTIVITIES_NAME ) )
+		json = loads( self.overlay_fs.readbytes( ACTIVITIES_NAME ) )
 		self._activities = self._factory.load( json, Dict[int, Activity] )
 		for id, activity in self._activities.items():
 			activity.id = id
 
-	# close db: persist changes to disk (if there are changes)
+	def commit( self ):
+		self.commit_resources()
+		self.commit_activities()
 
-	# json flags: options = OPT_APPEND_NEWLINE | OPT_INDENT_2 | OPT_SORT_KEYS
+	def commit_activities( self ):
+		json = self._keys_to_str( self._factory.dump( self._activities, Dict[int, Activity] ) )
+		self.overlay_fs.writebytes( f'/{ACTIVITIES_NAME}', dumps( json, option=ORJSON_OPTIONS ) )
+
+	def commit_resources( self ):
+		json = self._keys_to_str( self._factory.dump( self._resources, Dict[int, Resource] ) )
+		self.overlay_fs.writebytes( f'/{RESOURCES_NAME}', dumps( json, option=ORJSON_OPTIONS ) )
+
+	# replace int keys with strings ... :-( todo: how to get around this?
+	# noinspection PyMethodMayBeStatic
+	def _keys_to_str( self, mapping: Dict ) -> Dict:
+		for key in [ k for k in mapping.keys() ]:
+			mapping[str( key )] = mapping.pop( key )
+		return mapping
 
 	def save( self ):
-		if self._read_only or self.osfs is None:
+		if self._read_only or self.underlay_fs is None:
 			return
 		for f in DB_FILES:
-			copy_file_if( self.memfs, f'/{f}', self.osfs, f'/{f}', 'newer' )
+			copy_file_if( self.overlay_fs, f'/{f}', self.underlay_fs, f'/{f}', 'newer' )
 
 	def close( self ):
+		# self.commit() # todo: really do auto-commit here?
 		self.save()
 
 	# ---- DB Properties --------------------------------------------------------
+
+	@property
+	def underlay_fs( self ) -> FS:
+		return self.dbfs.get_fs( UNDERLAY )
+
+	@property
+	def overlay_fs( self ) -> FS:
+		return self.dbfs.get_fs( OVERLAY )
 
 	@property
 	def db( self ) -> TinyDB:
