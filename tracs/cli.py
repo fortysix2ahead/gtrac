@@ -272,11 +272,13 @@ def untag( ctx: ApplicationContext, filters, tag ):
 	untag_activities( list( ctx.db.find( filters ) ), tags=tag, ctx=ctx )
 
 @cli.command( help='Add equipment to an activity' )
-@option( '-e', '--equipment', is_flag=False, required=True, multiple=True, help='equipment to add to an activity' )
+@option( '-e', '--equipment', 'equipments', is_flag=False, required=True, multiple=True, help='equipment to add to an activity' )
 @argument( 'filters', nargs=-1 )
 @pass_obj
-def equip( ctx: ApplicationContext, filters, equipment ):
-	equip_activities( list( ctx.db.find( filters ) ), equipment=equipment, ctx=ctx )
+def equip( ctx: ApplicationContext, filters, equipments ):
+	equipments = list( set( chain( *[ e.split( ',' ) for e in equipments ] ) ) )
+	equip_activities( list( ctx.db.find( filters ) ), equipments=equipments, ctx=ctx )
+	ctx.db.commit()
 
 @cli.command( help='Removes equipment from activities' )
 @option( '-e', '--equipment', is_flag=False, required=True, multiple=True, help='equipment to remove from an activity' )
