@@ -55,12 +55,9 @@ def rename_activities( activities: [Activity], ctx: ApplicationContext, force: b
 				log.debug( f'renamed activity {a.id} to {answer}' )
 				break
 
-def tag_activities( activities: List[Activity], tags: Tuple[str], force: bool = False, pretend: bool = False, ctx: ApplicationContext = None ) -> None:
+def tag_activities( activities: List[Activity], tags: List[str], force: bool = False, pretend: bool = False, ctx: ApplicationContext = None ) -> None:
 	for a in activities:
-		if tags:
-			a.tags.extend( tags )
-			a.tags = sorted( list( set( a.tags ) ) )
-			ctx.db.update( a )
+		a.tags = sorted( list( set( a.tags ).union( set( tags ) ) ) )
 
 def untag_activities( activities: List[Activity], tags: Tuple[str], force: bool = False, pretend: bool = False, ctx: ApplicationContext = None ) -> None:
 	for a in activities:
