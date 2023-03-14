@@ -9,6 +9,7 @@ from dataclasses import InitVar
 from datetime import datetime, time
 from typing import Any
 from typing import Callable
+from typing import ClassVar
 from typing import Dict
 from typing import Union
 
@@ -29,11 +30,11 @@ log = getLogger( __name__ )
 @dataclass
 class VirtualFields:
 
-	resolvers: Dict[str, Callable] = field( default_factory=dict, init=False )
+	__resolvers__: ClassVar[Dict[str, Callable]] = field( default={} )
 
 	def __getattribute__( self, name: str ) -> Any:
-		if name in self.resolvers.keys():
-			return self.resolvers[name]()
+		if name in VirtualFields.__resolvers__.keys():
+			return VirtualFields.__resolvers__[name]()
 		else:
 			return super().__getattribute__( name )
 
@@ -90,17 +91,20 @@ class Activity:
 	heartrate_min: Optional[int] = field( default=None ) #
 	calories: Optional[int] = field( default=None ) #
 
-	__metadata__: Dict[str, Any] = field( init=False, default_factory=dict )
 	resources: List[Resource] = field( init=True, default_factory=list )
 	parts: List = field( init=True, default_factory=list )
-
-	__dirty__: bool = field( init=False, default=False, repr=False )
-	__parent_id__: int = field( init=False, default=0 )
-	# __vf__: VirtualFields = field( init=False, default=VirtualFields(), hash=False, compare=False )
 
 	others: InitVar = field( default=None )
 	other_parts: InitVar = field( default=None )
 	force: InitVar = field( default=False )
+
+	__dirty__: bool = field( init=False, default=False, repr=False )
+	__metadata__: Dict[str, Any] = field( init=False, default_factory=dict )
+	__parts__: List[Activity] = field( init=False, default_factory=list, repr=False )
+	__resources__: List[Resource] = field( init=False, default_factory=list, repr=False )
+	__parent_id__: int = field( init=False, default=0 )
+
+	__vf__: VirtualFields = field( init=False, default=VirtualFields(), hash=False, compare=False )
 
 	@classmethod
 	def fields( cls ) -> List[Field]:
