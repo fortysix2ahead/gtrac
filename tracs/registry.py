@@ -20,6 +20,8 @@ from typing import Type
 from typing import Union
 
 from confuse import NotFoundError
+from dataclass_factory import Factory
+from dataclass_factory import Schema
 
 from tracs.config import ApplicationContext
 from tracs.config import KEY_CLASSIFER
@@ -48,6 +50,7 @@ class Registry:
 	document_types: Dict[str, Type] = {}
 	downloaders = {}
 	event_listeners = {}
+	dataclass_factory = Factory( debug_path=True, schemas={} )
 	fetchers = {}
 	handlers: Dict[str, List[Handler]] = {}
 	importers: Dict[str, List[Importer]] = {}
@@ -281,6 +284,7 @@ def _register( args, kwargs, dictionary, callable_fn = False ) -> Union[Type, Ca
 def resourcetype( *args, **kwargs ):
 	def reg_resource_type( cls ):
 		Registry.register_resource_type( ResourceType( activity_cls = cls, **kwargs ) )
+		Registry.dataclass_factory.schemas[cls] = Schema( omit_default=True, skip_internal=True, unknown='unknown' )
 		return cls
 	return reg_resource_type if len( args ) == 0 else args[0]
 
