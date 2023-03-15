@@ -495,7 +495,7 @@ class ActivityDb:
 		else:
 			return [false_filter()]
 
-	# ----
+	# several find methods to make life easier
 
 	def find( self, filters: Union[List[str], List[Filter], str, Filter] = None ) -> [Activity]:
 		all_activities = self.activities
@@ -532,6 +532,12 @@ class ActivityDb:
 			return [ r for r in self.resources.values() if r.uid == uid and r.path == path ]
 		else:
 			return [ r for r in self.resources.values() if r.uid == uid ]
+
+	def find_resources_of_type( self, activity_type: str, activity: Activity = None ) -> List[Resource]:
+		if activity:
+			return [r for r in self.resources if r.type == activity_type and r.uid in activity.uids ]
+		else:
+			return [r for r in self.resources if r.type == activity_type ]
 
 	def find_all_resources( self, uids: List[str] ) -> List[Resource]:
 		return [r for r in self.resources.values() if r.uid in uids]
