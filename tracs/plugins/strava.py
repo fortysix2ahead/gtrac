@@ -141,15 +141,15 @@ class StravaActivity:
 	external_id: str = field( default=None )
 	flagged: bool = field( default=None )
 	from_accepted_tag: bool = field( default=None )
-	gear_id: str = field( default=None )
+	gear_id: Optional[str] = field( default=None )
 	has_heartrate: bool = field( default=None )
 	has_kudoed: bool = field( default=None )
 	heartrate_opt_out: bool = field( default=None )
 	id: int = field( default=None )
 	kudos_count: int = field( default=None )
-	location_city: str = field( default=None )
-	location_country: str = field( default=None )
-	location_state: str = field( default=None )
+	location_city: Optional[str] = field( default=None )
+	location_country: Optional[str] = field( default=None )
+	location_state: Optional[str] = field( default=None )
 	manual: bool = field( default=None )
 	map: Dict = field( default_factory=dict )
 	max_heartrate: float = field( default=None )
@@ -173,7 +173,7 @@ class StravaActivity:
 	upload_id_str: str = field( default=None )
 	utc_offset: float = field( default=None )
 	visibility: str = field( default=None )
-	workout_type: int = field( default=None )
+	workout_type: Optional[int] = field( default=None )
 
 	@property
 	def local_id( self ) -> int:
