@@ -15,6 +15,7 @@ from typing import List
 from typing import Tuple
 from typing import Type
 
+from arrow import Arrow
 from arrow import get as getarrow
 from arrow import utcnow as now
 from dateutil.tz import UTC
@@ -59,11 +60,14 @@ RULES: Dict[str, Type[Rule]] = {
 # this enables operations like 'list thisyear'
 KEYWORDS: Dict[str, Callable] = {
 	# date related keywords
-	# thisweek, lastweek, today, yesterday
-	'lastmonth': lambda s: f'month == {now().shift( months=-1 ).month} and year == {now().year}',
-	'thismonth': lambda s: f'month == {now().month} and year == {now().year}',
-	'lastyear': lambda s: f'year == {now().shift( years=-1 ).year}',
-	'thisyear': lambda s: f'year == {now().year}',
+	'yesterday': lambda s: f'time >= {floor( now().shift( days=-1 ), "day" )} and time <= {ceil( now().shift( days=-1 ), "day" )}',
+	'today': lambda s: f'time >= {floor( now(), "day" )} and time <= {ceil( now(), "day" )}',
+	'lastweek': lambda s: f'time >= {floor( now().shift( weeks=-1 ), "week" )} and time <= {ceil( now().shift( weeks=-1 ), "week" )}',
+	'thisweek': lambda s: f'time >= {floor( now(), "week" )} and time <= {ceil( now(), "week" )}',
+	'lastmonth': lambda s: f'time >= {floor( now().shift( months=-1 ), "month" )} and time <= {ceil( now().shift( months=-1 ), "month" )}',
+	'thismonth': lambda s: f'time >= {floor( now(), "month" )} and time <= {ceil( now(), "month" )}',
+	'lastyear': lambda s: f'time >= {floor( now().shift( years=-1 ), "year" )} and time <= {ceil( now().shift( years=-1 ), "year" )}',
+	'thisyear': lambda s: f'time >= {floor( now(), "year" )} and time <= {ceil( now(), "year" )}',
 	# todo: this needs to be detected automatically
 	'bikecitizens': lambda s: f'"bikecitizens" in __classifiers__',
 	'local': lambda s: f'"local" in __classifiers__',
@@ -287,3 +291,10 @@ def parse_ceil( s: str ) -> datetime:
 	else:
 		dt = getarrow( 9999, 12, 31 )
 	return dt.datetime.astimezone( UTC )
+
+def ceil( a: Arrow, frame: str ) -> str:
+	return f'd"{a.ceil( frame ).isoformat()}"'
+
+def floor( a: Arrow, frame: str ) -> str:
+	return f'd"{a.floor( frame ).isoformat()}"'
+
