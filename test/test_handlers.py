@@ -1,8 +1,10 @@
 
 from datetime import datetime
 
+from gpxpy.gpx import GPX
 from pytest import mark
 
+from tracs.activity import Activity
 from tracs.plugins.gpx import GPX_TYPE
 from tracs.plugins.tcx import TCX_TYPE
 from tracs.registry import Registry
@@ -44,12 +46,12 @@ def test_xml_importer( path ):
 
 @mark.file( 'templates/gpx/mapbox.gpx' )
 def test_gpx_importer( path ):
+	resource = Registry.importer_for( GPX_TYPE ).load( path=path )
+	assert type( resource.raw ) is GPX
+
 	activity = Registry.importer_for( GPX_TYPE ).load_as_activity( path=path )
-	assert type( activity ) is GPXActivity
-	assert activity.time is not None and type( activity.time ) is datetime
-	assert activity.raw_id is not None
-	assert activity.resources[0].path is not None
-	assert activity.resources[0].raw is not None
+	assert type( activity ) is Activity
+	assert activity.time.isoformat() == '2012-10-24T23:29:40+00:00'
 
 @mark.file( 'templates/tcx/sample.tcx' )
 def test_tcx_importer( path ):

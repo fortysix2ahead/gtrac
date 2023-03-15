@@ -1,7 +1,7 @@
 
+from dataclasses import dataclass
+from dataclasses import field
 from logging import getLogger
-from pathlib import Path
-from typing import Any
 from typing import Optional
 
 from dateutil.tz import tzlocal
@@ -10,8 +10,8 @@ from gpxpy import parse as parse_gpx
 from gpxpy.gpx import GPX
 
 from tracs.activity import Activity
+from tracs.registry import resourcetype
 from tracs.resources import Resource
-from tracs.registry import document
 from tracs.registry import importer
 from tracs.handlers import ResourceHandler
 from tracs.utils import seconds_to_time
@@ -20,20 +20,23 @@ log = getLogger( __name__ )
 
 GPX_TYPE = 'application/gpx+xml'
 
-@document( type=GPX_TYPE )
-class GPXActivity( Activity ):
+@resourcetype( type=GPX_TYPE, recording=True )
+@dataclass
+class GPXActivity:
 
-	def __raw_init__( self, raw: Any ) -> None:
-		gpx: GPX = self.raw
-		self.name = gpx.name
-		self.time = gpx.get_time_bounds().start_time.astimezone( UTC )
-		self.time_end = gpx.get_time_bounds().end_time.astimezone( UTC )
-		self.localtime = self.time.astimezone( tzlocal() )
-		self.localtime_end = self.time_end.astimezone( tzlocal() )
-		self.distance = round( gpx.length_2d(), 1 )
-		self.duration = seconds_to_time( gpx.get_duration() ) if gpx.get_duration() else None
-		self.raw_id = int( self.time.strftime( '%y%m%d%H%M%S' ) )
-		# self.uid = f'{self.classifier}:{self.raw_id}'
+	gpx: GPX = field( default=None )
+
+	def as_activity( self ) -> Activity:
+		return Activity(
+			name = self.gpx.name,
+			time = self.gpx.get_time_bounds().start_time.astimezone( UTC ),
+			time_end = self.gpx.get_time_bounds().end_time.astimezone( UTC ),
+			localtime = self.gpx.get_time_bounds().start_time.astimezone( tzlocal() ),
+			localtime_end = self.gpx.get_time_bounds().end_time.astimezone( tzlocal() ),
+			distance = round( self.gpx.length_2d(), 1 ),
+			duration = seconds_to_time( self.gpx.get_duration() ) if self.gpx.get_duration() else None,
+			uid = f'gpx:{self.gpx.get_time_bounds().start_time.astimezone( UTC ).strftime( "%y%m%d%H%M%S" )}',
+		)
 
 @importer( type=GPX_TYPE )
 class GPXImporter( ResourceHandler ):
@@ -43,3 +46,6 @@ class GPXImporter( ResourceHandler ):
 
 	def load_data( self, resource: Resource, **kwargs ) -> None:
 		resource.raw = parse_gpx( resource.content )
+
+	def as_activity( self, resource: Resource ) -> Optional[Activity]:
+		return GPXActivity( gpx=resource.raw ).as_activity()
