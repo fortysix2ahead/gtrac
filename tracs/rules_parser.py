@@ -73,6 +73,8 @@ KEYWORDS: Dict[str, Callable] = {
 # this enables operations like 'list classifier:polar' where ':' does not evaluate to '=='
 NORMALIZERS: Dict[str, Callable] = {
 	'classifier': lambda s: f'"{s}" in __classifiers__',
+	'service': lambda s: f'"{s}" in __classifiers__',
+	'source': lambda s: f'"{s}" in __classifiers__',
 }
 
 # custom resolvers, needed to access "virtual fields" which do not exist
