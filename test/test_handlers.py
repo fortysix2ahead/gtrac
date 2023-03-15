@@ -52,8 +52,8 @@ def test_gpx_importer( path ):
 	assert type( resource.raw ) is GPX
 
 	activity = Registry.importer_for( GPX_TYPE ).load_as_activity( path=path )
-	assert type( activity ) is Activity
-	assert activity.time.isoformat() == '2012-10-24T23:29:40+00:00'
+	assert type( activity ) is GPXActivity
+	assert activity.as_activity().time.isoformat() == '2012-10-24T23:29:40+00:00'
 
 @mark.file( 'templates/tcx/sample.tcx' )
 def test_tcx_importer( path ):
@@ -61,8 +61,8 @@ def test_tcx_importer( path ):
 	assert type( resource.raw ) is InternalTCXActivity
 
 	activity = Registry.importer_for( TCX_TYPE ).load_as_activity( path=path )
-	assert type( activity ) is Activity
-	assert activity.time.isoformat() == '2010-06-26T10:06:11+00:00'
+	assert type( activity ) is TCXActivity
+	assert activity.as_activity().time.isoformat() == '2010-06-26T10:06:11+00:00'
 
 @mark.file( 'libraries/default/polar/1/0/0/100001/100001.json' )
 def test_polar_flow_importer( path ):
@@ -111,4 +111,5 @@ def test_waze_importer( path ):
 	assert importer.activity_cls == WazeActivity
 
 	activity = importer.load_as_activity( path=path )
-	assert type( activity ) is Activity and activity.time.isoformat() == '2020-07-12T07:47:43+00:00'
+	assert type( activity ) is WazeActivity
+	assert activity.as_activity().time.isoformat() == '2020-07-12T07:47:43+00:00'

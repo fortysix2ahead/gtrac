@@ -17,6 +17,11 @@ from .config import ApplicationContext
 
 log = getLogger( __name__ )
 
+class ActivityProtocol( Protocol ):
+
+	def as_activity( self ) -> Activity:
+		pass
+
 # protocol for a service -> todo: should be stripped down, not all methods are necessary
 
 class Plugin( Protocol ):

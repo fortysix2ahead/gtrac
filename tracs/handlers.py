@@ -10,11 +10,13 @@ from typing import Protocol
 from typing import Type
 from typing import Union
 
+from dataclass_factory import Factory
 from requests import Response
 from requests import Session
 
-from tracs.activity import Activity
-from tracs.resources import Resource
+from .activity import Activity
+from .protocols import ActivityProtocol
+from .resources import Resource
 
 class Handler( Protocol ):
 	"""
@@ -98,6 +100,7 @@ class ResourceHandler:
 	def __init__( self, resource_type: Optional[str] = None, activity_cls: Optional[Type] = None ) -> None:
 		self._activity_cls: Optional[Type] = activity_cls
 		self._type: Optional[str] = resource_type
+		self._factory: Factory = Factory( debug_path=True, schemas={} )
 		self.content: Optional[bytes] = None
 		self.resource: Optional[Resource] = None
 		self.data: Any = None
@@ -159,8 +162,11 @@ class ResourceHandler:
 	def as_bytes( self, text: str, encoding: str = 'UTF-8' ) -> bytes:
 		return text.encode( encoding )
 
-	def as_activity( self, resource: Resource ) -> Optional[Activity]:
-		return self._activity_cls( raw=resource.raw, resources=[ resource ] )
+	def as_activity( self, resource: Resource ) -> Optional[ActivityProtocol]:
+		if self._activity_cls:
+			return self._factory.load( resource.raw, self._activity_cls )
+		else:
+			return None
 
 	@property
 	def type( self ) -> Optional[str]:

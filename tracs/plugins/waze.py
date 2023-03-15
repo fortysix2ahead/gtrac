@@ -26,6 +26,7 @@ from ..activity import Activity
 from ..activity_types import ActivityTypes
 from ..config import ApplicationContext
 from ..handlers import ResourceHandler
+from ..protocols import ActivityProtocol
 from ..registry import importer
 from ..registry import Registry
 from ..registry import resourcetype
@@ -115,8 +116,8 @@ class WazeImporter( ResourceHandler ):
 
 		return points
 
-	def as_activity( self, resource: Resource ) -> Optional[Activity]:
-		return WazeActivity( points=resource.raw ).as_activity()
+	def as_activity( self, resource: Resource ) -> Optional[ActivityProtocol]:
+		return WazeActivity( points=resource.raw )
 
 @importer( type=WAZE_TAKEOUT_TYPE )
 class WazeTakeoutImporter( CSVHandler ):
