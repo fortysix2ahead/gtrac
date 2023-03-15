@@ -25,8 +25,8 @@ from dataclass_factory import Schema
 
 from tracs.config import ApplicationContext
 from tracs.config import KEY_CLASSIFER
-from tracs.handlers import Handler
-from tracs.handlers import Importer
+from tracs.protocols import Handler
+from tracs.protocols import Importer
 from tracs.protocols import Service
 from tracs.resources import ResourceType
 
