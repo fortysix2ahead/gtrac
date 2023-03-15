@@ -1,4 +1,5 @@
-
+from dataclasses import dataclass
+from dataclasses import field
 from datetime import timedelta
 from logging import getLogger
 from re import DOTALL
@@ -80,22 +81,40 @@ HEADERS_OPTIONS = { **HEADERS_TEMPLATE, **{
 }
 
 @resourcetype( type=BIKECITIZENS_TYPE, summary=True )
-class BikecitizensActivity( Activity ):
+@dataclass
+class BikecitizensActivity:
 
-	def __raw_init__( self, raw: Any ) -> None:
-		self.raw_id = self.raw.get( 'id', 0 )
-		self.uid = f'{SERVICE_NAME}:{self.raw_id}'
-		self.type = ActivityTypes.bike
-		self.average_speed = self.raw.get( 'average_speed' )
-		self.cccode = self.raw.get( 'cccode' )
-		self.distance = self.raw.get( 'distance' )
-		self.duration = seconds_to_time( self.raw.get( 'duration' ) )
-		self.time = parse( self.raw['start_time'] )
-		self.time_end = self.time + timedelta( hours=self.duration.hour, minutes=self.duration.minute, seconds=self.duration.second )
-		self.localtime = parse( self.raw['start_time'] ).astimezone( tzlocal() )
-		self.localtime_end = self.localtime + timedelta( hours=self.duration.hour, minutes=self.duration.minute, seconds=self.duration.second )
-		self.tags = self.raw.get( 'tags' )
-		self.uuid = self.raw.get( 'uuid' )
+	id: int = field( default=None )
+	average_speed: float = field( default=None )
+	distance: int = field( default=None )
+	duration: int = field( default=None )
+	start_time: str = field( default=None )
+	postprocessed: bool = field( default=None )
+	postproc_cnt: int = field( default=None )
+	uuid: str = field( default=None )
+	cccode: str = field( default=None )
+	tags: List[str] = field( default_factory=list )
+	ping_points: List[str] = field( default_factory=list )
+
+	@property
+	def local_id( self ) -> int:
+		return self.id
+
+	def as_activity( self ) -> Activity:
+		time = parse( self.start_time )
+		duration = seconds_to_time( self.duration )
+		return Activity(
+			type = ActivityTypes.bike,
+			speed = self.average_speed,
+			distance = self.distance,
+			duration = duration,
+			time = time,
+			time_end = time + timedelta( hours=duration.hour, minutes=duration.minute, seconds=duration.second ),
+			localtime = time.astimezone( tzlocal() ),
+			localtime_end = time.astimezone( tzlocal() ) + timedelta( hours=duration.hour, minutes=duration.minute, seconds=duration.second ),
+			tags = self.tags,
+			uids=[f'{SERVICE_NAME}:{self.local_id}'],
+		)
 
 @importer( type=BIKECITIZENS_TYPE )
 class BikecitizensImporter( JSONHandler ):

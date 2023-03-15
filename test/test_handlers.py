@@ -95,14 +95,14 @@ def test_strava_importer( path ):
 	activity = importer.load_as_activity( path=path )
 	assert type( activity ) is StravaActivity and activity.local_id == 200002
 
-@mark.file( 'libraries/default/bikecitizens/1/0/0/1000001/1000001.raw.json' )
+@mark.file( 'libraries/default/bikecitizens/1/0/0/1000001/1000001.json' )
 def test_bikecitizens_importer( path ):
 	importer = Registry.importer_for( BIKECITIZENS_TYPE )
 	assert importer.type == BIKECITIZENS_TYPE
 	assert importer.activity_cls == BikecitizensActivity
 
 	activity = importer.load_as_activity( path=path )
-	assert type( activity ) is BikecitizensActivity and activity.uid == 'bikecitizens:1000001'
+	assert type( activity ) is BikecitizensActivity and activity.local_id == 1000001
 
 @mark.file( 'libraries/default/waze/20/07/12/200712074743/200712074743.raw.txt' )
 def test_waze_importer( path ):
