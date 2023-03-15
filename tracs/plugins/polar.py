@@ -455,42 +455,43 @@ class Polar( Service ):
 		resource.status = response.status_code
 		return response.content, response.status_code
 
-	def postdownload( self, ctx: ApplicationContext, import_session: ImportSession ) -> None:
-		if any( r.type in [POLAR_ZIP_GPX_TYPE, POLAR_ZIP_TCX_TYPE] for r in import_session.last_download ):
-			recordings = [r for r in import_session.last_download if r.type in [GPX_TYPE, TCX_TYPE]]
-			#activity = import_session.fetched_activities2.get( (import_session.last_summary.uid, import_session.last_summary.path) )
-			activity = import_session.index.activities.uid.get( import_session.last_summary.uid )
-			partlist = self.create_partlist( activity, recordings )
+	def postprocess_activities( self, activities: List[Activity], resources: List[Resource], **kwargs ) -> List[Activity]:
+		if not any( r.type in [POLAR_ZIP_GPX_TYPE, POLAR_ZIP_TCX_TYPE] for r in resources ):
+			return activities
 
-			# create separate activity for each part
-			for rp in partlist:
-				new_activity = None
+		recordings = [r for r in resources if r.type in [GPX_TYPE, TCX_TYPE]]
+		activity = activities[0] # there should be only one activity
+		partlist = self.create_partlist( activity, recordings )
 
-				# try to create activity from tcx
+		# create separate activity for each part
+		for rp in partlist:
+			new_activity = None
+
+			# try to create activity from tcx
+			try:
+				tcx_resource = next( (tcx for tcx in rp.resources if tcx.type == TCX_TYPE), None )
+				tcx_activity = cast( TCXImporter, Registry.importer_for( TCX_TYPE ) ).as_activity( tcx_resource )
+				new_activity = Activity( time=rp.range.start_datetime, time_end=rp.range.end_datetime, uid=f'{import_session.last_summary.uid}#{rp.index}' ).init_from( other=tcx_activity )
+			except AttributeError:
+				pass
+
+			# failed, try gpx
+			if not new_activity:
 				try:
-					tcx_resource = next( (tcx for tcx in rp.resources if tcx.type == TCX_TYPE), None )
-					tcx_activity = cast( TCXImporter, Registry.importer_for( TCX_TYPE ) ).as_activity( tcx_resource )
-					new_activity = Activity( time=rp.range.start_datetime, time_end=rp.range.end_datetime, uid=f'{import_session.last_summary.uid}#{rp.index}' ).init_from( other=tcx_activity )
+					gpx_resource = next( (gpx for gpx in rp.resources if gpx.type == GPX_TYPE), None )
+					gpx_activity = cast( GPXImporter, Registry.importer_for( GPX_TYPE ) ).as_activity( gpx_resource )
+					new_activity = Activity( time=rp.range.start_datetime, time_end=rp.range.end_datetime, uid=f'{import_session.last_summary.uid}#{rp.index}' ).init_from( other=gpx_activity )
 				except AttributeError:
 					pass
 
-				# failed, try gpx
-				if not new_activity:
-					try:
-						gpx_resource = next( (gpx for gpx in rp.resources if gpx.type == GPX_TYPE), None )
-						gpx_activity = cast( GPXImporter, Registry.importer_for( GPX_TYPE ) ).as_activity( gpx_resource )
-						new_activity = Activity( time=rp.range.start_datetime, time_end=rp.range.end_datetime, uid=f'{import_session.last_summary.uid}#{rp.index}' ).init_from( other=gpx_activity )
-					except AttributeError:
-						pass
+			if new_activity:
+				self.ctx.db.insert_activity( new_activity )
+			else:
+				log.error( f'unable to find TCX or GPX resources for multipart activity {import_session.last_summary.uid}, please report, this should not happen' )
 
-				if new_activity:
-					self.ctx.db.insert_activity( new_activity )
-				else:
-					log.error( f'unable to find TCX or GPX resources for multipart activity {import_session.last_summary.uid}, please report, this should not happen' )
-
-			# update main activity with parts
-			# self.ctx.db.set_field( Query().uids == [activity.uid], 'parts', activity.parts )
-			self.ctx.db.upsert_activity( activity )
+		# update main activity with parts
+		# self.ctx.db.set_field( Query().uids == [activity.uid], 'parts', activity.parts )
+		self.ctx.db.upsert_activity( activity )
 
 
 	# noinspection PyMethodMayBeStatic
@@ -505,7 +506,7 @@ class Polar( Service ):
 	def create_partlist( self, activity: Activity, resources: List[Resource] ) -> List[ResourcePartlist]:
 		ranges: Dict[int, ResourcePartlist] = { }
 		for r in resources:
-			recording = Registry.importer_for( r.type ).as_activity( r )
+			recording = Registry.importer_for( r.type ).as_activity( r ).as_activity()
 			dtr = DateTimeRange( recording.time, recording.time_end )
 
 			found_key = None

@@ -22,11 +22,10 @@ from typing import Union
 
 from click import confirm
 from dataclass_factory import Factory
-from dataclass_factory import Schema as FactorySchema
+from dataclass_factory import Schema as DataclassFactorySchema
 from fs.base import FS
 from fs.copy import copy_file
 from fs.copy import copy_file_if
-from fs.errors import CreateFailed
 from fs.memoryfs import MemoryFS
 from fs.multifs import MultiFS
 from fs.osfs import OSFS
@@ -227,10 +226,10 @@ class ActivityDb:
 			debug_path=True,
 			schemas={
 				# name_mapping={}
-				Activity: FactorySchema( exclude=['id'], omit_default=True, skip_internal=True, unknown='unknown' ),
-				ActivityTypes: FactorySchema( parser=ActivityTypes.from_str, serializer=ActivityTypes.to_str ),
-				Resource: FactorySchema( exclude=['id'], omit_default=True, skip_internal=True, unknown='unknown' ),
-				Schema: FactorySchema( skip_internal=True ),
+				Activity: DataclassFactorySchema( exclude=['id'], omit_default=True, skip_internal=True, unknown='unknown' ),
+				ActivityTypes: DataclassFactorySchema( parser=ActivityTypes.from_str, serializer=ActivityTypes.to_str ),
+				Resource: DataclassFactorySchema( exclude=['content', 'id', 'raw', 'resources', 'summary', 'text'], omit_default=True, skip_internal=True, unknown='unknown' ),
+				Schema: DataclassFactorySchema( skip_internal=True ),
 				# tiny db compatibility:
 				# Schema: FactorySchema( name_mapping={ 'version': ( '_default', '1', 'version' ) }, skip_internal=False, unknown='unknown' ),
 			}
@@ -359,9 +358,8 @@ class ActivityDb:
 
 	# noinspection PyMethodMayBeStatic
 	def _next_id( self, d: Dict ) -> int:
-		keys = sorted( d.keys() )
-		all_keys = range( 0, keys[-1] + 2 ) if keys else [0]
-		return set( all_keys ).difference( set( keys ) ).pop()
+		key_range = range( 1, max( d.keys() ) + 2 ) if d.keys() else [1]
+		return set( key_range ).difference( set( d.keys() ) ).pop()
 
 	# insert activities
 
@@ -374,15 +372,37 @@ class ActivityDb:
 		return ids[0] if len( ids ) == 1 else ids
 
 	def insert_activity( self, activity: Activity ) -> int:
-		return self.insert( activity )
+		activity.id = self._next_id( self._activities )
+		self._activities[activity.id] = activity
+		return activity.id
 
 	def insert_activities( self, activities: List[Activity] ) -> List[int]:
-		return self.insert( *activities )
+		return [ self.insert_activity( a ) for a in activities ]
+
+	def upsert_activity( self, activity: Activity ) -> int:
+		if existing := self.get_activity_by_uids( activity.uids ):
+			self._activities[existing.id] = activity
+			activity.id = existing.id
+			return activity.id
+		else:
+			self.insert_activity( activity )
 
 	# insert resources
 
-	def insert_resource( self, r: Resource ) -> int:
-		return self.resources.insert( r )
+	def insert_resource( self, resource: Resource ) -> int:
+		resource.id = self._next_id( self._resources )
+		self._resources[resource.id] = resource
+		return resource.id
+
+	def insert_resources( self, resources: List[Resource] ) -> List[int]:
+		return [ self.insert_resource( r ) for r in resources ]
+
+	def upsert_resource( self, resource: Resource ) -> int:
+		if existing := self.get_resource_by_uid_path( resource.uid, resource.path ):
+			self.resources[existing.id] = resource
+			return existing.id
+		else:
+			return self.insert_resource( resource )
 
 	# remove items
 
@@ -400,22 +420,23 @@ class ActivityDb:
 
 	# -----
 
-	def all( self ) -> List[Activity]:
+	@property
+	def summaries( self ) -> List[Resource]:
 		"""
-		Retrieves all activities stored in the internal db.
-
-		:return: list containing all activities
+		Returns all resource of type summary.
 		"""
-		return cast( List[Activity], self.activities.all() )
+		return [r for r in self.resources if (rt := cast( ResourceType, Registry.resource_types.get( r.type ) )) and rt.summary]
 
-	def all_resources( self ) -> List[Resource]:
-		return cast( List[Resource], self.resources.all() )
-
-	def all_summaries( self ) -> List[Resource]:
-		return [r for r in self.all_resources() if (rt := cast( ResourceType, Registry.resource_types.get( r.type ) )) and rt.summary]
-
-	def all_uids( self ) -> List[str]:
-		return list( set( [r.uid for r in self.all_resources()] ) )
+	@property
+	def uids( self, classifier: str = None ) -> List[str]:
+		"""
+		Returns a list of all known uids.
+		Optionally restrict the list to contain only resources with the given classifier.
+		"""
+		if classifier:
+			return list( set( [r.uid for r in self.resources if r.classifier == classifier] ) )
+		else:
+			return list( set( [r.uid for r in self.resources] ) )
 
 	def contains( self, id: Optional[int] = None, raw_id: Optional[int] = None, classifier: Optional[str] = None, uid: Optional[str] = None, filters: Union[List[str], List[Filter], str, Filter] = None ) -> bool:
 		filters = parse_filters( filters ) if filters else self._create_filter( id, raw_id, classifier, uid )
@@ -429,6 +450,9 @@ class ActivityDb:
 			return uid in self.index.activities.uid.keys()
 		else:
 			return self.activities.contains( Query()['uids'].test( lambda v: True if uid in v else False ) )
+
+	def contains_resource( self, uid: str, path: str ) -> bool:
+		return any( r.uid == uid and r.path == path for r in self.resources )
 
 	def get( self, id: Optional[int] = None, raw_id: Optional[int] = None, classifier: Optional[str] = None, uid: Optional[str] = None, filters: Union[List[str], List[Filter], str, Filter] = None ) -> Optional[Activity]:
 		filters = parse_filters( filters ) if filters else self._create_filter( id, raw_id, classifier, uid )
@@ -449,11 +473,17 @@ class ActivityDb:
 		"""
 		return next( (a for a in self.activities if uid in a.uids), None )
 
+	def get_activity_by_uids( self, uids: List[str] ):
+		return next( (a for a in self.activities if any( uid in a.uids for uid in uids ) ), None )
+
 	def get_resource( self, id: int ) -> Optional[Resource]:
-		return self.resources.get( id )
+		return self._resources.get( id )
 
 	def get_resources_by_uid( self, uid ) -> List[Resource]:
-		return cast( List[Resource], self.resources.search( Query()['uid'] == uid ) or [] )
+		return [r for r in self.resources if r.uid == uid]
+
+	def get_resource_by_uid_path( self, uid: str, path: str ) -> Optional[Resource]:
+		return next( (r for r in self.resources if r.uid == uid and r.path == path), None )
 
 	def _create_filter( self, id: Optional[int] = None, raw_id: Optional[int] = None, classifier: Optional[str] = None, uid: Optional[str] = None ) -> List[Filter]:
 		if id and id > 0:
@@ -518,9 +548,6 @@ class ActivityDb:
 
 	def find_resource_group( self, uid: str, path: str = None ) -> ResourceGroup:
 		return ResourceGroup( resources=self.find_resources( uid, path ) )
-
-	def contains_resource( self, uid: str, path: str ) -> bool:
-		return self.resources.contains( (Query()['uid'] == uid) & (Query()['path'] == path) )
 
 	# noinspection PyMethodMayBeStatic
 	def filter( self, activities: [Activity], queries: [Query] ) -> [Activity]:

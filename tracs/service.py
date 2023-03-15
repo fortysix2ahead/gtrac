@@ -54,6 +54,8 @@ class ImportSession:
 	def __post_init__( self, db: ActivityDb ):
 		self.index = db.index
 
+@dataclass
+
 # ---- base class for a service ----
 
 class Service( Plugin ):
@@ -214,11 +216,24 @@ class Service( Plugin ):
 
 	# methods related to fetch()
 
-	def fetch( self, force: bool, pretend: bool, **kwargs ) -> List[Resource]:
+	def fetch_summary_resources( self, skip: bool, force: bool, pretend: bool, uids: List[str], **kwargs ) -> List[Union[Resource, int]]:
+		if skip:
+			summaries = self.ctx.db.summaries
+		else:
+			summaries = self.fetch( force=force, pretend=pretend, **kwargs )  # fetch all summary resources
+
+		if uids:
+			summaries = list( filter( lambda s: s.uid in uids, summaries ) )
+
+		# sort summaries by uid so that progress bar in download looks better -> todo: improve progress bar later?
+		return sorted( summaries, key=lambda r: r.uid )
+
+
+	def fetch( self, force: bool, pretend: bool, **kwargs ) -> List[Union[Resource, int]]:
 		"""
 		This method has to be implemented by a service class. It shall fetch information for
-		activities from an external service and return a list of summary resources. This way it can be checked
-		what activities exist and which identifier they have.
+		activities from an external service and return a list of either summary resources or ids.
+		This way it can be checked what activities exist and which identifier they have.
 
 		:param force: flag to signal force execution
 		:param pretend: pretend flag, do not persist anything
@@ -260,11 +275,10 @@ class Service( Plugin ):
 		"""
 		pass
 
-	def persist_resources( self, *resources: Resource, force: bool, pretend: bool, include_children: bool = True, **kwargs ) -> None:
-		for resource in unarg( 'resources', resources, kwargs=kwargs ):
-			self.persist_resource( resource, force, pretend, include_children, **kwargs )
+	def persist_resources( self, resources: List[Resource], force: bool, pretend: bool, **kwargs ) -> None:
+		[ self.persist_resource( r, force, pretend, **kwargs ) for r in resources ]
 
-	def persist_resource( self, resource: Resource, force: bool, pretend: bool, include_children: bool = True, **kwargs ) -> None:
+	def persist_resource( self, resource: Resource, force: bool, pretend: bool, **kwargs ) -> None:
 		path = self.path_for_resource( resource )
 		if not force and path and path.exists():
 			return
@@ -279,16 +293,19 @@ class Service( Plugin ):
 				path.write_bytes( resource.content )
 				self.ctx.db.upsert_resource( resource )
 
-			if include_children:
-				for r in resource.resources:
-					self.persist_resource( r, force, pretend, include_children=False, **kwargs )
-
 		except TypeError:
 			log.error( f'error writing resource data for resource {resource.uid}?{resource.path}', exc_info=True )
 
-	def postprocess_resources( self, *resources: Resource, **kwargs ) -> None:
-		for resource in unarg( 'resources', resources, kwargs=kwargs ):
-			self.postprocess_resource( resource, **kwargs )
+	# noinspection PyMethodMayBeStatic
+	def postprocess_summaries( self, resources: List[Resource], **kwargs ) -> List[Resource]:
+		return resources
+
+	# noinspection PyMethodMayBeStatic
+	def postprocess_downloaded( self, resources: List[Resource], **kwargs ) -> List[Resource]:
+		return resources
+
+	def postprocess_resources( self, resources: List[Resource], **kwargs ) -> None:
+		[ self.postprocess_resource( resource, **kwargs ) for resource in resources ]
 
 	def postprocess_resource( self, resource: Resource = None, **kwargs ) -> None:
 		pass
@@ -300,28 +317,25 @@ class Service( Plugin ):
 		pass
 
 	# noinspection PyMethodMayBeStatic
-	def create_activity( self, resource: Resource, **kwargs ) -> Optional[Activity]:
-		resource_type = cast( ResourceType, Registry.resource_types.get( resource.type ) )
+	def create_activities( self, summary: Resource, resources: List[Resource], **kwargs ) -> List[Activity]:
+		resource_type = cast( ResourceType, Registry.resource_types.get( summary.type ) )
 		activity_cls = resource_type.activity_cls if resource_type else Activity
-		return activity_cls( raw=resource.raw, resources=[resource, *resource.resources] )
+		activity = Registry.dataclass_factory.load( summary.raw, activity_cls ).as_activity() # convert from native activity type to Activity
+		return [activity]
 
-	def postprocess_activities( self, *activities: Activity, **kwargs ) -> None:
-		pass
+	# noinspection PyMethodMayBeStatic
+	def postprocess_activities( self, activities: List[Activity], resources: List[Resource], **kwargs ) -> List[Activity]:
+		"""
+		Postprocesses activities after they have been created, by default nothing is done.
 
-	def persist_activities( self, *activities: Activity, force: bool, pretend: bool, **kwargs ) -> None:
-		for a in activities:
-			self.upsert_activity( activity=a, force=force, pretend=pretend, **kwargs )
+		:param activities: activities to postprocess
+		:param resources: associated resources, belonging to the provided activities
+		:return: postprocessed activities
+		"""
+		return activities
 
-	def upsert_activity( self, activity: Activity, force: bool, pretend: bool, **kwargs ) -> None:
-		if not pretend:
-			if self.ctx.db.contains_activity( activity.uid, use_index=False ):  # todo: check if we can use db.upsert here
-				# self._ctx.db.update( activity ) # todo: what to do here?
-				pass
-			else:
-				new_activity = Activity().init_from( activity )
-				new_activity.uids = [activity.uid]
-				new_activity.parts = activity.parts
-				activity.doc_id = self._ctx.db.insert( new_activity )
+	def persist_activities( self, activities: List[Activity], force: bool, pretend: bool, **kwargs ) -> None:
+		[ self._db.upsert_activity( a ) for a in activities ]
 
 	def import_activities( self, force: bool = False, pretend: bool = False, **kwargs ):
 		skip_fetch = kwargs.get( 'skip_fetch', False )
@@ -329,34 +343,54 @@ class Service( Plugin ):
 		skip_link = kwargs.get( 'skip_link', False )
 		uids: List[str] = kwargs.get( 'uids', [] )
 
-		self._import_session = ImportSession( db=self.ctx.db )
-
-		# fetch
-
+		# start fetch task
 		self.ctx.start( f'fetching activity data from {self.display_name}' )
 
-		# if all uids are known, there's no need for a fetch
-		if uids and all( uid in self._import_session.index.activities.uid.keys() for uid in uids ):
-			summaries: List[Resource] = self.filter_fetched( self.ctx.db.all_summaries(), *uids, **kwargs )
-		else:
-			if skip_fetch:
-				summaries: List[Resource] = self.ctx.db.all_summaries()
-			else:
-				summaries: List[Resource] = self.fetch( force, pretend, **kwargs )  # fetch summary resources for each activity
-			# summaries = self.filter_fetched( summaries, *uids, **kwargs )
+		# fetch summaries
+		summaries = self.fetch_summary_resources( skip_fetch, force, pretend, uids )
+		summaries = self.postprocess_summaries( summaries, **kwargs )  # post process summaries
 
-		# save uid/summary
-		for s in summaries:
-			self._import_session.summaries[s.uid] = s
+		# filter out summaries that are already known
+		if not force:
+			summaries = [s for s in summaries if not self.ctx.db.contains_resource( s.uid, s.path )]
 
-		# sort summaries by uid so that progress bar in download looks better -> todo: improve progress bar later?
-		summaries = sorted( summaries, key=lambda r: r.uid )
+		# mark task as done
+		self.set_state_value( KEY_LAST_FETCH, datetime.utcnow().astimezone( UTC ).isoformat() ) # update fetch timestamp
+		self.ctx.complete( 'done' )
 
-		# process and persist fetched resources
+		# download resources
+
+		self.ctx.start( f'downloading activity data from {self.display_name}', len( summaries ) )
+
+		while summaries:
+			# download resources for summary
+			summary = summaries.pop()
+			self.ctx.advance( f'{summary.uid}' )
+
+			downloaded_resources = self.download( summary=summary, force=force, pretend=pretend, **kwargs ) if not skip_download else []
+			downloaded_resources = self.postprocess_downloaded( downloaded_resources, **kwargs )  # post process
+			resources = [summary, *downloaded_resources]
+
+			# persist all resources
+			self.persist_resources( resources, force=force, pretend=pretend, **kwargs )
+
+			# create activity/activities from downloaded resources
+			activities = self.create_activities( summary=summary, resources=resources, **kwargs )
+			activities = self.postprocess_activities( activities, resources, **kwargs )
+
+			# persist activities
+			self.persist_activities( activities, force=force, pretend=pretend, **kwargs )
+
+		# mark download task as done
+		self._db.commit()
+		self.set_state_value( KEY_LAST_DOWNLOAD, datetime.utcnow().astimezone( UTC ).isoformat() )  # update download timestamp
+		self.ctx.complete( 'done' )
+
+		return
 
 		if not skip_fetch or force:
-			self.postprocess_resources( *summaries, **kwargs )  # post process summaries
-			self.persist_resources( *summaries, force=force, pretend=pretend, include_children=False, **kwargs ) # persist summaries
+			self.postprocess_resources( summaries, **kwargs )  # post process summaries
+			self.persist_resources( summaries, force=force, pretend=pretend, include_children=False, **kwargs ) # persist summaries
 
 			self.ctx.total( len( summaries ) )
 
