@@ -170,27 +170,27 @@ class PolarActivity( Activity ):
 @dataclass
 class PolarFlowExercise:
 
-	isTest: Optional[bool] = field( default=False )
-	title: str = field( default=None )
-	type: str = field( default=None )
-	listItemId: int = field( default=None )
-	hasTrainingTarget: Optional[bool] = field( default=False )
-	timestamp: int = field( default=None )
-	start: Optional[Union[int, str]] = field( default=None )
-	end: Optional[int] = field( default=None )
 	allDay: bool = field( default=False )
-	iconUrl: Optional[str] = field( default=None )
-	url: str = field( default=None )
 	backgroundColor: Optional[str] = field( default=None )
-	borderColor: str = field( default=None )
-	textColor: str = field( default=None )
+	borderColor: Optional[str] = field( default=None )
+	calories: Optional[int] = field( default=None )
 	className: Optional[str] = field( default=None )
 	datetime: str = field( default=None ) # 2011-04-28T17:48:10.000Z
-	eventType: str = field( default=None )
+	distance: Optional[float] = field( default=None )
 	duration: int = field( default=None )
-	distance: float = field( default=None )
-	calories: int = field( default=None )
+	end: Optional[int] = field( default=None )
+	eventType: str = field( default=None )
+	hasTrainingTarget: Optional[bool] = field( default=False )
+	iconUrl: Optional[str] = field( default=None )
 	index: Optional[int] = field( default=None )
+	isTest: Optional[bool] = field( default=False )
+	listItemId: int = field( default=None )
+	start: Optional[Union[int, str]] = field( default=None )
+	textColor: Optional[str] = field( default=None )
+	timestamp: int = field( default=None )
+	title: str = field( default=None )
+	type: str = field( default=None )
+	url: str = field( default=None )
 
 	@property
 	def is_multipart( self ):
