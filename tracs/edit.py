@@ -37,7 +37,7 @@ def rename_activities( activities: [Activity], ctx: ApplicationContext, force: b
 		ctx.console.print( f'  local time             : {fmt( a.localtime )}' )
 		ctx.console.print( f'  place, city (country)  : {a.location_place}, {a.location_city} ({a.location_country})' )
 
-		load_all_resources( ctx.db, a )
+		# resources = load_all_resources( ctx.db, a )
 
 		headline = 'select a choice from the list below, press enter to use the default value or enter a new name directly:'
 		choices = [ a.name, MSG_OPEN_APPLICATION ]

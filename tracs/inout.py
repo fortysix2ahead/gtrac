@@ -161,12 +161,11 @@ def reimport_activities( activities: List[Activity], include_recordings: bool = 
 		if force or _confirm_init( activity_source, activity, ctx.console ):
 			ctx.db.update( activity )
 
-def load_all_resources( db: ActivityDb, activity: Activity ) -> None:
-	all_resources = []
+def load_all_resources( db: ActivityDb, activity: Activity ) -> List[Resource]:
+	resources = []
 	for uid in activity.uids:
-		all_resources.extend( db.find_resources( uid ) )
-
-	activity.resources = all_resources
+		resources.extend( db.find_resources( uid ) )
+	return resources
 
 def load_resource( resource: Resource, as_activity: bool = False, update_raw: bool = False ) -> Optional[Union[Resource, Activity]]:
 	importers = Registry.importers_for( resource.type )

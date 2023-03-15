@@ -529,9 +529,9 @@ class ActivityDb:
 
 	def find_resources( self, uid: str, path: str = None ) -> List[Resource]:
 		if path:
-			return [ r for r in self.resources.values() if r.uid == uid and r.path == path ]
+			return [ r for r in self.resources if r.uid == uid and r.path == path ]
 		else:
-			return [ r for r in self.resources.values() if r.uid == uid ]
+			return [ r for r in self.resources if r.uid == uid ]
 
 	def find_resources_of_type( self, activity_type: str, activity: Activity = None ) -> List[Resource]:
 		if activity:
