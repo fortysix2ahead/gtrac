@@ -459,40 +459,40 @@ class Polar( Service ):
 		if not any( r.type in [POLAR_ZIP_GPX_TYPE, POLAR_ZIP_TCX_TYPE] for r in resources ):
 			return activities
 
+		summary = next( (r for r in resources if r.summary), None )
 		recordings = [r for r in resources if r.type in [GPX_TYPE, TCX_TYPE]]
 		activity = activities[0] # there should be only one activity
 		partlist = self.create_partlist( activity, recordings )
 
 		# create separate activity for each part
 		for rp in partlist:
-			new_activity = None
-
 			# try to create activity from tcx
 			try:
 				tcx_resource = next( (tcx for tcx in rp.resources if tcx.type == TCX_TYPE), None )
-				tcx_activity = cast( TCXImporter, Registry.importer_for( TCX_TYPE ) ).as_activity( tcx_resource )
-				new_activity = Activity( time=rp.range.start_datetime, time_end=rp.range.end_datetime, uid=f'{import_session.last_summary.uid}#{rp.index}' ).init_from( other=tcx_activity )
+				new_activity = Registry.importer_for( TCX_TYPE ).as_activity( tcx_resource ).as_activity()
 			except AttributeError:
-				pass
-
-			# failed, try gpx
-			if not new_activity:
 				try:
 					gpx_resource = next( (gpx for gpx in rp.resources if gpx.type == GPX_TYPE), None )
-					gpx_activity = cast( GPXImporter, Registry.importer_for( GPX_TYPE ) ).as_activity( gpx_resource )
-					new_activity = Activity( time=rp.range.start_datetime, time_end=rp.range.end_datetime, uid=f'{import_session.last_summary.uid}#{rp.index}' ).init_from( other=gpx_activity )
+					new_activity = Registry.importer_for( GPX_TYPE ).as_activity( gpx_resource ).as_activity()
 				except AttributeError:
-					pass
+					new_activity = None
 
 			if new_activity:
-				self.ctx.db.insert_activity( new_activity )
+				# update new activity
+				new_activity.time=rp.range.start_datetime
+				new_activity.localtime = rp.range.start_datetime.astimezone( tzlocal() )
+				new_activity.time_end=rp.range.end_datetime
+				new_activity.localtime_end = rp.range.end_datetime.astimezone( tzlocal() )
+				new_activity.uid=f'{summary.uid}#{rp.index}'
+				# self.ctx.db.insert_activity( new_activity )
+				activities.append( new_activity )
 			else:
-				log.error( f'unable to find TCX or GPX resources for multipart activity {import_session.last_summary.uid}, please report, this should not happen' )
+				log.error( f'unable to find TCX or GPX resources for multipart activity {summary.uid}, please report, this should not happen' )
 
 		# update main activity with parts
 		# self.ctx.db.set_field( Query().uids == [activity.uid], 'parts', activity.parts )
-		self.ctx.db.upsert_activity( activity )
-
+		# self.ctx.db.upsert_activity( activity )
+		return activities
 
 	# noinspection PyMethodMayBeStatic
 	def unzip_resources( self, resources: List[Resource] ) -> List[Resource]:
