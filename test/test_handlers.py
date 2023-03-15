@@ -22,6 +22,7 @@ from tracs.plugins.polar import PolarExerciseDataActivity
 from tracs.plugins.strava import STRAVA_TYPE
 from tracs.plugins.strava import StravaActivity
 from tracs.plugins.tcx import TCXActivity
+from tracs.plugins.tcx import Activity as InternalTCXActivity
 from tracs.plugins.waze import WAZE_TYPE
 from tracs.plugins.waze import WazeActivity
 
@@ -56,12 +57,12 @@ def test_gpx_importer( path ):
 
 @mark.file( 'templates/tcx/sample.tcx' )
 def test_tcx_importer( path ):
+	resource = Registry.importer_for( TCX_TYPE ).load( path=path )
+	assert type( resource.raw ) is InternalTCXActivity
+
 	activity = Registry.importer_for( TCX_TYPE ).load_as_activity( path=path )
-	assert type( activity ) is TCXActivity
-	assert type( activity.time ) is datetime
-	assert activity.raw_id is not None
-	assert activity.resources[0].path is not None
-	assert activity.resources[0].raw is not None
+	assert type( activity ) is Activity
+	assert activity.time.isoformat() == '2010-06-26T10:06:11+00:00'
 
 @mark.file( 'libraries/default/polar/1/0/0/100001/100001.json' )
 def test_polar_flow_importer( path ):

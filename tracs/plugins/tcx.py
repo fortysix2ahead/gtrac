@@ -17,6 +17,7 @@ from lxml.objectify import ObjectifiedElement
 
 from .handlers import XMLHandler
 from ..activity import Activity as TracsActivity
+from ..registry import resourcetype
 from ..resources import Resource
 from ..registry import document
 from ..registry import importer
@@ -85,18 +86,22 @@ class Activity:
 	def time_end( self ) -> Optional[datetime]:
 		return self.laps[-1].time_end() if len( self.laps ) > 0 else None
 
-@document( type=TCX_TYPE )
-class TCXActivity( TracsActivity ):
+@resourcetype( type=TCX_TYPE, recording=True )
+@dataclass
+class TCXActivity:
 
-	def __raw_init__( self, raw: Any ) -> None:
-		tcx: Activity = raw
-		self.distance = tcx.distance()
-		self.duration = tcx.duration()
-		self.time = tcx.time()
-		self.time_end = tcx.time_end()
-		self.localtime = self.time.astimezone( tzlocal() )
-		self.localtime_end = self.time_end.astimezone( tzlocal() )
-		self.raw_id = int( self.time.strftime( '%y%m%d%H%M%S' ) )
+	tcx: Activity = field( default=None )
+
+	def as_activity( self ) -> Activity:
+		return TracsActivity(
+			distance = self.tcx.distance(),
+			duration = self.tcx.duration(),
+			time = self.tcx.time(),
+			time_end = self.tcx.time_end(),
+			localtime = self.tcx.time().astimezone( tzlocal() ),
+			localtime_end = self.tcx.time_end().astimezone( tzlocal() ),
+			uid = f'tcx:{self.tcx.time().strftime( "%y%m%d%H%M%S" )}',
+		)
 
 @importer( type=TCX_TYPE )
 class TCXImporter( XMLHandler ):
@@ -152,6 +157,9 @@ class TCXImporter( XMLHandler ):
 				creator_build_minor = find( c, find( a, 'Creator.Version.BuildMinor' ) )
 
 			resource.raw = activity
+
+	def as_activity( self, resource: Resource ) -> Optional[Activity]:
+		return TCXActivity( tcx=resource.raw ).as_activity()
 
 # helper
 
