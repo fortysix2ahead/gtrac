@@ -212,7 +212,8 @@ class PolarFlowExercise:
 	def as_activity( self ) -> Activity:
 		return Activity(
 			local_id=self.local_id,
-			uid = f'{SERVICE_NAME}:{self.local_id}',
+			# uid = f'{SERVICE_NAME}:{self.local_id}', # todo: remove later?
+			uids = [f'{SERVICE_NAME}:{self.local_id}'],
 			name = self.title,
 			type = self.get_type(),
 			time = parse( self.datetime, ignoretz=True ).replace( tzinfo=tzlocal() ).astimezone( UTC ),
