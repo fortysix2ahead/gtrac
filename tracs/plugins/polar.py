@@ -147,7 +147,7 @@ class ResourcePartlist:
 	def end( self ) -> datetime:
 		return self.range.end_datetime
 
-@resourcetype( type=POLAR_FLOW_TYPE, summary=True )
+#@resourcetype( type=POLAR_FLOW_TYPE, summary=True )
 class PolarActivity( Activity ):
 
 	def __raw_init__( self, raw: Any ) -> None:
@@ -233,10 +233,10 @@ class PolarExerciseDataActivity( Activity ):
 		self.uid = f'{self.classifier}:{self.raw_id}'
 
 @importer( type=POLAR_FLOW_TYPE )
-class PolarImporter( JSONHandler ):
+class PolarFlowImporter( JSONHandler ):
 
 	def __init__( self ) -> None:
-		super().__init__( resource_type=POLAR_FLOW_TYPE, activity_cls=PolarActivity )
+		super().__init__( resource_type=POLAR_FLOW_TYPE, activity_cls=PolarFlowExercise )
 
 @importer( type=POLAR_EXERCISE_DATA_TYPE )
 class PersonalTrainerImporter( XMLHandler ):
@@ -279,7 +279,7 @@ class Polar( Service ):
 		self._session = None
 		self._logged_in = False
 
-		self.importer: PolarImporter = cast( PolarImporter, Registry.importer_for( POLAR_FLOW_TYPE ) )
+		self.importer: PolarFlowImporter = cast( PolarFlowImporter, Registry.importer_for( POLAR_FLOW_TYPE ) )
 		self.json_handler: JSONHandler = cast( JSONHandler, Registry.importer_for( JSON_TYPE ) )
 
 	def _link_path( self, pa: Activity, ext: str ) -> Path or None:

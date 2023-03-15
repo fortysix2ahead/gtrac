@@ -6,6 +6,7 @@ from pytest import mark
 
 from tracs.activity import Activity
 from tracs.plugins.gpx import GPX_TYPE
+from tracs.plugins.polar import PolarFlowExercise
 from tracs.plugins.tcx import TCX_TYPE
 from tracs.registry import Registry
 from tracs.plugins.bikecitizens import BIKECITIZENS_TYPE
@@ -62,14 +63,17 @@ def test_tcx_importer( path ):
 	assert activity.resources[0].path is not None
 	assert activity.resources[0].raw is not None
 
-@mark.file( 'libraries/default/polar/1/0/0/100001/100001.raw.json' )
-def test_polar_importer( path ):
+@mark.file( 'libraries/default/polar/1/0/0/100001/100001.json' )
+def test_polar_flow_importer( path ):
 	importer = Registry.importer_for( POLAR_FLOW_TYPE )
 	assert importer.type == POLAR_FLOW_TYPE
-	assert importer.activity_cls == PolarActivity
+	assert importer.activity_cls == PolarFlowExercise
+
+	resource = importer.load( path=path )
+	assert type( resource.raw ) is dict
 
 	activity = importer.load_as_activity( path=path )
-	assert type( activity ) is PolarActivity and activity.uid == 'polar:100001'
+	assert type( activity ) is PolarFlowExercise and activity.local_id == 100001
 
 @mark.skip
 @mark.file( 'templates/polar/personal_trainer/20160904.xml' )
