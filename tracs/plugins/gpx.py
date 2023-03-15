@@ -10,7 +10,7 @@ from gpxpy import parse as parse_gpx
 from gpxpy.gpx import GPX
 
 from tracs.activity import Activity
-from tracs.protocols import ActivityProtocol
+from tracs.protocols import SpecificActivity
 from tracs.registry import resourcetype
 from tracs.resources import Resource
 from tracs.registry import importer
@@ -48,5 +48,5 @@ class GPXImporter( ResourceHandler ):
 	def load_data( self, resource: Resource, **kwargs ) -> None:
 		resource.raw = parse_gpx( resource.content )
 
-	def as_activity( self, resource: Resource ) -> Optional[ActivityProtocol]:
+	def as_activity( self, resource: Resource ) -> Optional[SpecificActivity]:
 		return GPXActivity( gpx=resource.raw )

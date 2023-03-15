@@ -26,7 +26,7 @@ from ..activity import Activity
 from ..activity_types import ActivityTypes
 from ..config import ApplicationContext
 from ..handlers import ResourceHandler
-from ..protocols import ActivityProtocol
+from ..protocols import SpecificActivity
 from ..registry import importer
 from ..registry import Registry
 from ..registry import resourcetype
@@ -116,7 +116,7 @@ class WazeImporter( ResourceHandler ):
 
 		return points
 
-	def as_activity( self, resource: Resource ) -> Optional[ActivityProtocol]:
+	def as_activity( self, resource: Resource ) -> Optional[SpecificActivity]:
 		return WazeActivity( points=resource.raw )
 
 @importer( type=WAZE_TAKEOUT_TYPE )

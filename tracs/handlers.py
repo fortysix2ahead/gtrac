@@ -11,7 +11,6 @@ from requests import Response
 from requests import Session
 
 from .activity import Activity
-from .protocols import ActivityProtocol
 from .resources import Resource
 
 class ResourceHandler:
@@ -42,6 +41,12 @@ class ResourceHandler:
 
 	def load_as_activity( self, path: Optional[Path] = None, url: Optional[str] = None, **kwargs ) -> Optional[Activity]:
 		return self.as_activity( self.load( path, url, **kwargs ) )
+
+	def as_activity( self, resource: Resource ) -> Optional[Activity]:
+		if self._activity_cls:
+			return self._factory.load( resource.raw, self._activity_cls )
+		else:
+			return None
 
 	def load_from_url( self, url: str, **kwargs ) -> Optional[Resource]:
 		session: Session = kwargs.get( 'session' )
@@ -80,12 +85,6 @@ class ResourceHandler:
 	# noinspection PyMethodMayBeStatic
 	def as_bytes( self, text: str, encoding: str = 'UTF-8' ) -> bytes:
 		return text.encode( encoding )
-
-	def as_activity( self, resource: Resource ) -> Optional[ActivityProtocol]:
-		if self._activity_cls:
-			return self._factory.load( resource.raw, self._activity_cls )
-		else:
-			return None
 
 	@property
 	def type( self ) -> Optional[str]:

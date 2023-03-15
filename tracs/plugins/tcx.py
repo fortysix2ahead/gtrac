@@ -17,7 +17,7 @@ from lxml.objectify import ObjectifiedElement
 
 from .handlers import XMLHandler
 from ..activity import Activity as TracsActivity
-from ..protocols import ActivityProtocol
+from ..protocols import SpecificActivity
 from ..registry import resourcetype
 from ..resources import Resource
 from ..registry import document
@@ -159,7 +159,7 @@ class TCXImporter( XMLHandler ):
 
 			resource.raw = activity
 
-	def as_activity( self, resource: Resource ) -> Optional[ActivityProtocol]:
+	def as_activity( self, resource: Resource ) -> Optional[SpecificActivity]:
 		return TCXActivity( tcx=resource.raw )
 
 # helper

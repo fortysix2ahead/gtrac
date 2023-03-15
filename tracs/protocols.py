@@ -18,7 +18,7 @@ from .resources import Resource
 
 log = getLogger( __name__ )
 
-class ActivityProtocol( Protocol ):
+class SpecificActivity( Protocol ):
 
 	def as_activity( self ) -> Activity:
 		pass
@@ -171,6 +171,15 @@ class Importer( Protocol ):
 		pass
 
 	def load_as_activity( self, path: Optional[Path] = None, url: Optional[str] = None, **kwargs ) -> Optional[Activity]:
+		"""
+		Loads data via load() and returns it via as_activity()
+		"""
+		pass
+
+	def as_activity( self, resource: Resource ) -> Optional[Activity]:
+		"""
+		Transforms the provided resource into an activity.
+		"""
 		pass
 
 	@property
