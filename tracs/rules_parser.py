@@ -16,6 +16,7 @@ from typing import Tuple
 from typing import Type
 
 from arrow import get as getarrow
+from arrow import utcnow as now
 from dateutil.tz import UTC
 from rule_engine import Context
 from rule_engine import resolve_attribute
@@ -59,8 +60,10 @@ RULES: Dict[str, Type[Rule]] = {
 KEYWORDS: Dict[str, Callable] = {
 	# date related keywords
 	# thisweek, lastweek, today, yesterday
-	'lastyear': lambda s: f'year == {datetime.utcnow().year - 1}',
-	'thisyear': lambda s: f'year == {datetime.utcnow().year}',
+	'lastmonth': lambda s: f'month == {now().shift( months=-1 ).month} and year == {now().year}',
+	'thismonth': lambda s: f'month == {now().month} and year == {now().year}',
+	'lastyear': lambda s: f'year == {now().shift( years=-1 ).year}',
+	'thisyear': lambda s: f'year == {now().year}',
 	# todo: this needs to be detected automatically
 	'bikecitizens': lambda s: f'"bikecitizens" in __classifiers__',
 	'local': lambda s: f'"local" in __classifiers__',
