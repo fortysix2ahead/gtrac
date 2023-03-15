@@ -316,12 +316,9 @@ class Service( Plugin ):
 	def postdownload( self, ctx: ApplicationContext, import_session: ImportSession ) -> None:
 		pass
 
-	# noinspection PyMethodMayBeStatic
+	# noinspection PyMethodMayBeStatic,PyUnresolvedReferences
 	def create_activities( self, summary: Resource, resources: List[Resource], **kwargs ) -> List[Activity]:
-		resource_type = cast( ResourceType, Registry.resource_types.get( summary.type ) )
-		activity_cls = resource_type.activity_cls if resource_type else Activity
-		activity = Registry.dataclass_factory.load( summary.raw, activity_cls ).as_activity() # convert from native activity type to Activity
-		return [activity]
+		return [ Registry.importer_for( summary.type ).as_activity( summary ).as_activity() ]
 
 	# noinspection PyMethodMayBeStatic
 	def postprocess_activities( self, activities: List[Activity], resources: List[Resource], **kwargs ) -> List[Activity]:
