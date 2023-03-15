@@ -86,14 +86,14 @@ def test_polar_ped_importer( path ):
 	activity = importer.load_as_activity( path=path )
 	assert type( activity ) is PolarExerciseDataActivity and activity.uid == 'polar:160904124614'
 
-@mark.file( 'libraries/default/strava/2/0/0/200002/200002.raw.json' )
+@mark.file( 'libraries/default/strava/2/0/0/200002/200002.json' )
 def test_strava_importer( path ):
 	importer = Registry.importer_for( STRAVA_TYPE )
 	assert importer.type == STRAVA_TYPE
 	assert importer.activity_cls == StravaActivity
 
 	activity = importer.load_as_activity( path=path )
-	assert type( activity ) is StravaActivity and activity.uid == 'strava:200002'
+	assert type( activity ) is StravaActivity and activity.local_id == 200002
 
 @mark.file( 'libraries/default/bikecitizens/1/0/0/1000001/1000001.raw.json' )
 def test_bikecitizens_importer( path ):

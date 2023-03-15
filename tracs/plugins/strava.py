@@ -1,10 +1,12 @@
-
+from dataclasses import dataclass
+from dataclasses import field
 from http.server import BaseHTTPRequestHandler
 from http.server import HTTPServer
 from re import findall
 from re import match
 from typing import Any
 from typing import cast
+from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
@@ -119,29 +121,84 @@ TYPES = {
 }
 
 @resourcetype( type=STRAVA_TYPE, summary=True )
-class StravaActivity( Activity ):
+@dataclass
+class StravaActivity:
 
-	def __raw_init__( self, raw: Any ) -> None:
-		self.raw_id = self.raw.get( 'id', 0 )
-		self.name = self.raw.get( 'name' )
-		self.type = TYPES.get( self.raw.get( 'type' ), ActivityTypes.unknown )
-		self.time = to_isotime( self.raw.get( 'start_date' ) )
-		self.localtime = to_isotime( self.raw.get( 'start_date_local' ) )
-		self.distance = self.raw.get( 'distance' )
-		self.speed = self.raw.get( 'average_speed' )
-		self.speed_max = self.raw.get( 'max_speed' )
-		self.ascent = self.raw.get( 'total_elevation_gain' )
-		self.descent = self.raw.get( 'total_elevation_gain' )
-		self.elevation_max = self.raw.get( 'elev_high' )
-		self.elevation_min = self.raw.get( 'elev_low' )
-		self.duration = stt( self.raw.get( 'elapsed_time' ) ) if self.raw.get( 'elapsed_time' ) else None
-		self.duration_moving = stt( self.raw.get( 'moving_time' ) ) if self.raw.get( 'moving_time' ) else None
-		self.heartrate = float( self.raw.get( 'average_heartrate' ) ) if self.raw.get( 'average_heartrate' ) else None
-		self.heartrate_max = float( self.raw.get( 'max_heartrate' ) ) if self.raw.get( 'max_heartrate' ) else None
-		self.location_country = self.raw.get( 'location_country' )
+	achievement_count: int = field( default=None )
+	athlete: Dict[str, int] = field( default_factory=dict )
+	athlete_count: int = field( default=None )
+	average_cadence: float = field( default=None )
+	average_heartrate: float = field( default=None )
+	average_speed: float = field( default=None )
+	comment_count: int = field( default=None )
+	commute: bool = field( default=None )
+	display_hide_heartrate_option: bool = field( default=None )
+	distance: float = field( default=None )
+	elapsed_time: int = field( default=None )
+	elev_high: float = field( default=None )
+	elev_low: float = field( default=None )
+	end_latlng: List[float] = field( default_factory=list )
+	external_id: str = field( default=None )
+	flagged: bool = field( default=None )
+	from_accepted_tag: bool = field( default=None )
+	gear_id: str = field( default=None )
+	has_heartrate: bool = field( default=None )
+	has_kudoed: bool = field( default=None )
+	heartrate_opt_out: bool = field( default=None )
+	id: int = field( default=None )
+	kudos_count: int = field( default=None )
+	location_city: str = field( default=None )
+	location_country: str = field( default=None )
+	location_state: str = field( default=None )
+	manual: bool = field( default=None )
+	map: Dict = field( default_factory=dict )
+	max_heartrate: float = field( default=None )
+	max_speed: float = field( default=None )
+	moving_time: int = field( default=None )
+	name: str = field( default=None )
+	photo_count: int = field( default=None )
+	pr_count: int = field( default=None )
+	private: bool = field( default=None )
+	resource_state: int = field( default=None )
+	sport_type: str = field( default=None )
+	start_date: str = field( default=None )
+	start_date_local: str = field( default=None )
+	start_latlng: List[float] = field( default_factory=list )
+	timezone: str = field( default=None )
+	total_elevation_gain: float = field( default=None )
+	total_photo_count: int = field( default=None )
+	trainer: bool = field( default=None )
+	type: str = field( default=None )
+	upload_id: int = field( default=None )
+	upload_id_str: str = field( default=None )
+	utc_offset: float = field( default=None )
+	visibility: str = field( default=None )
+	workout_type: int = field( default=None )
 
-		self.classifier = f'{SERVICE_NAME}'
-		self.uid = f'{self.classifier}:{self.raw_id}'
+	@property
+	def local_id( self ) -> int:
+		return self.id
+
+	def as_activity( self ) -> Activity:
+		return Activity(
+			name = self.name,
+			type = TYPES.get( self.type, ActivityTypes.unknown ),
+			time = to_isotime( self.start_date ),
+			localtime = to_isotime( self.start_date_local ),
+			distance = self.distance,
+			speed = self.average_speed,
+			speed_max = self.max_speed,
+			ascent = self.total_elevation_gain,
+			descent = self.total_elevation_gain,
+			elevation_max = self.elev_high,
+			elevation_min = self.elev_low,
+			duration = stt( self.elapsed_time ) if self.elapsed_time else None,
+			duration_moving = stt( self.moving_time ) if self.moving_time else None,
+			heartrate = float( self.average_heartrate ) if self.average_heartrate else None,
+			heartrate_max = float( self.max_heartrate ) if self.max_heartrate else None,
+			location_country = self.location_country,
+			uids = [f'{SERVICE_NAME}:{self.id}'],
+		)
 
 @importer( type=STRAVA_TYPE )
 class StravaImporter( JSONHandler ):
