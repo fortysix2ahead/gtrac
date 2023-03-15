@@ -111,4 +111,4 @@ def test_waze_importer( path ):
 	assert importer.activity_cls == WazeActivity
 
 	activity = importer.load_as_activity( path=path )
-	assert type( activity ) is WazeActivity and activity.uid == 'waze:200712074743'
+	assert type( activity ) is Activity and activity.time.isoformat() == '2020-07-12T07:47:43+00:00'

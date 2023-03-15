@@ -46,19 +46,6 @@ DISPLAY_NAME = 'Waze'
 WAZE_TYPE = 'text/vnd.waze+txt'
 WAZE_TAKEOUT_TYPE = 'text/vnd.waze+csv'
 
-@resourcetype( type=WAZE_TYPE, summary=True )
-class WazeActivity( Activity ):
-
-	def __raw_init__( self, raw: Any ) -> None:
-		if len( raw ) > 0:
-			self.raw_id = cast( WazePoint, self.raw[0] ).time_as_int()
-			self.time = cast( WazePoint, self.raw[0] ).time
-			self.localtime = as_datetime( self.time, tz=gettz() )
-
-		self.type = ActivityTypes.drive
-		self.classifier = f'{SERVICE_NAME}'
-		self.uid = f'{self.classifier}:{self.raw_id}'
-
 @dataclass
 class WazePoint:
 	str_format = '%y%m%d%H%M%S'
@@ -73,6 +60,21 @@ class WazePoint:
 
 	def time_as_int( self ) -> int:
 		return int( self.time_as_str() )
+
+@resourcetype( type=WAZE_TYPE, summary=True )
+@dataclass
+class WazeActivity:
+
+	points: List[WazePoint] = field( default_factory=list )
+
+	def as_activity( self ) -> Activity:
+		p0 = cast( WazePoint, self.points[0] )
+		return Activity(
+			time = p0.time,
+			localtime=as_datetime( p0.time, tz=gettz() ),
+			type = ActivityTypes.drive,
+			uids = [f'{SERVICE_NAME}:{p0.time_as_int()}']
+		)
 
 @importer( type=WAZE_TYPE )
 class WazeImporter( ResourceHandler ):
@@ -112,6 +114,9 @@ class WazeImporter( ResourceHandler ):
 					raise RuntimeError( f'Error parsing Waze drive while processing token {token}' )
 
 		return points
+
+	def as_activity( self, resource: Resource ) -> Optional[Activity]:
+		return WazeActivity( points=resource.raw ).as_activity()
 
 @importer( type=WAZE_TAKEOUT_TYPE )
 class WazeTakeoutImporter( CSVHandler ):
