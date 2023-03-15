@@ -280,7 +280,7 @@ def _register( args, kwargs, dictionary, callable_fn = False ) -> Union[Type, Ca
 
 def resourcetype( *args, **kwargs ):
 	def reg_resource_type( cls ):
-		Registry.register_resource_type( ResourceType( type=kwargs.get( 'type' ), summary=kwargs.get( 'summary', False ), activity_cls=cls ) )
+		Registry.register_resource_type( ResourceType( activity_cls = cls, **kwargs ) )
 		return cls
 	return reg_resource_type if len( args ) == 0 else args[0]
 
