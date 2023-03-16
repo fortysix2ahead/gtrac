@@ -60,12 +60,18 @@ RULES: Dict[str, Type[Rule]] = {
 # this enables operations like 'list thisyear'
 KEYWORDS: Dict[str, Callable] = {
 	# date related keywords
-	'yesterday': lambda s: f'time >= {floor( now().shift( days=-1 ), "day" )} and time <= {ceil( now().shift( days=-1 ), "day" )}',
+	'last7days': lambda s: f'time >= {floor( now().shift( days=-6 ), "day" )} and time <= {ceil( now(), "day" )}',
+	'last14days': lambda s: f'time >= {floor( now().shift( days=-13 ), "day" )} and time <= {ceil( now(), "day" )}',
+	'last30days': lambda s: f'time >= {floor( now().shift( days=-29 ), "day" )} and time <= {ceil( now(), "day" )}',
+	'last60days': lambda s: f'time >= {floor( now().shift( days=-59 ), "day" )} and time <= {ceil( now(), "day" )}',
+	'last90days': lambda s: f'time >= {floor( now().shift( days=-89 ), "day" )} and time <= {ceil( now(), "day" )}',
 	'today': lambda s: f'time >= {floor( now(), "day" )} and time <= {ceil( now(), "day" )}',
 	'lastweek': lambda s: f'time >= {floor( now().shift( weeks=-1 ), "week" )} and time <= {ceil( now().shift( weeks=-1 ), "week" )}',
 	'thisweek': lambda s: f'time >= {floor( now(), "week" )} and time <= {ceil( now(), "week" )}',
 	'lastmonth': lambda s: f'time >= {floor( now().shift( months=-1 ), "month" )} and time <= {ceil( now().shift( months=-1 ), "month" )}',
 	'thismonth': lambda s: f'time >= {floor( now(), "month" )} and time <= {ceil( now(), "month" )}',
+	'lastquarter': lambda s: f'time >= {floor( now().shift( months=-3 ), "quarter" )} and time <= {ceil( now().shift( months=-3 ), "quarter" )}',
+	'thisquarter': lambda s: f'time >= {floor( now(), "quarter" )} and time <= {ceil( now(), "quarter" )}',
 	'lastyear': lambda s: f'time >= {floor( now().shift( years=-1 ), "year" )} and time <= {ceil( now().shift( years=-1 ), "year" )}',
 	'thisyear': lambda s: f'time >= {floor( now(), "year" )} and time <= {ceil( now(), "year" )}',
 	# todo: this needs to be detected automatically
