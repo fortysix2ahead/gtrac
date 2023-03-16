@@ -26,6 +26,8 @@ from .utils import sum_times
 
 log = getLogger( __name__ )
 
+PROTECTED_FIELDS = [ 'id', 'uid', 'uids', 'local_id' ]
+
 @dataclass
 class Fields:
 
@@ -40,10 +42,8 @@ class Fields:
 @dataclass
 class Activity:
 
-	id: int = field( default=0 )
-
-	classifier: str = field( default=None ) # classifier of this activity, only used in subclasses
-	uid: str = field( default=None ) # unique id of this activity in the form of <classifier:number>, only used in subclasses
+	id: int = field( default=0 ) # integer id of this activity, same as key in dict which holds activities
+	uid: str = field( default=None ) # unique id of this activity in the form of <classifier:number> # todo: can this be removed?
 	uids: List[str] = field( default_factory=list ) # uids of activities which belong to this activity
 
 	raw: Any = field( default=None )  # structured raw data used for initialization from external data
@@ -123,6 +123,10 @@ class Activity:
 		return self.__vf__
 
 	@property
+	def classifiers( self ) -> List[str]:
+		return sorted( list( set( [uid.split( ':', maxsplit=1 )[0] for uid in self.uids] ) ) )
+
+	@property
 	def resources( self ) -> List[Resource]:
 		return self.__resources__
 
@@ -139,6 +143,27 @@ class Activity:
 		return True if len( self.parts ) > 0 else False
 
 	# additional methods
+
+	# def union( self, others: List[Activity], strategy: Literal['first', 'last'] = 'first' ) -> Activity: # todo: are different strategies useful?
+	def union( self, others: List[Activity], force: bool = False ) -> Activity:
+		for f in self.fields():
+			if f.name.startswith( '__' ): # never touch internal fields
+				continue
+
+			if not force and f.name in PROTECTED_FIELDS: # only overwrite protected fields when forced
+				continue
+
+
+			if (value := getattr( self, f.name )) != f.default and not force: # do not overwrite when a value is already set
+				continue
+
+			for other in others:
+				# overwrite when other value is different and different from default
+				if (other_value := getattr( other, f.name )) != value and other_value != f.default:
+					setattr( self, f.name, other_value )
+					if not force: # with force the last value wins
+						break
+		return self
 
 	def append_resource( self, resource: Resource ) -> None:
 		self.__resources__.append( resource )

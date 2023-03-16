@@ -14,7 +14,6 @@ from tracs.activity import Activity
 from tracs.resources import UID
 from tracs.resources import Resource
 from tracs.activity_types import ActivityTypes
-from tracs.dataclasses import as_dict
 
 @mark.file( 'libraries/default/activities.json' )
 def test_init( json ):
@@ -44,19 +43,20 @@ def test_init( json ):
 	# assert a.localtime == datetime( 2012, 10, 24, 22, 29, 40, tzinfo=tzlocal() ) # comparison with tzlocal worked before ...
 	assert a.localtime == datetime( 2012, 10, 24, 22, 29, 40, tzinfo=timezone( timedelta( seconds=3600 ) ) )
 
-@mark.file( 'libraries/default/polar/1/0/0/100001/100001.raw.json' )
-def test_init_from( json ):
-	src1 = Activity( doc_id=1, name='One' )
-	src2 = Activity( distance=10, calories=20 )
-	src3 = Activity( calories=100, heartrate= 100 )
+@mark.file( 'libraries/default/polar/1/0/0/100001/100001.json' )
+def test_union( json ):
+	src1 = Activity( id=1, name='One' )
+	src2 = Activity( id=2, distance=10, calories=20 )
+	src3 = Activity( id=3, calories=100, heartrate= 100 )
 
-	target = Activity( others=[src1, src2, src3] )
+	target = src1.union( [src2, src3] )
 	assert target.name == 'One' and target.distance == 10 and target.calories == 20 and target.heartrate == 100
-	assert target.doc_id == 0
+	assert target.id == 1
 
-	target = Activity( others=[src1, src2, src3], force=True )
+	src1 = Activity( id=1, name='One' )
+	target = src1.union( others=[src2, src3], force=True )
 	assert target.name == 'One' and target.distance == 10 and target.calories == 100 and target.heartrate == 100
-	assert target.doc_id == 1
+	assert target.id == 3
 
 def test_init_from_other_parts():
 	src1 = Activity( distance=10, duration=time( 1, 0, 0 ), heartrate_max=180, heartrate_min=100 )
