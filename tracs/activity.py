@@ -170,17 +170,8 @@ class Activity:
 		return [r for r in self.resources if r.uid.startswith( f'{classifier}:' )]
 
 	def __post_init__( self, other_parts: List[Activity], force: bool ):
-		if self.raw:
-			self.__raw_init__( self.raw )
-		elif other_parts:
+		if other_parts:
 			self.__init_from_parts__( other_parts, force )
-
-	def __raw_init__( self, raw: Any ) -> None:
-		"""
-		Called from __post_init__ with raw data as parameter and can be overridden in subclasses. Will not be called when raw is None.
-		:return:
-		"""
-		pass
 
 	def __init_from_parts__( self, other_parts: List[Activity], force: bool ) -> None:
 		"""
