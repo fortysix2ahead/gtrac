@@ -21,7 +21,7 @@ log = getLogger( __name__ )
 
 TITLE_STYLE = { 'title_justify': 'left', 'title_style': 'bold bright_blue' }
 
-def show_resource( resources: List[str], ctx: ApplicationContext, display_raw: bool = False, verbose: bool = True, format_name: str = None ) -> None:
+def show_resources( resources: List[str], ctx: ApplicationContext, display_raw: bool = False, verbose: bool = True, format_name: str = None ) -> None:
 	for resource_url in resources:
 		url = urlparse( resource_url )
 		try:
@@ -48,9 +48,9 @@ def show_resource( resources: List[str], ctx: ApplicationContext, display_raw: b
 				importer = Registry.importer_for( resource.type )
 				if importer:
 					activity = importer.load( path=Service.path_for_resource( resource ) )
-					show_activity( [activity], ctx, display_raw=False, verbose=False, format_name=format_name )
+					show_activities( [activity], ctx, display_raw=False, verbose=False, format_name=format_name )
 
-def show_activity( activities: [Activity], ctx: ApplicationContext, display_raw: bool = False, verbose: bool = True, format_name: str = None ) -> None:
+def show_activities( activities: [Activity], ctx: ApplicationContext, display_raw: bool = False, verbose: bool = True, format_name: str = None ) -> None:
 
 	if format_name == 'all':
 		show_fields = [ f.name for f in Activity.fields() ]
@@ -64,33 +64,32 @@ def show_activity( activities: [Activity], ctx: ApplicationContext, display_raw:
 
 	for a in activities:
 		if display_raw:
-			table = Table( box=box.MINIMAL, show_header=False, show_footer=False )
-			table.add_row( '[blue]field[/blue]', '[blue]value[/blue]' )
-
-			for f in sorted( Activity.fields(), key=lambda field: field.name ):
-				table.add_row( f.name, pp( getattr( a, f.name ) ) )
-
-			console.print( table )
-
-			table = Table( box=box.MINIMAL, show_header=False, show_footer=False )
-			table.add_row( '[bold bright_blue]Resources[/bold bright_blue]' )
-			table.add_row( '[blue]id[/blue]', '[blue]name[/blue]', '[blue]path[/blue]', '[blue]exists[/blue]', '[blue]type[/blue]', '[blue]uid[/blue]', '[blue]status[/blue]', '[blue]source[/blue]' )
-			for uid in a.uids:
-				resources = ctx.db.find_resources( uid )
-				for r in resources:
-					resource_path = Registry.services.get( r.classifier ).path_for( resource=r )
-					path_exists = '[bright_green]\u2713[/bright_green]' if resource_path.exists() else '[bright_red]\u2716[/bright_red]'
-					table.add_row( pp( r.doc_id ), r.name, r.path, path_exists, r.type, r.uid, pp( r.status ), r.source )
-
-			console.print( table )
-
+			show_raw_activity( a, ctx )
 		else:
 			if verbose:
 				show_verbose_activity( a, ctx, show_fields )
 			else:
-				_show_activity( a, ctx, show_fields )
+				show_activity( a, ctx, show_fields )
 
-def _show_activity( a: Activity, ctx: ApplicationContext, show_fields: List[str] ):
+def show_raw_activity( a: Activity, ctx: ApplicationContext ):
+
+	table = Table( box=box.MINIMAL, show_header=False, show_footer=False, title='Fields and Values:', **TITLE_STYLE )
+	table.add_row( '[blue]field[/blue]', '[blue]value[/blue]' )
+	for f in sorted( Activity.fields(), key=lambda field: field.name ):
+		table.add_row( f.name, pp( getattr( a, f.name ) ) )
+	console.print( table )
+
+	table = Table( box=box.MINIMAL, show_header=False, show_footer=False, title='Resources:', **TITLE_STYLE )
+	table.add_row( '[blue]id[/blue]', '[blue]name[/blue]', '[blue]path[/blue]', '[blue]exists[/blue]', '[blue]type[/blue]', '[blue]uid[/blue]', '[blue]status[/blue]', '[blue]source[/blue]' )
+	for uid in a.uids:
+		resources = ctx.db.find_resources( uid )
+		for r in resources:
+			resource_path = Registry.services.get( r.classifier ).path_for( resource=r )
+			path_exists = '[bright_green]\u2713[/bright_green]' if resource_path.exists() else '[bright_red]\u2716[/bright_red]'
+			table.add_row( pp( r.id ), r.name, r.path, path_exists, r.type, r.uid, pp( r.status ), r.source )
+	console.print( table )
+
+def show_activity( a: Activity, ctx: ApplicationContext, show_fields: List[str] ):
 	table = Table( box=box.MINIMAL, show_header=False, show_footer=False )
 	rows = [[field, getattr( a, field )] for field in show_fields]
 
