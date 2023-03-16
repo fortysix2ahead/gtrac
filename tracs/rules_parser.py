@@ -59,6 +59,12 @@ RULES: Dict[str, Type[Rule]] = {
 # mapping of keywords to normalized expressions
 # this enables operations like 'list thisyear'
 KEYWORDS: Dict[str, Callable] = {
+	# time related keywords
+	'morning': lambda s: f'hour >= 6 and hour < 11',
+	'noon': lambda s: f'hour >= 11 and hour < 13',
+	'afternoon': lambda s: f'hour >= 13 and hour < 18',
+	'evening': lambda s: f'hour >= 18 and hour < 22',
+	'night': lambda s: f'hour >= 22 or hour < 6',
 	# date related keywords
 	'last7days': lambda s: f'time >= {floor( now().shift( days=-6 ), "day" )} and time <= {ceil( now(), "day" )}',
 	'last14days': lambda s: f'time >= {floor( now().shift( days=-13 ), "day" )} and time <= {ceil( now(), "day" )}',
@@ -94,17 +100,18 @@ NORMALIZERS: Dict[str, Callable] = {
 # the key represents the name of the virtual field, the value is a function which calculates the actual value
 RESOLVERS: Dict[str, Callable] = {
 	# date/time fields
-	'weekday': lambda t, n: t.time.day, # day attribute of datetime objects
-	'day': lambda t, n: t.time.day, # day attribute of datetime objects
-	'month': lambda t, n: t.time.month, # month attribute of datetime objects
-	'year': lambda t, n: t.time.year, # year attribute of datetime objects
-	'date': lambda t, n: t.time.date(), # date
+	'weekday': lambda t, n: t.localtime.day, # day attribute of datetime objects
+	'hour': lambda t, n: t.localtime.hour, # hour attribute of datetime objects
+	'day': lambda t, n: t.localtime.day, # day attribute of datetime objects
+	'month': lambda t, n: t.localtime.month, # month attribute of datetime objects
+	'year': lambda t, n: t.localtime.year, # year attribute of datetime objects
+	'date': lambda t, n: t.localtime.date(), # date
 	# activity type
 	'type': lambda t, n: t.type.value if t.type else None,
 	# internal helper attributes, which are not intended to be used directly
 	'__classifiers__': lambda t, n: list( map( lambda s: s.split( ':', 1 )[0], t.uids ) ), # virtual attribute of uids
-	'__date__': lambda t, n: t.time.date(), # date
-	'__time__': lambda t, n: t.time.time(), # time
+	'__date__': lambda t, n: t.localtime.date(), # date
+	'__time__': lambda t, n: t.localtime.time(), # time
 }
 
 # type hints to be able to parse certain string correctly (i.e. 2022 as date, not as int)
