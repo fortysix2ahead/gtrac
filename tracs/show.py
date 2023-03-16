@@ -19,6 +19,8 @@ from .utils import fmt
 
 log = getLogger( __name__ )
 
+TITLE_STYLE = { 'title_justify': 'left', 'title_style': 'bold bright_blue' }
+
 def show_resource( resources: List[str], ctx: ApplicationContext, display_raw: bool = False, verbose: bool = True, format_name: str = None ) -> None:
 	for resource_url in resources:
 		url = urlparse( resource_url )
@@ -83,51 +85,61 @@ def show_activity( activities: [Activity], ctx: ApplicationContext, display_raw:
 			console.print( table )
 
 		else:
-			table = Table( box=box.MINIMAL, show_header=False, show_footer=False )
-			rows = [ [ field, getattr( a, field ) ] for field in show_fields ]
-
-			for row in rows:
-				if row[1] is not None and row[1] != '' and row[1] != [] and row[1] != {}:
-					table.add_row( row[0], fmt( row[1] ) )
-
-			console.print( table )
-			# console.print( '\u00b9 Proper timezone support is currently missing, local timezone is displayed' )
-
 			if verbose:
+				show_verbose_activity( a, ctx, show_fields )
+			else:
 				table = Table( box=box.MINIMAL, show_header=False, show_footer=False )
-				table.add_row( '[bold bright_blue]URLs and Locations:[/bold bright_blue]' )
-				for uid in a.uids:
-					classifier, local_id = uid.split( ':', 1 )
-					table.add_row( classifier, Service.url_for_uid( uid ) )
-				for uid in a.uids:
-					path = Path( ctx.db_dir, Service.path_for_uid( uid ) )
-					table.add_row( 'local db', f'{str( path )}/' )
+				rows = [ [ field, getattr( a, field ) ] for field in show_fields ]
+
+				for row in rows:
+					if row[1] is not None and row[1] != '' and row[1] != [] and row[1] != {}:
+						table.add_row( row[0], fmt( row[1] ) )
 
 				console.print( table )
+				# console.print( '\u00b9 Proper timezone support is currently missing, local timezone is displayed' )
 
-				table = Table( box=box.MINIMAL, show_header=False, show_footer=False )
-				table.add_row( '[bold bright_blue]Resources:[/bold bright_blue]' )
-				table.add_row( '[blue]id[/blue]', '[blue]path[/blue]', '[blue]absolute path[/blue]', '[blue]type[/blue]' )
-				# table.add_row( '[blue]id[/blue]', '[blue]path[/blue]', '[blue]absolute path[/blue]', '[blue]type[/blue]', '[blue]URL[/blue]' )
-				for uid in a.uids:
-					resources = ctx.db.find_resources( uid ) if ctx else []
-					for r in resources:
-						resource_path = Registry.services.get( r.classifier ).path_for( resource=r )
-						path_exists = '[bright_green]\u2713[/bright_green]' if resource_path.exists() else '[bright_red]\u2716[/bright_red]'
+def show_verbose_activity( a: Activity, ctx: ApplicationContext, show_fields: List[str] ) -> None:
+	# activity data
+	table = Table( box=box.MINIMAL, show_header=False, show_footer=False, title='Activity Data:', **TITLE_STYLE )
+	rows = [[field, getattr( a, field )] for field in show_fields]
+	for row in rows:
+		if row[1] is not None and row[1] != '' and row[1] != [] and row[1] != { }:
+			table.add_row( row[0], fmt( row[1] ) )
+	console.print( table )
 
-						overlay_path = Registry.services.get( r.classifier ).path_for( resource=r, ignore_overlay=False )
-						# overlay_sign = ' \u29c9'
-						# overlay_sign = '\u2a39'
-						overlay_sign = '\u2a01'
-						overlay_path_exists = f'[bright_green] {overlay_sign}[/bright_green]' if overlay_path.exists() else ''
+	# locations/urls
+	table = Table( box=box.MINIMAL, show_header=False, show_footer=False, title='URLs and Locations:', **TITLE_STYLE )
+	for uid in a.uids:
+		classifier, local_id = uid.split( ':', 1 )
+		table.add_row( classifier, Service.url_for_uid( uid ) )
+	for uid in a.uids:
+		path = Path( ctx.db_dir, Service.path_for_uid( uid ) )
+		table.add_row( 'local db', f'{str( path )}/' )
+	console.print( table )
 
-						absolute_path = str( overlay_path ) if overlay_path.exists() else str( resource_path )
-						table.add_row( pp( r.id ), f'{r.path} {path_exists}{overlay_path_exists}', absolute_path, r.type )
+	# attached resources
+	table = Table( box=box.MINIMAL, show_header=False, show_footer=False, title='Resources:', **TITLE_STYLE )
+	table.add_row( '[blue]id[/blue]', '[blue]path[/blue]', '[blue]absolute path[/blue]', '[blue]type[/blue]' )
+	# table.add_row( '[blue]id[/blue]', '[blue]path[/blue]', '[blue]absolute path[/blue]', '[blue]type[/blue]', '[blue]URL[/blue]' )
+	for uid in a.uids:
+		resources = ctx.db.find_resources( uid ) if ctx else []
+		for r in resources:
+			resource_path = Registry.services.get( r.classifier ).path_for( resource=r )
+			path_exists = '[bright_green]\u2713[/bright_green]' if resource_path.exists() else '[bright_red]\u2716[/bright_red]'
 
-						# resource_url = Registry.services.get( r.classifier ).url_for( resource=r )
-						# table.add_row( pp( r.doc_id ), f'{r.path} {path_exists}{overlay_path_exists}', absolute_path, r.type, resource_url )
+			overlay_path = Registry.services.get( r.classifier ).path_for( resource=r, ignore_overlay=False )
+			# overlay_sign = ' \u29c9'
+			# overlay_sign = '\u2a39'
+			overlay_sign = '\u2a01'
+			overlay_path_exists = f'[bright_green] {overlay_sign}[/bright_green]' if overlay_path.exists() else ''
 
-				console.print( table )
+			absolute_path = str( overlay_path ) if overlay_path.exists() else str( resource_path )
+			table.add_row( pp( r.id ), f'{r.path} {path_exists}{overlay_path_exists}', absolute_path, r.type )
+
+	# resource_url = Registry.services.get( r.classifier ).url_for( resource=r )
+	# table.add_row( pp( r.doc_id ), f'{r.path} {path_exists}{overlay_path_exists}', absolute_path, r.type, resource_url )
+
+	console.print( table )
 
 def show_aggregate( activities: [Activity], ctx: ApplicationContext ) -> None:
 	table = Table( box=box.MINIMAL, show_header=False, show_footer=False )
