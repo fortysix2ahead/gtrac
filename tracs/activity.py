@@ -11,7 +11,6 @@ from typing import Any
 from typing import Callable
 from typing import ClassVar
 from typing import Dict
-from typing import Union
 
 from logging import getLogger
 from typing import List
@@ -90,9 +89,7 @@ class Activity:
 
 	# resources: List[Resource] = field( init=True, default_factory=list )
 	parts: List = field( init=True, default_factory=list )
-
 	other_parts: InitVar = field( default=None )
-	force: InitVar = field( default=False )
 
 	__dirty__: bool = field( init=False, default=False, repr=False )
 	__metadata__: Dict[str, Any] = field( init=False, default_factory=dict )
@@ -169,9 +166,9 @@ class Activity:
 	def resources_for( self, classifier: str ) -> List[Resource]:
 		return [r for r in self.resources if r.uid.startswith( f'{classifier}:' )]
 
-	def __post_init__( self, other_parts: List[Activity], force: bool ):
+	def __post_init__( self, other_parts: List[Activity] ):
 		if other_parts:
-			self.__init_from_parts__( other_parts, force )
+			self.__init_from_parts__( other_parts )
 
 	def __init_from_parts__( self, other_parts: List[Activity], force: bool ) -> None:
 		"""
