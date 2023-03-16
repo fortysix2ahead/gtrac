@@ -88,15 +88,18 @@ def show_activity( activities: [Activity], ctx: ApplicationContext, display_raw:
 			if verbose:
 				show_verbose_activity( a, ctx, show_fields )
 			else:
-				table = Table( box=box.MINIMAL, show_header=False, show_footer=False )
-				rows = [ [ field, getattr( a, field ) ] for field in show_fields ]
+				_show_activity( a, ctx, show_fields )
 
-				for row in rows:
-					if row[1] is not None and row[1] != '' and row[1] != [] and row[1] != {}:
-						table.add_row( row[0], fmt( row[1] ) )
+def _show_activity( a: Activity, ctx: ApplicationContext, show_fields: List[str] ):
+	table = Table( box=box.MINIMAL, show_header=False, show_footer=False )
+	rows = [[field, getattr( a, field )] for field in show_fields]
 
-				console.print( table )
-				# console.print( '\u00b9 Proper timezone support is currently missing, local timezone is displayed' )
+	for row in rows:
+		if row[1] is not None and row[1] != '' and row[1] != [] and row[1] != { }:
+			table.add_row( row[0], fmt( row[1] ) )
+
+	console.print( table )
+	# console.print( '\u00b9 Proper timezone support is currently missing, local timezone is displayed' )
 
 def show_verbose_activity( a: Activity, ctx: ApplicationContext, show_fields: List[str] ) -> None:
 	# activity data
