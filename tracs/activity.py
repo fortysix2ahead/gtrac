@@ -91,7 +91,6 @@ class Activity:
 	# resources: List[Resource] = field( init=True, default_factory=list )
 	parts: List = field( init=True, default_factory=list )
 
-	others: InitVar = field( default=None )
 	other_parts: InitVar = field( default=None )
 	force: InitVar = field( default=False )
 
@@ -170,11 +169,9 @@ class Activity:
 	def resources_for( self, classifier: str ) -> List[Resource]:
 		return [r for r in self.resources if r.uid.startswith( f'{classifier}:' )]
 
-	def __post_init__( self, others: List[Activity], other_parts: List[Activity], force: bool ):
+	def __post_init__( self, other_parts: List[Activity], force: bool ):
 		if self.raw:
 			self.__raw_init__( self.raw )
-		elif others:
-			self.__init_from_others__( others, force )
 		elif other_parts:
 			self.__init_from_parts__( other_parts, force )
 
@@ -184,20 +181,6 @@ class Activity:
 		:return:
 		"""
 		pass
-
-	def __init_from_others__( self, others: List[Activity], force: bool ) -> None:
-		"""
-		Called from __post_init__ with other activities as parameter.
-
-		:return:
-		"""
-		for f in fields( self ):
-			for o in others:
-				if value := getattr( o, f.name ):
-					if not f.metadata.get( PROTECTED, False ) or force:
-						setattr( self, f.name, value ) # todo: make a copy in case of list or dict
-					if not force:
-						break
 
 	def __init_from_parts__( self, other_parts: List[Activity], force: bool ) -> None:
 		"""
