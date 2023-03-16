@@ -48,8 +48,6 @@ class Activity:
 
 	raw: Any = field( default=None )  # structured raw data used for initialization from external data
 	raw_id: int = field( default=None )  # raw id as raw data might not contain all data necessary
-	raw_name: str = field( default=None )  # same as raw id
-	raw_data: Union[str, bytes] = field( default=None )  # serialized version of raw, can be i.e. str or bytes
 
 	local_id: int = field( default=None )  # same as raw_id
 
