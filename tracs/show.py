@@ -1,4 +1,5 @@
 
+from dataclasses import fields
 from logging import getLogger
 from pathlib import Path
 from typing import List
@@ -21,34 +22,24 @@ log = getLogger( __name__ )
 
 TITLE_STYLE = { 'title_justify': 'left', 'title_style': 'bold bright_blue' }
 
-def show_resources( resources: List[str], ctx: ApplicationContext, display_raw: bool = False, verbose: bool = True, format_name: str = None ) -> None:
-	for resource_url in resources:
-		url = urlparse( resource_url )
-		try:
-			id = int( url.path )
-		except ValueError:
-			id = None
+def show_resources( activities: List[Activity], ctx: ApplicationContext, display_raw: bool = False, verbose: bool = True, format_name: str = None ) -> None:
+	for a in activities:
+		for r in ctx.db.get_resources_by_uids( a.uids ):
+			table = Table( box=box.MINIMAL, show_header=False, show_footer=False, title=f'Resource:', **TITLE_STYLE )
+			for f in sorted( Resource.fieldnames() ):
+				if f in ['__parent_activity__', 'content', 'raw']:
+					continue
+				table.add_row( f, pp( getattr( r, f ) ) )
 
-		if id and url.scheme == '' and url.query == '':
-			resource = ctx.db.get_resource( id )
-		else:
-			resource = None
+			table.add_row( '[bright_blue]native fields[/bright_blue]', '' )
+			try:
+				act = Registry.importer_for( r.type ).load_as_activity( path=Service.path_for_resource( r ) )
+				for nf in fields( act ):
+					table.add_row( nf.name, pp( getattr( act, nf.name ), max_depth=1, no_wrap=True ) )
+			except AttributeError:
+				table.add_row( '...', '[red]error: failed to load resource as activity[/red]' )
 
-		if resource:
-			if display_raw:
-				table = Table( box=box.MINIMAL, show_header=False, show_footer=False )
-				table.add_row( '[blue]field[/blue]', '[blue]value[/blue]' )
-
-				for f in sorted( Resource.fields(), key=lambda field: field.name ):
-					table.add_row( f.name, pp( getattr( resource, f.name ) ) )
-
-				console.print( table )
-
-			else:
-				importer = Registry.importer_for( resource.type )
-				if importer:
-					activity = importer.load( path=Service.path_for_resource( resource ) )
-					show_activities( [activity], ctx, display_raw=False, verbose=False, format_name=format_name )
+			console.print( table )
 
 def show_activities( activities: [Activity], ctx: ApplicationContext, display_raw: bool = False, verbose: bool = True, format_name: str = None ) -> None:
 

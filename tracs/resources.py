@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from dataclasses import field
+from dataclasses import Field
+from dataclasses import fields
 from dataclasses import InitVar
 from enum import Enum
 from re import compile
@@ -120,6 +122,16 @@ class Resource:
 	resources: List[Resource] = field( default_factory=list, repr=False )
 
 	__parent_activity__: List = field( default_factory=list, repr=False )
+
+	# class methods
+
+	@classmethod
+	def fields( cls ) -> List[Field]:
+		return list( fields( Resource ) )
+
+	@classmethod
+	def fieldnames( cls ) -> List[str]:
+		return [f.name for f in fields( Resource )]
 
 	def __post_init__( self, text: str ):
 		self.content = text.encode( encoding='UTF-8' ) if text else self.content

@@ -482,6 +482,11 @@ class ActivityDb:
 	def get_resources_by_uid( self, uid ) -> List[Resource]:
 		return [r for r in self.resources if r.uid == uid]
 
+	def get_resources_by_uids( self, uids: List[str] ):
+		# regular_list = [[1, 2, 3, 4], [5, 6, 7], [8, 9]]
+		# flat_list = [item for sublist in regular_list for item in sublist]
+		return list( chain( *[r for r in [self.get_resources_by_uid( uid ) for uid in uids]] ) ) # todo: revise flatten list!
+
 	def get_resource_by_uid_path( self, uid: str, path: str ) -> Optional[Resource]:
 		return next( (r for r in self.resources if r.uid == uid and r.path == path), None )
 

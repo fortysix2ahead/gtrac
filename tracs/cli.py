@@ -162,12 +162,12 @@ def ls( ctx: ApplicationContext, sort, reverse, format_name, filters ):
 @cli.command( help='shows details about activities and resources' )
 @option( '-f', '--format', 'format_name', is_flag=False, required=False, type=str, hidden=True, help='uses the format with the provided name when printing', metavar='FORMAT' )
 @option( '-w', '--raw', is_flag=True, required=False, hidden=True, help='display raw data' )
-@option( '-r', '--resource', is_flag=True, required=False, hidden=True, default=False, help='treat filters as URLs for resources' )
+@option( '-r', '--resource', is_flag=True, required=False, hidden=True, default=False, help='display information on resources' )
 @argument('filters', nargs=-1)
 @pass_obj
 def show( ctx: ApplicationContext, filters, raw, format_name, resource ):
 	if resource:
-		show_resources( list( filters ), ctx=ctx, display_raw=raw, verbose=ctx.verbose, format_name=format_name )
+		show_resources( list( ctx.db.find( filters ) ), ctx=ctx, display_raw=raw, verbose=ctx.verbose, format_name=format_name )
 	else:
 		show_activities( list( ctx.db.find( filters ) ), ctx=ctx, display_raw=raw, verbose=ctx.verbose, format_name=format_name )
 
