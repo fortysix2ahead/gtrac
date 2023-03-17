@@ -136,6 +136,10 @@ class Activity:
 		return self.__parent_id__
 
 	@property
+	def is_group( self ) -> bool:
+		return True if len( self.uids ) > 1 else False
+
+	@property
 	def is_multipart( self ) -> bool:
 		return True if len( self.parts ) > 0 else False
 
