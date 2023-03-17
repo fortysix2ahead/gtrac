@@ -71,6 +71,7 @@ class Activity:
 	localtime: datetime = field( default=None ) # activity time (local)
 	localtime_end: Optional[datetime] = field( default=None ) # activity end time (local)
 	timezone: str = field( default=get_localzone_name() ) # timezone of the activity, local timezone by default
+
 	duration: Optional[time] = field( default=None ) #
 	duration_moving: Optional[time] = field( default=None ) #
 
@@ -89,8 +90,10 @@ class Activity:
 
 	# resources: List[Resource] = field( init=True, default_factory=list )
 	parts: List = field( init=True, default_factory=list )
-	other_parts: InitVar = field( default=None )
+	others: InitVar[List[Activity]] = field( default=None, kw_only=True )
+	other_parts: InitVar[List[Activity]] = field( default=None, kw_only=True )
 
+	__id__: int = field( init=False, default=0, repr=False )
 	__dirty__: bool = field( init=False, default=False, repr=False )
 	__metadata__: Dict[str, Any] = field( init=False, default_factory=dict )
 	__parts__: List[Activity] = field( init=False, default_factory=list, repr=False )
@@ -136,6 +139,15 @@ class Activity:
 	def is_multipart( self ) -> bool:
 		return True if len( self.parts ) > 0 else False
 
+	# init
+
+	def __post_init__( self, others: List[Activity], other_parts: List[Activity] ):
+		self.__id__ = self.id
+		if others:
+			self.union( others )
+		elif other_parts:
+			self.__init_from_parts__( other_parts )
+
 	# additional methods
 
 	# def union( self, others: List[Activity], strategy: Literal['first', 'last'] = 'first' ) -> Activity: # todo: are different strategies useful?
@@ -165,10 +177,6 @@ class Activity:
 
 	def resources_for( self, classifier: str ) -> List[Resource]:
 		return [r for r in self.resources if r.uid.startswith( f'{classifier}:' )]
-
-	def __post_init__( self, other_parts: List[Activity] ):
-		if other_parts:
-			self.__init_from_parts__( other_parts )
 
 	def __init_from_parts__( self, other_parts: List[Activity], force: bool ) -> None:
 		"""
