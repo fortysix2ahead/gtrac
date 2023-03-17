@@ -83,6 +83,7 @@ class ResourceType:
 
 	activity_cls: Type = field( default=None )
 	name: str = field( default=None )
+
 	summary: bool = field( default=False )
 	recording: bool = field( default=False )
 	image: bool = field( default=False )
@@ -100,6 +101,10 @@ class ResourceType:
 			return f'{self.subtype}' if not self.vendor else f'{self.subtype}.{self.suffix}'
 		else:
 			return self.suffix
+
+	@property
+	def other( self ) -> bool:
+		return True if not self.summary and not self.recording and not self.image else False
 
 @dataclass
 class Resource:
