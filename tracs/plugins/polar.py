@@ -223,6 +223,12 @@ class PolarFlowExercise:
 			calories = self.calories,
 		)
 
+@resourcetype( type=POLAR_CSV_TYPE )
+@dataclass
+class PolarFlowExerciseCsv:
+
+	pass
+
 @resourcetype( type=POLAR_EXERCISE_DATA_TYPE, summary=True )
 class PolarExerciseDataActivity( Activity ):
 
