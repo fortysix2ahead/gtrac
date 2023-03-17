@@ -8,6 +8,7 @@ from copy import deepcopy
 from csv import writer as csv_writer
 from os import system
 from re import compile
+from typing import cast
 from typing import Iterable
 from typing import List
 from typing import Optional
@@ -28,6 +29,7 @@ from tzlocal import get_localzone_name
 from .activity import Activity
 from .resources import UID
 from .resources import Resource
+from .resources import ResourceType
 from .config import ApplicationConfig as cfg
 from .config import ApplicationContext
 from .config import cs
@@ -128,38 +130,38 @@ def reimport_activities( activities: List[Activity], include_recordings: bool = 
 		offset_delta = None
 		timezone = None
 
-	for activity in activities:
-		activity_source = deepcopy( activity )
-		for uid in activity.uids:
-			resources = ctx.db.find_resources( uid )
-			# first iteration: import from raw data only
-			for r in resources:
-				if not r.type in [ GPX_TYPE, TCX_TYPE ]:
-					log.debug( f'importing resource of type {r}' )
-					imported_activity = load_resource( r, as_activity=True )
-					activity.init_from( other=imported_activity )
+	for a in activities:
+		resources = ctx.db.find_all_resources( a.uids )
+		new_activity = Activity()
 
-			# second iteration import from recording when flag is set
-			for r in resources:
-				if include_recordings and r.type in [ GPX_TYPE, TCX_TYPE ]:
-					log.debug( f'importing resource of type {r}' )
-					imported_activity = load_resource( r, as_activity=True )
-					activity.init_from( other=imported_activity )
+		src_activities = []
+		for r in resources:
+			resource_type = cast( ResourceType, Registry.resource_types.get( r.type ) )
+			if resource_type.summary or ( resource_type.recording and include_recordings ):
+				path = Service.path_for_resource( r )
+				loaded = Registry.importer_for( r.type ).load_as_activity( path=path )
+				src_activities.append( loaded.as_activity() )
+
+		new_activity.union( others=src_activities )
+		new_activity.local_id = None # todo: remove later
+		new_activity.uids = a.uids # manually copy uids
 
 		if offset_delta:
-			activity.time = activity.time + offset_delta
-			activity.tag( TAG_OFFSET_CORRECTION )
+			new_activity.time = new_activity.time + offset_delta
+			new_activity.tag( TAG_OFFSET_CORRECTION )
 
 		if timezone:
-			activity.timezone = timezone.tzname( datetime.utcnow() )
-			activity.localtime = activity.time.astimezone( timezone )
-			activity.tag( TAG_TIMEZONE_CORRECTION )
+			new_activity.timezone = timezone.tzname( datetime.utcnow() )
+			new_activity.localtime = new_activity.time.astimezone( timezone )
+			new_activity.tag( TAG_TIMEZONE_CORRECTION )
 		else:
-			activity.timezone = get_localzone_name()
-			activity.localtime = activity.time.astimezone( gettz( activity.timezone ) )
+			new_activity.timezone = get_localzone_name()
+			new_activity.localtime = new_activity.time.astimezone( gettz( a.timezone ) )
 
-		if force or _confirm_init( activity_source, activity, ctx.console ):
-			ctx.db.update( activity )
+		if force or _confirm_init( a, new_activity, ctx ):
+			ctx.db.upsert_activity( new_activity )
+
+	ctx.db.commit()
 
 def load_all_resources( db: ActivityDb, activity: Activity ) -> List[Resource]:
 	resources = []
@@ -183,10 +185,12 @@ def load_resource( resource: Resource, as_activity: bool = False, update_raw: bo
 
 	log.error( f'unable to load resource {resource.uid}?{resource.path}, no importer found for resource type {resource.type}' )
 
-def _confirm_init( source: Activity, target: Activity, console: Console ) -> bool:
-	table = diff_table( as_dict( source, remove_protected=True ), as_dict( target, remove_protected=True ), header=('Field', 'Old Value', 'New Value') )
+def _confirm_init( source: Activity, target: Activity, ctx: ApplicationContext ) -> bool:
+	src_dict = ctx.db.factory.dump( source, Activity )
+	target_dict = ctx.db.factory.dump( target, Activity )
+	table = diff_table( src_dict, target_dict, header=('Field', 'Old Value', 'New Value') )
 	if len( table.rows ) > 0:
-		console.print( table )
+		ctx.console.print( table )
 		answer = Confirm.ask( f'Would you like to reimport activity {source.uids[0]}?', default=False )
 	else:
 		cs.print( f'no difference found during reimport of activity {source.uids[0]}, skipping reimport' )

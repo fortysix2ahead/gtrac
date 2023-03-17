@@ -365,7 +365,7 @@ class ActivityDb:
 		key_range = range( 1, max( d.keys() ) + 2 ) if d.keys() else [1]
 		return set( key_range ).difference( set( d.keys() ) ).pop()
 
-	# insert activities
+	# insert/upsert activities
 
 	def insert( self, *activities ) -> Union[int, List[int]]:
 		ids = []
@@ -553,7 +553,7 @@ class ActivityDb:
 			return [r for r in self.resources if r.type == activity_type ]
 
 	def find_all_resources( self, uids: List[str] ) -> List[Resource]:
-		return [r for r in self.resources.values() if r.uid in uids]
+		return [r for r in self.resources if r.uid in uids]
 
 	def find_summaries( self, uid ) -> List[Resource]:
 		return [r for r in self.find_resources( uid ) if (rt := cast( ResourceType, Registry.resource_types.get( r.type ) )) and rt.summary]
