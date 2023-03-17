@@ -20,7 +20,6 @@ from tzlocal import get_localzone_name
 
 from .activity_types import ActivityTypes
 from .resources import Resource
-from .resources import ResourceGroup
 from .utils import sum_times
 
 log = getLogger( __name__ )
@@ -217,30 +216,6 @@ class Activity:
 	def resources_for( self, classifier: str ) -> List[Resource]:
 		return [r for r in self.resources if r.uid.startswith( f'{classifier}:' )]
 
-	def init_from( self, other: Activity = None, raw: Dict = None, force: bool = False ) -> Activity:
-		"""
-		Initializes this activity with data from another activity/dictionary.
-
-		:param other: other activity
-		:param raw: raw data
-		:param force: flag to overwrite existing data from other, regardless of existing values (otherwise non-null values will be preferred
-		:return: self, for convenience
-		"""
-		if other:
-			for f in fields( self ):
-				if not f.metadata.get( PROTECTED, False ):
-					other_value = getattr( other, f.name )
-					if force:
-						setattr( self, f.name, other_value )
-					else:
-						new_value = getattr( self, f.name ) or other_value
-						setattr( self, f.name, new_value )
-		elif raw:
-			self.raw = raw
-			self.__post_init__( serialized_data=None )
-
-		return self
-
 	def tag( self, tag: str ):
 		if tag not in self.tags:
 			self.tags.append( tag )
@@ -248,6 +223,3 @@ class Activity:
 
 	def untag( self, tag: str ):
 		self.tags.remove( tag )
-
-	def resource_group( self ) -> ResourceGroup:
-		return ResourceGroup( resources=self.resources )
