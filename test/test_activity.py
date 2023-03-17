@@ -64,11 +64,11 @@ def test_union( json ):
 	assert target.name == 'One' and target.distance == 10 and target.calories == 20 and target.heartrate == 100
 	assert target.id == 0
 
-def test_init_from_other_parts():
-	src1 = Activity( distance=10, duration=time( 1, 0, 0 ), heartrate_max=180, heartrate_min=100 )
-	src2 = Activity( distance=20, duration=time( 1, 20, 0 ) )
-	src3 = Activity( heartrate_max=160, heartrate_min=80 )
-	target = Activity( other_parts=[src1, src2, src3] )
+def test_add():
+	src1 = Activity( time=datetime( 2022, 2, 22, 7 ), distance=10, duration=time( 1, 0, 0 ), heartrate_max=180, heartrate_min=100 )
+	src2 = Activity( time=datetime( 2022, 2, 22, 8 ), distance=20, duration=time( 1, 20, 0 ) )
+	src3 = Activity( time=datetime( 2022, 2, 22, 9 ), heartrate_max=160, heartrate_min=80 )
+	target = Activity().add( others=[src3, src1, src2] )
 
 	assert target.distance == 30
 	assert target.ascent is None

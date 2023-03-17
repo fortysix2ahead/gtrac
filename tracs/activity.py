@@ -90,6 +90,7 @@ class Activity:
 
 	# resources: List[Resource] = field( init=True, default_factory=list )
 	parts: List = field( init=True, default_factory=list )
+
 	others: InitVar[List[Activity]] = field( default=None, kw_only=True )
 	other_parts: InitVar[List[Activity]] = field( default=None, kw_only=True )
 
@@ -146,7 +147,7 @@ class Activity:
 		if others:
 			self.union( others )
 		elif other_parts:
-			self.__init_from_parts__( other_parts )
+			self.add( other_parts )
 
 	# additional methods
 
@@ -171,42 +172,50 @@ class Activity:
 						break
 		return self
 
-	def append_resource( self, resource: Resource ) -> None:
+	def add( self, others: List[Activity], force: bool = False ) -> Activity:
+		"""
+		Updates this activity with other activities as parts for this activity.
+		Existing values are overwritten, if existing values need to be incorporated, this method
+		has to called with add( [ self, other1, other2 ... ] ).
+
+		:return:
+		"""
+
+		# field processing is currently a manual process, not sure if this can really be generalized ...
+		if others:
+			others.sort( key=lambda a: a.time.timestamp() )
+
+			self.time = others[0].time
+			self.localtime = others[0].localtime
+			self.time_end = others[-1].time_end
+			self.localtime_end = others[-1].localtime_end
+			self.timezone = others[0].timezone
+
+			self.duration = sum_times( [o.duration for o in others] ) # don't know why pycharm complains about this line
+			self.duration_moving = sum_times( [o.duration_moving for o in others] ) # don't know why pycharm complains about this line
+
+			self.distance = s if (s := sum( o.distance for o in others if o.distance )) else None
+			self.ascent = s if (s := sum( o.ascent for o in others if o.ascent )) else None
+			self.descent = s if (s := sum( o.descent for o in others if o.descent )) else None
+			self.elevation_max = max( l ) if ( l := [o.elevation_max for o in others if o.elevation_max is not None] ) else None
+			self.elevation_min = min( l ) if ( l := [o.elevation_min for o in others if o.elevation_min is not None] ) else None
+
+			self.speed_max = max( l ) if ( l := [o.speed_max for o in others if o.speed_max is not None] ) else None
+
+			self.heartrate_max = max( l ) if ( l := [o.heartrate_max for o in others if o.heartrate_max is not None] ) else None
+			self.heartrate_min = min( l ) if ( l := [o.heartrate_min for o in others if o.heartrate_min is not None] ) else None
+			self.calories = s if (s := sum( o.calories for o in others if o.calories )) else None
+
+			# todo: fill parts field information already here?
+
+		return self
+
+	def add_resource( self, resource: Resource ) -> None:
 		self.__resources__.append( resource )
 		resource.__parent_activity__ = self
 
 	def resources_for( self, classifier: str ) -> List[Resource]:
 		return [r for r in self.resources if r.uid.startswith( f'{classifier}:' )]
-
-	def __init_from_parts__( self, other_parts: List[Activity], force: bool ) -> None:
-		"""
-		Called from __post_init__ with other activities as parts for this new activity. This method assumes that the list of parts
-		is sorted by time already.
-
-		:return:
-		"""
-
-		# field selection is currently a manual process ...
-		self.time = other_parts[0].time
-		self.localtime = other_parts[0].localtime
-		self.time_end = other_parts[-1].time_end
-		self.localtime_end = other_parts[-1].localtime_end
-		self.timezone = other_parts[0].timezone
-
-		self.duration = sum_times( [o.duration for o in other_parts] ) # don't know why pycharm complains about this line
-		self.duration_moving = sum_times( [o.duration_moving for o in other_parts] ) # don't know why pycharm complains about this line
-
-		self.distance = s if (s := sum( o.distance for o in other_parts if o.distance )) else None
-		self.ascent = s if (s := sum( o.ascent for o in other_parts if o.ascent )) else None
-		self.descent = s if (s := sum( o.descent for o in other_parts if o.descent )) else None
-		self.elevation_max = max( l ) if ( l := [o.elevation_max for o in other_parts if o.elevation_max is not None] ) else None
-		self.elevation_min = min( l ) if ( l := [o.elevation_min for o in other_parts if o.elevation_min is not None] ) else None
-
-		self.speed_max = max( l ) if ( l := [o.speed_max for o in other_parts if o.speed_max is not None] ) else None
-
-		self.heartrate_max = max( l ) if ( l := [o.heartrate_max for o in other_parts if o.heartrate_max is not None] ) else None
-		self.heartrate_min = min( l ) if ( l := [o.heartrate_min for o in other_parts if o.heartrate_min is not None] ) else None
-		self.calories = s if (s := sum( o.calories for o in other_parts if o.calories )) else None
 
 	def init_from( self, other: Activity = None, raw: Dict = None, force: bool = False ) -> Activity:
 		"""
