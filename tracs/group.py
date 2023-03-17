@@ -1,9 +1,11 @@
 
+from dataclasses import asdict
 from dataclasses import dataclass
 from dataclasses import field
 from datetime import datetime
 from datetime import time
-from typing import Any
+from datetime import timedelta
+from itertools import chain
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -11,6 +13,7 @@ from typing import Tuple
 
 from click import echo
 from logging import getLogger
+
 from rich.prompt import Confirm
 
 from .activity import Activity
@@ -25,7 +28,31 @@ from .utils import seconds_to_time
 log = getLogger( __name__ )
 
 DELTA = 180
+MAX_DELTA = timedelta( seconds=180 )
 PART_THRESHOLD = 4
+
+@dataclass
+class ActivityGroup:
+
+	members: List[Activity] = field( default_factory=list )
+	time: datetime = field( default=None )
+
+	@property
+	def head( self ) -> Activity:
+		return self.members[0]
+
+	@property
+	def tail( self ) -> List[Activity]:
+		return self.members[1:]
+
+	def execute( self ):
+		self.head.union( self.tail )
+		for a in self.tail:
+			self.head.uids.extend( a.uids )
+			self.head.resources.extend( a.resources )
+			for r in a.resources:
+				r.__parent_activity__ = self.head
+		self.head.uids = sorted( list( set( self.head.uids ) ) )
 
 @dataclass
 class GroupResult:
@@ -41,7 +68,61 @@ class Bucket:
 	queue: List[Activity] = field( default_factory=list )
 	targets: List[GroupResult] = field( default_factory=list )
 
-def group_activities( ctx: ApplicationContext, activities: List[Activity], force: bool = False, pretend: bool = False ) -> None:
+def group_activities( ctx: ApplicationContext, activities: List[Activity], force: bool = False ) -> None:
+	groups = group_activities2( activities )
+
+	for g in groups:
+		updated, removed = [], []
+		if force or confirm_grouping( ctx, g ):
+			g.execute()
+			updated.append( g.head )
+			removed.extend( g.tail )
+
+		# ctx.db.upsert_activities( updated ) # this is not necessary, activity is already updated
+		ctx.db.remove_activities( removed )
+		ctx.db.commit()
+
+def group_activities2( activities: List[Activity] ) -> List[ActivityGroup]:
+	last_activity, next_activity, current_group = None, None, None
+	groups: List[ActivityGroup] = []
+	for a in sorted( activities, key=lambda act: act.time.timestamp() ):
+		last_activity, next_activity = next_activity, a
+		if last_activity is None:
+			current_group = ActivityGroup( members=[a], time=a.time )
+			continue
+
+		delta = next_activity.time - last_activity.time
+		if delta < MAX_DELTA:
+			current_group.members.append( a )
+		else:
+			groups.append( current_group )
+			current_group = ActivityGroup( members=[a], time=a.time )
+
+	# append the last group
+	if current_group:
+		groups.append( current_group )
+
+	return [g for g in groups if len( g.members ) > 1 ]
+
+def confirm_grouping( ctx: ApplicationContext, group: ActivityGroup, force: bool = False ) -> bool:
+	if force:
+		return True
+
+	result = ctx.db.factory.dump( group.head.union( group.tail, copy=True ), Activity )
+	sources = [ctx.db.factory.dump( a, Activity ) for a in group.members]
+
+	ctx.console.print( diff_table2( result = result, sources = sources ) )
+
+	answer = Confirm.ask( f'Continue grouping?' )
+	names = sorted( list( set( [member.name for member in group.members] ) ) )
+	if answer and len( names ) > 1:
+		headline = 'Select a name for the new activity group:'
+		choices = names
+		group.head.name = Choice.ask( headline=headline, choices=choices, use_index=True, allow_free_text=True )
+
+	return answer
+
+def _group_activities( activities: List[Activity] ) -> Tuple[List[Activity], List[Activity]]:
 	log.debug( f'attempting to group {len( activities )} activities' )
 
 	changes: List[Activity] = []
@@ -99,7 +180,7 @@ def group_activities( ctx: ApplicationContext, activities: List[Activity], force
 def _confirm_grouping( gr: GroupResult ) -> bool:
 	echo( f"Attempting to group activities:" )
 
-	table = diff_table2( result = as_dict( gr.target ), sources = [ as_dict( m ) for m in gr.members] )
+	table = diff_table2( result = asdict( gr.target ), sources = [ asdict( m ) for m in gr.members] )
 	console.print( table )
 
 	answer = Confirm.ask( f'Continue grouping?' )

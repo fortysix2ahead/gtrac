@@ -6,6 +6,7 @@ from dataclasses import field
 from dataclasses import Field
 from dataclasses import fields
 from dataclasses import InitVar
+from dataclasses import replace
 from datetime import datetime, time
 from typing import Any
 from typing import Callable
@@ -155,8 +156,10 @@ class Activity:
 	# additional methods
 
 	# def union( self, others: List[Activity], strategy: Literal['first', 'last'] = 'first' ) -> Activity: # todo: are different strategies useful?
-	def union( self, others: List[Activity], force: bool = False ) -> Activity:
-		for f in self.fields():
+	def union( self, others: List[Activity], copy: bool = False, force: bool = False ) -> Activity:
+		this = replace( self ) if copy else self
+
+		for f in this.fields():
 			if f.name.startswith( '__' ): # never touch internal fields
 				continue
 
@@ -164,16 +167,16 @@ class Activity:
 				continue
 
 
-			if (value := getattr( self, f.name )) != f.default and not force: # do not overwrite when a value is already set
+			if (value := getattr( this, f.name )) != f.default and not force: # do not overwrite when a value is already set
 				continue
 
 			for other in others:
 				# overwrite when other value is different and different from default
 				if (other_value := getattr( other, f.name )) != value and other_value != f.default:
-					setattr( self, f.name, other_value )
+					setattr( this, f.name, other_value )
 					if not force: # with force the last value wins
 						break
-		return self
+		return this
 
 	def add( self, others: List[Activity], force: bool = False ) -> Activity:
 		"""

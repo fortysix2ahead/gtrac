@@ -175,7 +175,7 @@ def show( ctx: ApplicationContext, filters, raw, format_name, resource ):
 @argument( 'filters', nargs=-1 )
 @pass_obj
 def group( ctx: ApplicationContext, filters: List[str] ):
-	group_activities( ctx, list( ctx.db.find( filters ) ), force=ctx.force, pretend=ctx.pretend )
+	group_activities( ctx, list( ctx.db.find( filters ) ), force=ctx.force )
 
 @cli.command( help='reverts activity groupings' )
 @argument( 'filters', nargs=-1 )

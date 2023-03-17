@@ -295,6 +295,10 @@ class ActivityDb:
 		return self.dbfs.get_fs( OVERLAY )
 
 	@property
+	def factory( self ) -> Factory:
+		return self._factory
+
+	@property
 	def schema( self ) -> Schema:
 		return self._schema
 
@@ -408,6 +412,10 @@ class ActivityDb:
 
 	def remove( self, a: Activity ) -> None:
 		self._activities.remove( doc_ids=[a.doc_id] )
+
+	def remove_activities( self, activities: List[Activity] ) -> None:
+		for a in activities:
+			del self._activities[a.id]
 
 	def remove_field( self, a: Activity, field: str ) -> None:
 		if field.startswith( '_' ):
