@@ -91,8 +91,8 @@ class Activity:
 	# resources: List[Resource] = field( init=True, default_factory=list )
 	parts: List = field( init=True, default_factory=list )
 
-	others: InitVar = field( default=None, kw_only=True )
-	other_parts: InitVar = field( default=None, kw_only=True )
+	others: InitVar = field( default=None )
+	other_parts: InitVar = field( default=None )
 
 	__id__: int = field( init=False, default=0, repr=False )
 	__dirty__: bool = field( init=False, default=False, repr=False )
