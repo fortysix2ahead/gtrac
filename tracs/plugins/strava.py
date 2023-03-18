@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from dataclasses import field
 from http.server import BaseHTTPRequestHandler
 from http.server import HTTPServer
+from re import compile
 from re import findall
 from re import match
 from typing import Any
@@ -27,7 +28,6 @@ from webbrowser import open as open_url
 from rich.prompt import Prompt
 
 from ..registry import Registry
-from ..registry import document
 from ..registry import importer
 from ..registry import resourcetype
 from ..registry import service
@@ -59,6 +59,9 @@ BASE_URL = 'https://www.strava.com'
 OAUTH_REDIRECT_URL = 'http://localhost:40004'
 
 FETCH_PAGE_SIZE = 200 # maximum possible size?
+
+TIMEZONE_FULL_REGEX = compile( '^(\(.+\)) (.+)$' ) # not used at the moment
+TIMEZONE_REGEX = compile( '\(\w+\+\d\d:\d\d\) ' )
 
 HEADERS_TEMPLATE = {
 }
@@ -185,17 +188,18 @@ class StravaActivity:
 			type = TYPES.get( self.type, ActivityTypes.unknown ),
 			time = to_isotime( self.start_date ),
 			localtime = to_isotime( self.start_date_local ),
-			distance = self.distance,
-			speed = self.average_speed,
-			speed_max = self.max_speed,
-			ascent = self.total_elevation_gain,
-			descent = self.total_elevation_gain,
+			timezone = TIMEZONE_REGEX.sub( '', self.timezone ),
+			distance = self.distance if self.distance > 0 else None,
+			speed = self.average_speed if self.average_speed > 0 else None,
+			speed_max = self.max_speed if self.max_speed > 0 else None,
+			ascent = self.total_elevation_gain if self.total_elevation_gain > 0 else None,
+			descent = self.total_elevation_gain if self.total_elevation_gain > 0 else None,
 			elevation_max = self.elev_high,
 			elevation_min = self.elev_low,
 			duration = stt( self.elapsed_time ) if self.elapsed_time else None,
 			duration_moving = stt( self.moving_time ) if self.moving_time else None,
-			heartrate = float( self.average_heartrate ) if self.average_heartrate else None,
-			heartrate_max = float( self.max_heartrate ) if self.max_heartrate else None,
+			heartrate = int( self.average_heartrate ) if self.average_heartrate else None,
+			heartrate_max = int( self.max_heartrate ) if self.max_heartrate else None,
 			location_country = self.location_country,
 			uids = [f'{SERVICE_NAME}:{self.id}'],
 		)
