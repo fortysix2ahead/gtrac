@@ -16,6 +16,9 @@ from typing import Union
 from bs4 import BeautifulSoup
 from click import echo
 from datetime import datetime
+
+from dateutil.tz import gettz
+from dateutil.tz import tzlocal
 from dateutil.tz import UTC
 from logging import getLogger
 from oauthlib.oauth2 import InvalidGrantError # package name is not oauthlib
@@ -183,12 +186,16 @@ class StravaActivity:
 		return self.id
 
 	def as_activity( self ) -> Activity:
+		tz_str = TIMEZONE_REGEX.sub( '', self.timezone )
+		if not (tz := gettz( tz_str ) ):
+			tz = tzlocal()
+
 		return Activity(
 			name = self.name,
 			type = TYPES.get( self.type, ActivityTypes.unknown ),
 			time = to_isotime( self.start_date ),
-			localtime = to_isotime( self.start_date_local ),
-			timezone = TIMEZONE_REGEX.sub( '', self.timezone ),
+			localtime = to_isotime( self.start_date ).astimezone( tz ),
+			timezone = tz_str,
 			distance = self.distance if self.distance > 0 else None,
 			speed = self.average_speed if self.average_speed > 0 else None,
 			speed_max = self.max_speed if self.max_speed > 0 else None,
