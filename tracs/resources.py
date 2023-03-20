@@ -23,6 +23,7 @@ class ResourceStatus( Enum ):
 	NOT_FOUND = 404
 
 pattern: Pattern = compile( '\w+\/(vnd\.(?P<vendor>\w+).)?((?P<subtype>\w+)\+)?(?P<suffix>\w+)' )
+classifier_local_id_pattern = compile( '\w+\:\d+' )
 
 @dataclass
 class UID:
@@ -42,7 +43,11 @@ class UID:
 				self.path = url.query if url.query else None
 				self.part = int( url.fragment ) if url.fragment else None
 			else:
-				self.classifier = url.path
+				if classifier_local_id_pattern.match( url.path ):
+					self.classifier, self.local_id = url.path.split( ':', maxsplit=1 )
+					self.local_id = int( self.local_id )
+				else:
+					self.classifier = url.path
 
 		elif self.classifier and self.local_id:
 			self.uid = f'{self.classifier}:{self.local_id}'
