@@ -61,11 +61,9 @@ class Registry:
 	@classmethod
 	def instantiate_services( cls, ctx: Optional[ApplicationContext] = None, **kwargs ):
 		_ctx = ctx if ctx else Registry.ctx
-		base_path = kwargs.get( 'base_path' )
-		overlay_path = kwargs.get( 'overlay_path' )
 		for name, service_type in Registry.service_classes.items():
-			service_base_path = Path( base_path, name )
-			service_overlay_path = Path( overlay_path, name )
+			service_base_path = Path( _ctx.db_dir_path, name )
+			service_overlay_path = Path( _ctx.db_overlay_path, name )
 
 			# find config/state values
 			try:

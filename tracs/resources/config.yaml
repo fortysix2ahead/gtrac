@@ -1,5 +1,5 @@
 
-# main keys, values can be overwritten via command line argument
+# main keys, values can partially be overwritten via command line arguments
 
 debug: no # enables debug mode
 fetch_from: 2000 # year to start from when attempting to fetch all activities
@@ -11,10 +11,8 @@ verbose: no # verbose mode, displays more log information
 # database configuration
 
 db:
-  cache: yes
-  cache_size: 100
 
-# configuration for printing activity information
+# configuration for printing activity/resource information
 
 formats:
   locale: 'en'
@@ -38,7 +36,7 @@ filters:
 gpx:
   parser: gpxpy # allowed values: internal, gpxpy
 
-# plugin configuration
+# plugin configuration, todo: this needs to be moved elsewhere
 
 plugins:
 

@@ -7,6 +7,7 @@ from logging import StreamHandler
 from logging import getLogger
 from sys import stderr
 from typing import List
+from typing import Optional
 
 from click import argument
 from click import group
@@ -55,6 +56,9 @@ from .setup import setup as setup_application
 
 log = getLogger( __name__ )
 
+# global application instance: we probably don't need this, but it's accessible from here
+APPLICATION_INSTANCE: Optional[Application] = None
+
 @group()
 # @shell( prompt=f'{APPNAME} > ', intro=f'Starting interactive shell mode, enter <exit> to leave this mode again, use <{APPNAME} --help> for help ...' )
 @option( '-c', '--configuration', is_flag=False, required=False, help='configuration area location', metavar='PATH' )
@@ -74,7 +78,8 @@ def cli( ctx, configuration, library, force, verbose, pretend, debug ):
 
 	log.debug( f'triggered CLI with flags configuration={configuration}, library={library}, debug={debug}, verbose={verbose}, force={force}, pretend={pretend}' )
 
-	instance = Application.instance(
+	global APPLICATION_INSTANCE
+	APPLICATION_INSTANCE = Application.instance(
 		config_dir=configuration,
 		lib_dir=library,
 		verbose=verbose,
@@ -83,7 +88,7 @@ def cli( ctx, configuration, library, force, verbose, pretend, debug ):
 		pretend=pretend
 	)
 
-	ctx.obj = instance.ctx # save newly created context object
+	ctx.obj = APPLICATION_INSTANCE.ctx # save newly created context object
 
 	# migrate_application( ctx.obj, None ) # check if migration is necessary
 

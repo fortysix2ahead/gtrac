@@ -8,10 +8,7 @@ from logging import FileHandler
 from logging import Formatter
 from logging import getLogger
 from logging import StreamHandler
-from pathlib import Path
 from sys import stderr
-
-from confuse.exceptions import ConfigTypeError
 
 from .config import ApplicationContext
 from .config import APPNAME
@@ -42,74 +39,34 @@ class Application( object ):
 		return instance
 
 	# 'None' as default value means value has not been provided from the outside (via command line switch)
-	def __setup__( self, ctx: ApplicationContext = None, config_dir: str = None, lib_dir: str = None, verbose: bool = None, debug: bool = None, force: bool = None, pretend: bool = None ):
-
-		# ---- configuration directory initialization -----
-		config_dir = Path( Path.cwd(), config_dir ).resolve() if config_dir else Path( Path.home(), '.config', APPNAME )
-		config_dir.mkdir( parents=True, exist_ok=True )
-
-		log.debug( f'using {config_dir} as configuration directory' )
-
-		# ---- (default) library location ----
-		lib_dir_str = lib_dir # save parameter for later
-		lib_dir = Path( Path.cwd(), lib_dir ).resolve() if lib_dir else Path( config_dir )
-
-		log.debug( f'using {lib_dir} as default library directory' )
-
+	def __setup__( self, *args, **kwargs ):
 		# ---- create context, based on cfg_dir ----
-		ctx = ApplicationContext( cfg_dir=config_dir, lib_dir=lib_dir )
-		self._ctx = ctx
-
-		# load configuration + state from user location if it exists -> this can also be moved into the context later
-		if ctx.cfg_file.exists():
-			ctx.config.set_file( ctx.cfg_file )
-
-		if ctx.state_file.exists():
-			ctx.state.set_file( ctx.state_file )
-
-		# ---- evaluate provided parameters (configuration/command line) ------------
-		ctx.debug = debug if debug is not None else ctx.config['debug'].get()
-		ctx.force = force if force is not None else ctx.config['force'].get()
-		ctx.pretend = pretend if pretend is not None else ctx.config['pretend'].get()
-		ctx.verbose = verbose if verbose is not None else ctx.config['verbose'].get()
+		self._ctx = ApplicationContext( **kwargs )
+		log.debug( f'using {self._ctx.config_dir} as configuration directory' )
+		log.debug( f'using {self._ctx.lib_dir} as library' )
 
 		# ---- logging setup: only possible after configuration has been loaded --
-		self._setup_logging( ctx )
-
-		# ---- library initialization/handling -----
-
-		# lib_dir has been set via parameter ? -> if yes, parameter wins over definition in config file
-		if not lib_dir_str:
-			# try to read from config file ... if that fails we'll use the previously defined default
-			try:
-				lib_dir = ctx.config['library'].as_path()
-				# todo: update context ...
-			except ConfigTypeError:
-				pass
-
-		lib_dir.mkdir( parents=True, exist_ok=True )
-
-		log.debug( f'using {lib_dir} as library directory' )
+		self._setup_logging( self._ctx )
 
 		# ---- file logging setup: only possible after library configuration --------
-		self._setup_file_logging( ctx )
+		self._setup_file_logging( self._ctx )
 
 		# ---- open db from config_dir ----------------------------------------------
-		ctx.db = ActivityDb( path=ctx.db_dir, read_only=ctx.pretend )
+		self._ctx.db = ActivityDb( path=self._ctx.db_dir_path, read_only=self._ctx.pretend )
 
 		# load plugins
 		from .registry import load as load_plugins
 		load_plugins()
 
 		# ---- create service instances ----
-		Registry.instantiate_services( ctx=ctx, base_path=ctx.db_dir, overlay_path=ctx.overlay_dir )
+		Registry.instantiate_services( ctx=self._ctx )
 
 		# ---- announce context/configuration to utils module ----
-		UCFG.reconfigure( ctx.config )
+		UCFG.reconfigure( self._ctx.config )
 
 		# ---- register cleanup functions ----
-		register_atexit( ctx.db.close )
-		register_atexit( ctx.dump_state )
+		register_atexit( self._ctx.db.close )
+		register_atexit( self._ctx.dump_state )
 
 	# noinspection PyMethodMayBeStatic
 	def _setup_logging( self, ctx: ApplicationContext ):
@@ -132,12 +89,10 @@ class Application( object ):
 
 	# noinspection PyMethodMayBeStatic
 	def _setup_file_logging( self, ctx: ApplicationContext ):
-		ctx.log_dir.mkdir( parents=True, exist_ok=True )
-
 		file_level = DEBUG if ctx.debug else INFO
 		file_format = '[%(asctime)s] %(levelname)s: %(message)s'
 		date_format = '%Y-%m-%d %H:%M:%S'
-		file_handler = FileHandler( ctx.log_file, 'a' )
+		file_handler = FileHandler( ctx.log_file_path, 'a' )
 		file_handler.setLevel( file_level )
 		file_handler.setFormatter( Formatter( file_format, date_format ) )
 

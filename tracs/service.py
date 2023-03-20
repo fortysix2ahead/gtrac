@@ -139,6 +139,10 @@ class Service( Plugin ):
 			return service.path_for( resource=resource ).resolve()
 
 	@classmethod
+	def relpath_for( cls, resource: Resource ) -> Optional[Path]:
+		pass
+
+	@classmethod
 	def url_for_uid( cls, uid: str ) -> Optional[str]:
 		classifier, local_id = uid.split( ':', 1 )
 		if service := Registry.services.get( classifier ):
