@@ -229,6 +229,12 @@ class PolarFlowExerciseCsv:
 
 	pass
 
+@resourcetype( type=POLAR_HRV_TYPE )
+@dataclass
+class PolarFlowExerciseHrv:
+
+	pass
+
 @resourcetype( type=POLAR_EXERCISE_DATA_TYPE, summary=True )
 class PolarExerciseDataActivity( Activity ):
 
