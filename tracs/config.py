@@ -250,19 +250,15 @@ class ApplicationContext:
 
 	def dump_config( self ) -> None:
 		if not self.pretend:
-			with open( self.cfg_file, 'w+' ) as cf:
-				#cf.write( dump_yaml( load_yaml( self._cfg.dump( full=True ), Loader=FullLoader ), sort_keys=True ) )
-				cf.write( self.config.dump( full=True ) )
+			self.config_fs.writetext( CONFIG_FILENAME, self.config.dump( full=True ) )
 		else:
-			log.info( f'pretending to write config file to {self.cfg_file}' )
+			log.info( f'pretending to write config file to {self.config_fs.getsyspath( CONFIG_FILENAME )}' )
 
 	def dump_state( self ) -> None:
 		if not self.pretend:
-			with open( self.state_file, 'w+' ) as sf:
-				#sf.write( dump_yaml( load_yaml( self._state.dump( full=True ), Loader=FullLoader ), sort_keys=True ) )
-				sf.write( self.state.dump( full=True ) )
+			self.config_fs.writetext( STATE_FILENAME, self.state.dump( full=True ) )
 		else:
-			log.info( f'pretending to write state file to {self.state_file}' )
+			log.info( f'pretending to write state file to {self.config_fs.getsyspath( STATE_FILENAME )}' )
 
 ApplicationConfig = Configuration( APPNAME, __name__, read=False )
 ApplicationState = Configuration( f'{APPNAME}-state', __name__, read=False )

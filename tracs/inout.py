@@ -138,9 +138,8 @@ def reimport_activities( activities: List[Activity], include_recordings: bool = 
 		for r in resources:
 			resource_type = cast( ResourceType, Registry.resource_types.get( r.type ) )
 			if resource_type.summary or ( resource_type.recording and include_recordings ):
-				path = Service.path_for_resource( r )
-				loaded = Registry.importer_for( r.type ).load_as_activity( path=path )
-				src_activities.append( loaded.as_activity() )
+				if activity := Service.as_activity( r ):
+					src_activities.append( activity )
 
 		new_activity.union( others=src_activities )
 		new_activity.local_id = None # todo: remove later

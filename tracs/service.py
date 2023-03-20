@@ -34,7 +34,6 @@ from .config import KEY_LAST_DOWNLOAD
 from .config import KEY_LAST_FETCH
 from .registry import Registry
 from .resources import ResourceType
-from .utils import unarg
 
 log = getLogger( __name__ )
 
@@ -139,10 +138,6 @@ class Service( Plugin ):
 			return service.path_for( resource=resource ).resolve()
 
 	@classmethod
-	def relpath_for( cls, resource: Resource ) -> Optional[Path]:
-		pass
-
-	@classmethod
 	def url_for_uid( cls, uid: str ) -> Optional[str]:
 		classifier, local_id = uid.split( ':', 1 )
 		if service := Registry.services.get( classifier ):
@@ -150,29 +145,29 @@ class Service( Plugin ):
 		else:
 			return None
 
-	def path_for_id( self, raw_id: int, base_path: Optional[Path] ) -> Path:
-		_id = str( raw_id )
+	@classmethod
+	def as_activity( cls, resource: Resource ) -> Optional[Activity]:
+		importer = Registry.importer_for( resource.type )
+		path = Service.path_for_resource( resource )
+		activity = importer.load_as_activity( path=path )
+		return activity.as_activity()
+
+	def path_for_id( self, local_id: int, base_path: Optional[Path] ) -> Path:
+		_id = str( local_id )
 		rel_path = Path( _id[0], _id[1], _id[2], _id )
 		return Path( base_path, rel_path ) if base_path else rel_path
 
-	def path_for( self, activity: Activity = None, resource: Resource = None, ignore_overlay: bool = True ) -> Optional[Path]:
+	def path_for( self, resource: Resource = None, ignore_overlay: bool = True, absolute: bool = True ) -> Optional[Path]:
 		"""
 		Returns the path in the local file system where all artefacts of a provided activity are located.
 
-		:param activity: activity
-		:param resource: resource
-		:param ignore_overlay:
-		:return: path of the activity in the local file system
+		:param resource: resource for which the path shall be calculated
+		:param ignore_overlay: if True ignores the overlay
+		:param absolute: if True returns an absolute path
+		:return: path of the resource in the local file system
 		"""
-		path, overlay_path = None, None
-		if activity:
-			rel_path = self.path_for_id( activity.raw_id, base_path=None )
-			path = Path( self.base_path, rel_path )
-			overlay_path = Path( self.overlay_path, rel_path )
-		elif resource:
-			rel_path = self.path_for_id( resource.local_id, base_path=None )
-			path = Path( self.base_path, rel_path, resource.path )
-			overlay_path = Path( self.overlay_path, rel_path, resource.path )
+		rel_path = Path( self.path_for_id( resource.local_id, base_path=None ), resource.path )
+		return Path( self.base_fs.getsyspath( str( rel_path ) ) ) if absolute else rel_path
 
 		if ignore_overlay:
 			return path

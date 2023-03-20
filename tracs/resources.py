@@ -156,6 +156,10 @@ class Resource:
 	def local_id( self ) -> int:
 		return int( self._uid()[1] )
 
+	@property
+	def local_id_str( self ) -> str:
+		return self._uid()[1]
+
 	@property  # property should be deprecated in favour of local id
 	def raw_id( self ) -> int:
 		return self.local_id
