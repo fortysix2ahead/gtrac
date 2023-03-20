@@ -4,7 +4,6 @@ from datetime import time
 from datetime import timedelta
 from logging import getLogger
 
-from copy import deepcopy
 from csv import writer as csv_writer
 from os import system
 from re import compile
@@ -22,7 +21,6 @@ from geojson import FeatureCollection
 from geojson import LineString
 from pathlib import Path
 
-from rich.console import Console
 from rich.prompt import Confirm
 from tzlocal import get_localzone_name
 
@@ -36,7 +34,6 @@ from .config import cs
 from .db import ActivityDb
 from .registry import Registry
 from .plugins.gpx import GPX_TYPE
-from .plugins.handlers import TCX_TYPE
 from .plugins.local import SERVICE_NAME as LOCAL_SERVICE_NAME
 from .service import Service
 from .ui import diff_table
@@ -53,12 +50,13 @@ MAXIMUM_OPEN = 8
 # kepler: https://docs.kepler.gl/docs/user-guides/b-kepler-gl-workflow/a-add-data-to-the-map#geojson
 # also nice: https://github.com/luka1199/geo-heatmap
 
+uid_pattern = compile( f'^({"|".join( Registry.service_names() )}):(\d+)$' )
+
 def import_activities( ctx: Optional[ApplicationContext], importer: Optional[str], sources: List[str], **kwargs ):
 	# use all registered services if nothing is provided
 	# services = [ s for i in importers if ( s := Registry.services.get( i ) ) ]
 
 	sources = sources or Registry.service_names()
-	uid_pattern = compile( f'^({"|".join( Registry.service_names() )}):(\d+)$' )
 
 	for src in sources:
 		uid = UID( src )

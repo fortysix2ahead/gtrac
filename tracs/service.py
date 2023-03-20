@@ -382,54 +382,6 @@ class Service( Plugin ):
 		self.set_state_value( KEY_LAST_DOWNLOAD, datetime.utcnow().astimezone( UTC ).isoformat() )  # update download timestamp
 		self.ctx.complete( 'done' )
 
-		return
-
-		if not skip_fetch or force:
-			self.postprocess_resources( summaries, **kwargs )  # post process summaries
-			self.persist_resources( summaries, force=force, pretend=pretend, include_children=False, **kwargs ) # persist summaries
-
-			self.ctx.total( len( summaries ) )
-
-			for summary in summaries:
-				self.ctx.advance( f'{summary.uid}' )
-				if summary.uid not in self._import_session.index.activities.uid.keys() or force:
-					activity = self.create_activity( resource=summary, **kwargs )
-					self.postprocess_activities( activity, **kwargs )
-					self.persist_activities( activity, force=force, pretend=pretend, **kwargs )
-
-					# add newly created summary/activity pair to import session
-					self._import_session.fetched_activities[(summary.uid, summary.path)] = activity
-
-			self.postfetch( self.ctx, self._import_session )
-
-		# complete fetch task
-		self.set_state_value( KEY_LAST_FETCH, datetime.utcnow().astimezone( UTC ).isoformat() ) # update fetch timestamp
-		self.ctx.complete( 'done' )
-
-		# download
-
-		if not skip_download:
-			self.ctx.start( f'downloading activity data from {self.display_name}', len( summaries ) )
-
-			for summary in summaries:
-				self.ctx.advance( f'{summary.uid}' )
-
-				# find existing resources and attach it to summary
-				existing = self.ctx.db.find_resources( uid=summary.uid )
-				summary.resources = [r for r in existing if not(r.uid == summary.uid and r.path == summary.path)]
-
-				downloaded = self.download( summary=summary, force=force, pretend=pretend, **kwargs )
-				self.postprocess_resources( *downloaded, **kwargs )  # post process
-				self.persist_resources( *downloaded, force=force, include_children=False, pretend=pretend, **kwargs )
-
-				# post download
-				self._import_session.last_summary = summary
-				self._import_session.last_download = downloaded
-				self.postdownload( self.ctx, self._import_session )
-
-			self.set_state_value( KEY_LAST_DOWNLOAD, datetime.utcnow().astimezone( UTC ).isoformat() )  # update download timestamp
-			self.ctx.complete( 'done' )
-
 		# link / vfs
 
 		if not skip_link:
