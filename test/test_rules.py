@@ -4,7 +4,7 @@ from re import match
 from typing import cast
 
 from dateutil.tz import tzlocal, UTC
-from pytest import mark, raises
+from pytest import raises
 from rule_engine import Context, EvaluationError, resolve_attribute, Rule, RuleSyntaxError, SymbolResolutionError
 
 from tracs.core import Metadata
@@ -13,7 +13,7 @@ from tracs.activity_types import ActivityTypes
 from tracs.plugins.rule_extensions import TIME_FRAMES as TIME_FRAMES_EXT
 from tracs.rules import DATE_PATTERN, DATE_RANGE_PATTERN, FUZZY_DATE_PATTERN, FUZZY_TIME_PATTERN, INT_LIST, INT_PATTERN, KEYWORD_PATTERN, LIST_PATTERN, \
 	parse_date_range_as_str, RANGE_PATTERN, RULE_PATTERN, TIME_PATTERN, TIME_RANGE_PATTERN
-from uid import UID
+from tracs.uid import UID
 
 log = getLogger( __name__ )
 
@@ -77,9 +77,12 @@ def test_rule_engine():
 	assert Rule( 'heartrate == 180', context=context ).matches( a2 )
 	assert Rule( 'year == 2023', context=context ).matches( a2 )
 	assert Rule( 'heartrate == 180 and year == 2023', context=context ).matches( a2 )
+	assert Rule( 'heartrate != 1800 and year != 20230', context=context ).matches( a2 ) # not equal
 	assert not Rule( 'heartrate == 170 and year == 2023', context=context ).matches( a2 )
 
 	assert Rule( '"tired" in tags', context=context ).matches( a2 )
+	assert Rule( 'not "asleep" in tags', context=context ).matches( a2 ) # not before term works
+	assert Rule( '"asleep" not in tags', context=context ).matches( a2 ) # not before in also works
 	assert not Rule( '"evening" in tags', context=context ).matches( a2 )
 
 	assert Rule( '"polar:1234" in uids', context=context ).matches( a2 )
