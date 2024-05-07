@@ -5,7 +5,7 @@ from attrs import define, field
 from datetime import datetime, time
 from decimal import Decimal, InvalidOperation
 from logging import getLogger
-from re import compile as rx_compile, match
+from re import compile as rx_compile, match, Pattern
 from sys import maxsize
 from typing import Any, Dict, List, Literal, Tuple, Type, Union
 
@@ -21,11 +21,11 @@ log = getLogger( __name__ )
 
 TIME_FRAMES = Literal[ 'year', 'quarter', 'month', 'week', 'day', 'hour' ]
 
-TRUE_FALSE = rx_compile( r'^(true|false)$' )
+TRUE_FALSE: Pattern = rx_compile( r'^(true|false)$' )
 
-INT_PATTERN = rx_compile( '^(?P<value>\d+)$' )
-INT_LIST = rx_compile( '^\d+(,\d+)*$' )
-INT_RANGE_PATTERN = rx_compile( '^(?P<range_from>\d+)?\.\.(?P<range_to>\d+)?$' )
+INT_PATTERN: Pattern = rx_compile( '^(?P<value>\d+)$' )
+INT_LIST: Pattern = rx_compile( '^\d+(,\d+)*$' )
+INT_RANGE_PATTERN: Pattern = rx_compile( '^(?P<range_from>\d+)?\.\.(?P<range_to>\d+)?$' )
 
 NUMBER_PATTERN = '^(?P<value>\d+(\.\d+)?)$'
 
@@ -42,10 +42,10 @@ DATE_YEAR_MONTH_PATTERN = '^(?P<year>[12]\d\d\d)-(?P<month>[01]\d)$'
 DATE_YEAR_MONTH_DAY_PATTERN = DATE_PATTERN
 FUZZY_DATE_PATTERN = '^(?P<year>[12]\d\d\d)(-(?P<month>[01]\d))?(-(?P<day>[0-3]\d))?$'
 
-DATE_RANGE_PATTERN = rx_compile(
+DATE_RANGE_PATTERN: Pattern = rx_compile(
 	'^((?P<year_from>[12]\d\d\d)(-(?P<month_from>[01]\d))?(-(?P<day_from>[0-3]\d))?)?\.\.((?P<year_to>[12]\d\d\d)(-(?P<month_to>[01]\d))?(-(?P<day_to>[0-3]\d))?)?$'
 )
-TIME_RANGE_PATTERN = rx_compile(
+TIME_RANGE_PATTERN: Pattern = rx_compile(
 	'^((?P<hour_from>[0-2]\d)(:(?P<min_from>[0-5]\d))?(:(?P<sec_from>[0-5]\d))?)?\.\.((?P<hour_to>[0-2]\d)(:(?P<min_to>[0-5]\d))?(:(?P<sec_to>[0-5]\d))?)?$'
 )
 
