@@ -56,31 +56,39 @@ ICON_ID_TRIATHLON = '003304795bc33d808ee8e6ab8bf45d1f-2015-10-20_13_45_17'  # tr
 ICON_ID_MULTISPORT = '20951a7d8b02def8265f5231f57f4ed9-2015-10-20_13_45_40'  # multisport
 
 BASE_URL = 'https://flow.polar.com'
+AUTH_URL = 'https://auth.polar.com'
 
 HEADERS_TEMPLATE = {
-	'Accept-Encoding': 'gzip, deflate, br',
+	'Accept-Encoding': 'gzip, deflate, br, zstd',
 	'Accept-Language': 'en-US,en;q=0.5',
 	'Connection': 'keep-alive',
 	'DNT': '1',
-	'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:85.0) Gecko/20100101 Firefox/85.0',
+	'Sec-Fetch-Dest': 'document',
+	'Sec-Fetch-Mode': 'navigate',
+	'Sec-Fetch-Site': 'same-origin',
+	'Sec-Fetch-User': '?1',
+	'Sec-GPC': '1',
+	'Upgrade-Insecure-Requests': '1',
+	'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0',
 }
 
-HEADERS_LOGIN = { **HEADERS_TEMPLATE, **{
+HEADERS_LOGIN = HEADERS_TEMPLATE | {
 	'Accept': '*/*',
 	'Cache-Control': 'no-cache',
 	'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
 	'Host': 'flow.polar.com',
 	'Origin': 'https://flow.polar.com',
 	'Pragma': 'no-cache',
-	'Referer': 'https://flow.polar.com/',
+	'Referer': 'https://flow.polar.com',
 	'TE': 'Trailers',
-	# 'X-Requested-With': 'XMLHttpRequest'
-} }
+}
 
-HEADERS_API = { **HEADERS_TEMPLATE, **{
+HEADERS_API = HEADERS_TEMPLATE | {
 	'Accept': 'application/json',
 	# 'Cache-Control': 'no-cache',
-} }
+	'Referer': 'https://flow.polar.com',
+	'X-Requested-With': 'XMLHttpRequest'
+}
 
 HEADERS_DOWNLOAD = { **HEADERS_TEMPLATE, **{
 	'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -382,6 +390,14 @@ class Polar( Service ):
 		return f'{self.base_url}/ajaxLogin?_={str( int( current_time() ) )}'
 
 	@property
+	def flow_sso_login_url( self ) -> str:
+		return f'{self.base_url}/flowSso/login'
+
+	@property
+	def auth_authorize_url( self ) -> str:
+		return f'{AUTH_URL}/oauth/authorize'
+
+	@property
 	def events_url( self ) -> str:
 		return f'{self.base_url}/training/getCalendarEvents'
 
@@ -430,38 +446,61 @@ class Polar( Service ):
 			return self._logged_in
 
 		if not self._session:
-			self._session = CachedSession( backend='memory' )
+			self._session = CachedSession( cache_control=True, backend='memory' )
+
+		if not self.cfg_value( 'username' ) and not self.cfg_value( 'password' ):
+			log.error( f'application setup not complete for Polar Flow, consider running {APPNAME} setup' )
+			return False
 
 		# noinspection PyUnusedLocal
+		# not sure if we really need to request the base url
+
 		response = self._session.get( self.base_url )
+
+		# request to ajax login to detect the csrf token
 		response = self._session.get( self.ajax_login_url )
 
 		try:
 			token = BeautifulSoup( response.text, 'html.parser' ).find( 'input', attrs={ 'name': 'csrfToken' } )['value']
+			log.debug( f'detected CSRF token on {self.ajax_login_url}: {token}' )
 		except TypeError:
-			token = None
-
-		log.debug( f"CSRF Token: {token}" )
-
-		if token is None:
-			echo( "CSRF Token not found" )
+			log.error( f'unable to detect CSRF Token on {self.ajax_login_url}' )
 			return False
 
-		if not self.cfg_value( 'username' ) and not self.cfg_value( 'password' ):
-			log.error( f"application setup not complete for Polar Flow, consider running {APPNAME} setup" )
-			sysexit( -1 )
-
-		data = {
+		params = {
 			'csrfToken': token,
-			'email': self.cfg_value( 'username' ),
-			'password': self.cfg_value( 'password' ),
+#			'email': self.cfg_value( 'username' ),
+#			'password': self.cfg_value( 'password' ),
+			'landingUrl': '/settings/products',
 			'returnUrl': '/'
 		}
 
-		# noinspection PyUnusedLocal
-		response = self._session.post( self.login_url, headers=HEADERS_LOGIN, data=data )
+		# request to flow SSO login
+		response = self._session.get( self.flow_sso_login_url, headers=HEADERS_API, data=params )
 
-		self._logged_in = True
+		# this is coming from response above -> location
+
+		# request to auth
+		params = {
+			'response_type': 'code',
+			'scope': 'POLAR_SSO',
+			'client_id': 'flow',
+			'redirect_uri': 'https%3A%2F%2Fflow.polar.com%2FflowSso%2Fredirect',
+			'state': 'some UUID goes in here',
+		}
+
+		response = self._session.get( self.auth_authorize_url, headers=HEADERS_LOGIN, data=params )
+
+		# noinspection PyUnusedLocal
+		response = self._session.post( self.login_url, headers=HEADERS_LOGIN, data=params )
+
+		if response.status_code == 200:
+			hidden_password = f'{self.cfg_value( "password" )[0]}***********{self.cfg_value( "password" )[-1]}'
+			log.debug( f'successfully logged into Polar Flow, with credentials {self.cfg_value( "username" )} / {hidden_password}' )
+			self._logged_in = True
+		else:
+			log.error( 'unable to log into Polar Flow, are the credentials correct?' )
+			self._logged_in = False
 
 		return self._logged_in
 

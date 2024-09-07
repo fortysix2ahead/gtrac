@@ -123,11 +123,15 @@ class ResourceHandler:
 		:param kwargs: session, headers, allow_redirects, stream
 		:return: bytes read from the provided URL
 		"""
+		log.debug( f'attempting to load resource from {url}' )
 		session: Session = kwargs.get( 'session' )
 		headers = kwargs.get( 'headers' )
 		allow_redirects: bool = kwargs.get( 'allow_redirects', True )
 		stream: bool = kwargs.get( 'stream', True )
+
 		response: Response = session.get( url, headers=headers, allow_redirects=allow_redirects, stream=stream )
+		log.debug( f'response for loading resource from URL: {response.status_code}' )
+
 		return response.content
 
 	def load_raw( self, content: Union[bytes,str], **kwargs ) -> Any:
