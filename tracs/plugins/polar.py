@@ -2,21 +2,22 @@ from datetime import datetime, time, timedelta
 from logging import getLogger
 from pathlib import Path
 from re import compile, match
-from sys import exit as sysexit
 from time import time as current_time
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 from zipfile import BadZipFile
 
 from attrs import define, field
 from bs4 import BeautifulSoup
-from click import echo
 from datetimerange import DateTimeRange
 from dateutil.parser import parse
 from dateutil.tz import tzlocal, UTC
 from fs import open_fs
 from fs.errors import CreateFailed
 from fs.zipfs import ReadZipFS
+from more_itertools import first_true
+from requests import HTTPError
 from requests_cache import CachedSession
+from rich.pretty import pprint
 from rich.prompt import Prompt
 
 from tracs.activity import Activity, ActivityPart
@@ -59,35 +60,50 @@ BASE_URL = 'https://flow.polar.com'
 AUTH_URL = 'https://auth.polar.com'
 
 HEADERS_TEMPLATE = {
+	'Accept': '*/*',
 	'Accept-Encoding': 'gzip, deflate, br, zstd',
 	'Accept-Language': 'en-US,en;q=0.5',
+	'Cache-Control': 'no-cache',
 	'Connection': 'keep-alive',
 	'DNT': '1',
+	'Host': 'flow.polar.com',
+	'Pragma': 'no-cache',
 	'Sec-Fetch-Dest': 'document',
 	'Sec-Fetch-Mode': 'navigate',
 	'Sec-Fetch-Site': 'same-origin',
 	'Sec-Fetch-User': '?1',
 	'Sec-GPC': '1',
+	'TE': 'Trailers',
 	'Upgrade-Insecure-Requests': '1',
 	'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0',
 }
 
 HEADERS_LOGIN = HEADERS_TEMPLATE | {
-	'Accept': '*/*',
+	'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8',
 	'Cache-Control': 'no-cache',
-	'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-	'Host': 'flow.polar.com',
-	'Origin': 'https://flow.polar.com',
+	'Content-Type': 'application/x-www-form-urlencoded',
+	'DNT': '1',
+	'Host': 'auth.polar.com',
+	'Origin': 'https://auth.polar.com',
 	'Pragma': 'no-cache',
-	'Referer': 'https://flow.polar.com',
+	'Referer': 'https://auth.polar.com', # needs update
+	'Sec-Fetch-Dest': 'document',
+	'Sec-Fetch-Mode': 'navigate',
+	'Sec-Fetch-Site': 'same-origin',
+	'Sec-Fetch-User': '?1',
+	'Sec-GPC': '1',
 	'TE': 'Trailers',
 }
 
 HEADERS_API = HEADERS_TEMPLATE | {
 	'Accept': 'application/json',
-	# 'Cache-Control': 'no-cache',
 	'Referer': 'https://flow.polar.com',
 	'X-Requested-With': 'XMLHttpRequest'
+}
+
+HEADERS_API2 = HEADERS_TEMPLATE | {
+	'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8',
+	'Referer': 'https://flow.polar.com/',
 }
 
 HEADERS_DOWNLOAD = { **HEADERS_TEMPLATE, **{
@@ -383,7 +399,7 @@ class Polar( Service ):
 
 	@property
 	def login_url( self ) -> str:
-		return f'{self.base_url}/login'
+		return f'{AUTH_URL}/login'
 
 	@property
 	def ajax_login_url( self ) -> str:
@@ -452,55 +468,54 @@ class Polar( Service ):
 			log.error( f'application setup not complete for Polar Flow, consider running {APPNAME} setup' )
 			return False
 
-		# noinspection PyUnusedLocal
-		# not sure if we really need to request the base url
-
-		response = self._session.get( self.base_url )
-
-		# request to ajax login to detect the csrf token
-		response = self._session.get( self.ajax_login_url )
-
 		try:
-			token = BeautifulSoup( response.text, 'html.parser' ).find( 'input', attrs={ 'name': 'csrfToken' } )['value']
-			log.debug( f'detected CSRF token on {self.ajax_login_url}: {token}' )
-		except TypeError:
-			log.error( f'unable to detect CSRF Token on {self.ajax_login_url}' )
-			return False
+			# not sure if we really need to request the base url, but probably yes as we need to get the session cookie
+			response = self._session.get( self.base_url )
+			response.raise_for_status()
 
-		params = {
-			'csrfToken': token,
-#			'email': self.cfg_value( 'username' ),
-#			'password': self.cfg_value( 'password' ),
-			'landingUrl': '/settings/products',
-			'returnUrl': '/'
-		}
+			# request to ajax login to detect the csrf token
+			response = self._session.get( self.ajax_login_url )
+			response.raise_for_status()
 
-		# request to flow SSO login
-		response = self._session.get( self.flow_sso_login_url, headers=HEADERS_API, data=params )
+			# detect CSRF token
+			csrf_token = BeautifulSoup( response.text, 'html.parser' ).find( 'input', attrs={ 'name': 'csrfToken' } )['value']
+			log.debug( f'detected CSRF token on {self.ajax_login_url}: {csrf_token}' )
 
-		# this is coming from response above -> location
+			# request to flow SSO login
+			params = {
+				'csrfToken': csrf_token,
+				'landingUrl': '/settings/products',
+				'returnUrl': '/'
+			}
+			response = self._session.get( self.flow_sso_login_url, params=params, headers=HEADERS_API2 )
+			response.raise_for_status()
 
-		# request to auth
-		params = {
-			'response_type': 'code',
-			'scope': 'POLAR_SSO',
-			'client_id': 'flow',
-			'redirect_uri': 'https%3A%2F%2Fflow.polar.com%2FflowSso%2Fredirect',
-			'state': 'some UUID goes in here',
-		}
+			# detect XSRF token and auth url
+			xsrf_token_cookie = first_true( self._session.cookies, pred=lambda c: (c.domain, c.path, c.name) == ('flow.polar.com', '/' , 'XSRF-TOKEN') )
+			auth_url = response.history[-1].url
+			headers = HEADERS_LOGIN | { 'Referer': auth_url }
+			data = {
+				'_csrf': xsrf_token_cookie.value,
+				'username': self.cfg_value( 'username' ),
+				'password': self.cfg_value( 'password' ),
+			}
+			# does not work ...
+			# username, password = quote_plus( self.cfg_value( 'username' ) ), self.cfg_value( 'password' )
+			# data = f'_csrf={xsrf_token_cookie.value}&username={username}&password={password}'
 
-		response = self._session.get( self.auth_authorize_url, headers=HEADERS_LOGIN, data=params )
+			response = self._session.post( self.login_url, headers=headers, data=data )
+			response.raise_for_status()
 
-		# noinspection PyUnusedLocal
-		response = self._session.post( self.login_url, headers=HEADERS_LOGIN, data=params )
-
-		if response.status_code == 200:
 			hidden_password = f'{self.cfg_value( "password" )[0]}***********{self.cfg_value( "password" )[-1]}'
 			log.debug( f'successfully logged into Polar Flow, with credentials {self.cfg_value( "username" )} / {hidden_password}' )
 			self._logged_in = True
-		else:
-			log.error( 'unable to log into Polar Flow, are the credentials correct?' )
-			self._logged_in = False
+
+		except HTTPError:
+			log.error( f'unable to complete login sequence for service {self.display_name}' )
+			log.error( pprint( response ) )
+
+		except TypeError:
+			log.error( f'unable to detect CSRF Token on {self.ajax_login_url}', exc_info=True )
 
 		return self._logged_in
 

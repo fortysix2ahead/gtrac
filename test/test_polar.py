@@ -1,15 +1,12 @@
 
-from datetime import datetime, timedelta
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 
 from dateutil.tz import tzlocal, UTC
 from pytest import mark
 
 from test.helpers import skip_live
 from tracs.activity_types import ActivityTypes
-from tracs.plugins.polar import BASE_URL, PolarFitnessTestImporter, PolarOrthostaticTestImporter, PolarRRRecordingImporter
-from tracs.plugins.polar import Polar, PolarFlowExercise
-from tracs.plugins.polar import PolarFlowImporter
+from tracs.plugins.polar import BASE_URL, Polar, PolarFitnessTestImporter, PolarFlowImporter, PolarOrthostaticTestImporter, PolarRRRecordingImporter
 from tracs.utils import FsPath
 
 importer = PolarFlowImporter()
