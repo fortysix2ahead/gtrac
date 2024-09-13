@@ -464,24 +464,22 @@ class Polar( Service ):
 		if not self._session:
 			self._session = CachedSession( cache_control=True, backend='memory' )
 
-		if not self.cfg_value( 'username' ) and not self.cfg_value( 'password' ):
+		if not self._cfg['username'] and self._cfg['password']:
 			log.error( f'application setup not complete for Polar Flow, consider running {APPNAME} setup' )
 			return False
 
 		try:
-			# not sure if we really need to request the base url, but probably yes as we need to get the session cookie
+			# not sure if we really need to request the base url, but probably yes as we need to get the PLAY session cookie
 			response = self._session.get( self.base_url )
 			response.raise_for_status()
 
-			# request to ajax login to detect the csrf token
+			# request to ajax login and detect the csrf token
 			response = self._session.get( self.ajax_login_url )
 			response.raise_for_status()
-
-			# detect CSRF token
 			csrf_token = BeautifulSoup( response.text, 'html.parser' ).find( 'input', attrs={ 'name': 'csrfToken' } )['value']
 			log.debug( f'detected CSRF token on {self.ajax_login_url}: {csrf_token}' )
 
-			# request to flow SSO login
+			# request to flow SSO login and fetch the XSRF-TOKEN value and the auth url
 			params = {
 				'csrfToken': csrf_token,
 				'landingUrl': '/settings/products',
@@ -489,23 +487,19 @@ class Polar( Service ):
 			}
 			response = self._session.get( self.flow_sso_login_url, params=params, headers=HEADERS_API2 )
 			response.raise_for_status()
-
-			# detect XSRF token and auth url
 			xsrf_token_cookie = first_true( self._session.cookies, pred=lambda c: (c.domain, c.path, c.name) == ('flow.polar.com', '/' , 'XSRF-TOKEN') )
 			auth_url = response.history[-1].url
+
+			# login with xsrf token and auth url as referer
 			headers = HEADERS_LOGIN | { 'Referer': auth_url }
-			data = {
-				'_csrf': xsrf_token_cookie.value,
-				'username': self.cfg_value( 'username' ),
-				'password': self.cfg_value( 'password' ),
-			}
+			data = { '_csrf': xsrf_token_cookie.value, 'username': self._cfg['username'], 'password': self._cfg['password'] }
 			# does not work ...
 			# username, password = quote_plus( self.cfg_value( 'username' ) ), self.cfg_value( 'password' )
 			# data = f'_csrf={xsrf_token_cookie.value}&username={username}&password={password}'
-
 			response = self._session.post( self.login_url, headers=headers, data=data )
 			response.raise_for_status()
 
+			# print success ... or not
 			hidden_password = f'{self.cfg_value( "password" )[0]}***********{self.cfg_value( "password" )[-1]}'
 			log.debug( f'successfully logged into Polar Flow, with credentials {self.cfg_value( "username" )} / {hidden_password}' )
 			self._logged_in = True
