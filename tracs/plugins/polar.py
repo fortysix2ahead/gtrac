@@ -1,5 +1,5 @@
 from datetime import datetime, time, timedelta
-from logging import getLogger
+from logging import DEBUG, getLogger
 from pathlib import Path
 from re import compile, match
 from time import time as current_time
@@ -488,14 +488,16 @@ class Polar( Service ):
 			response = self._session.get( self.flow_sso_login_url, params=params, headers=HEADERS_API2 )
 			response.raise_for_status()
 			xsrf_token_cookie = first_true( self._session.cookies, pred=lambda c: (c.domain, c.path, c.name) == ('flow.polar.com', '/' , 'XSRF-TOKEN') )
+			xsrf_token = xsrf_token_cookie.value
 			auth_url = response.history[-1].url
 
 			# login with xsrf token and auth url as referer
 			headers = HEADERS_LOGIN | { 'Referer': auth_url }
-			data = { '_csrf': xsrf_token_cookie.value, 'username': self._cfg['username'], 'password': self._cfg['password'] }
+			data = { '_csrf': xsrf_token, 'username': self._cfg['username'], 'password': self._cfg['password'] }
 			# does not work ...
 			# username, password = quote_plus( self.cfg_value( 'username' ) ), self.cfg_value( 'password' )
 			# data = f'_csrf={xsrf_token_cookie.value}&username={username}&password={password}'
+			print_cookies( self._session )
 			response = self._session.post( self.login_url, headers=headers, data=data )
 			response.raise_for_status()
 
@@ -746,3 +748,6 @@ def decompress_resources( r: Resource, gpx_importer: GPXImporter ) -> List[Resou
 				resources.append( resource )
 
 	return resources
+
+def print_cookies( session: CachedSession ) -> None:
+	[print( c ) for c in session.cookies ]
