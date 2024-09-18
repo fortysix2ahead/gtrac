@@ -26,6 +26,7 @@ from tracs.config import ApplicationContext, APPNAME
 from tracs.pluginmgr import importer, resourcetype, service, setup
 from tracs.plugins.gpx import GPX_TYPE, GPXImporter
 from tracs.plugins.json import DataclassFactoryHandler, JSONHandler
+from tracs.plugins.polar_takeout import PolarFlowTakeoutImporter
 from tracs.plugins.tcx import TCX_TYPE
 from tracs.plugins.xml import XMLHandler
 from tracs.resources import Resource
@@ -358,6 +359,7 @@ class Polar( Service ):
 		self._logged_in = False
 
 		self.importer: PolarFlowImporter = PolarFlowImporter()
+		self.take_importer: PolarFlowTakeoutImporter = PolarFlowTakeoutImporter()
 		self.json_handler: JSONHandler = JSONHandler()
 		self.gpx_importer = GPXImporter()
 
@@ -466,25 +468,29 @@ class Polar( Service ):
 		return self._logged_in
 
 	def fetch( self, force: bool, pretend: bool, **kwargs ) -> List[Resource]:
-		try:
-			url = self.events_url_for( range_from=kwargs.get( 'range_from' ), range_to=kwargs.get( 'range_to' ) )
-			json_list = self.json_handler.load( url=url, headers=HEADERS_API, session=self._session, stream=False )
+		if kwargs.get( 'from_takeouts', False ):
+			return self.take_importer.fetch( fs=self.ctx.takeout_fs( self.name ), existing_uids=kwargs.get( 'existing_uids' ), force=force )
 
-			return [
-				self.importer.save_to_resource(
-					content=self.json_handler.save_raw( j ),
-					raw=j,
-					data=self.importer.load_data( j ),
-					uid=f'{self.name}:{ _local_id( j ) }',
-					path=f'{_local_id( j )}.json',
-					type=POLAR_FLOW_TYPE,
-					source=self.url_for_id( _local_id( j ) ),
-				) for j in json_list.raw
-			]
+		else:
+			try:
+				url = self.events_url_for( range_from=kwargs.get( 'range_from' ), range_to=kwargs.get( 'range_to' ) )
+				json_list = self.json_handler.load( url=url, headers=HEADERS_API, session=self._session, stream=False )
 
-		except RuntimeError:
-			log.error( f'error fetching activity ids' )
-			return []
+				return [
+					self.importer.save_to_resource(
+						content=self.json_handler.save_raw( j ),
+						raw=j,
+						data=self.importer.load_data( j ),
+						uid=f'{self.name}:{ _local_id( j ) }',
+						path=f'{_local_id( j )}.json',
+						type=POLAR_FLOW_TYPE,
+						source=self.url_for_id( _local_id( j ) ),
+					) for j in json_list.raw
+				]
+
+			except RuntimeError:
+				log.error( f'error fetching activity ids' )
+				return []
 
 	def download( self, summary: Resource, force: bool = False, pretend: bool = False, **kwargs ) -> List[Resource]:
 		try:
