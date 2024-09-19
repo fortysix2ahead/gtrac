@@ -366,7 +366,7 @@ def version( ctx: ApplicationContext ):
 	if ctx.json:
 		ctx.console.print_json( data={ 'version': '0.1.0' } )
 	else:
-		ctx.console.print( '0.1.0' )
+		ctx.hub.print( '0.1.0' )
 
 def main( args=None ):
 	cli()  # trigger cli

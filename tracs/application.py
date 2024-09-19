@@ -6,6 +6,8 @@ from typing import ClassVar, Optional, Tuple
 
 from attrs import define, field
 from dynaconf import Dynaconf as Configuration
+from textual.message import Message
+from textual.message_pump import MessagePump
 
 from tracs import setup_console_logging, setup_file_logging
 from tracs.activity import configure_formatters as configure_activity_formatters
@@ -18,6 +20,24 @@ from tracs.utils import UCFG
 
 log = getLogger( __name__ )
 
+class PrintMessage( Message ):
+
+	def __init__( self, text: str ) -> None:
+		super().__init__()
+		self.text = text
+
+class MessageHub( MessagePump ):
+
+	def __init__( self ) -> None:
+		super().__init__()
+		self.app._register( None, self )
+
+	def print( self, text: str ) -> bool:
+		return self.post_message( PrintMessage( text ) )
+
+	def on_print_message( self, message: PrintMessage ) -> None:
+		print( message.text )
+
 @define( init=False )
 class Application:
 
@@ -25,6 +45,7 @@ class Application:
 
 	_ctx: ApplicationContext = field( default=None, alias='_ctx' )
 	_db: ActivityDb = field( default=None, alias='_db' )
+	_hub: MessageHub = field( default=None, alias='_hub' )
 	_registry: Registry = field( default=None, alias='_registry' )
 	_parser: RuleParser = field( default=None, alias='_parser' )
 
@@ -119,6 +140,10 @@ class Application:
 			keywords=self.registry.keywords,
 			normalizers=self.registry.normalizers,
 		)
+
+		# create message hub
+		self._hub = MessageHub()
+		self._ctx.hub = self._hub
 
 		# ---- announce context/configuration to utils module + configure formatters ----
 		UCFG.reconfigure( self._ctx.config )

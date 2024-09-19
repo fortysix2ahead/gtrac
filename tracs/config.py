@@ -135,6 +135,9 @@ class ApplicationContext:
 	# registry
 	registry: Any = field( default=None )
 
+	# event hub
+	hub: Any = field( default=None )
+
 	# kwargs fields, not used, but needed for
 
 	# todo: move this stuff away, as it does not belong here
