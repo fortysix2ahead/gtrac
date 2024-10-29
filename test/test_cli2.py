@@ -58,10 +58,12 @@ def test_list( ctx: Context ):
 @mark.context( env='empty', persist='clone', cleanup=True, json=True )
 @mark.file( 'environments/default/takeouts' )
 def test_import( ctx: Context, path ):
+	# import single file
 	drivey_file = f'{str( path )}/drivey/drive-20240825-160655.gpx'
 	cmd = cmd_import_file_or_dir.format( drivey_file )
-	invoke( ctx, cmd )
-
+	json = invoke( ctx, cmd ).json
+	assert [ a['id'] for a in json ] == [1]
+	
 	drivey_folder = f'{str( path )}/drivey'
 	drivey_zip = f'{str( path )}/drivey/drive-20240825-160655.gpx'
 

@@ -118,7 +118,7 @@ def imprt( ctx: ApplicationContext,
 	)
 
 	if ctx.json:
-		ctx.console.print_json( activities.to_dict() )
+		ctx.console.print_json( data=activities.to_dict() )
 
 @cli.command( help='fetches activity summaries', hidden=True )
 @argument( 'sources', nargs=-1 )
