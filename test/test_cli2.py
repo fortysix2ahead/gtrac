@@ -7,6 +7,22 @@ from tracs.config import ApplicationContext as Context
 
 log = getLogger( __name__ )
 
+cmd_import_bikecitizens = 'import bikecitizens'
+
+# local imports
+cmd_import_local = 'import local'
+cmd_import_file_or_dir = 'import --from {}'
+cmd_import_local_file_or_dir = 'import --from {} local'
+
+# strava imports
+cmd_import_strava = 'import strava'
+cmd_import_strava_from = 'import --from {} strava' # this should not work, cannot apply strava import on local files
+cmd_import_strava_takeout = 'import --takeout strava' # look into default strava takeout location, should work
+cmd_import_strava_takeout_from = 'import --takeout {} strava' # look into arbitrary strava takeout location, should work, can be a zip or a dir
+
+# combined imports
+cmd_import_local_strava_from = 'import --from {} local strava' # --from implies local, should at least give a warning
+
 cmd_list = 'list'
 cmd_list_1 = 'list 1'
 cmd_list_l_1 = 'list -l "id name" 1'
@@ -38,6 +54,18 @@ def test_list( ctx: Context ):
 
 	i = invoke( ctx, cmd_list_l_1 )
 	assert i.out.table_header == [ 'id', 'name' ]
+
+# import
+@mark.context( env='empty', persist='clone', cleanup=True )
+@mark.file( 'environments/default/takeouts' )
+def test_import( ctx: Context, path ):
+	drivey_gpx_file = f'{str( path )}/drivey/drive-20240825-160655.gpx'
+	drivey_folder = f'{str( path )}/drivey'
+	drivey_zip = f'{str( path )}/drivey/drive-20240825-160655.gpx'
+
+	cmd = cmd_import_file_or_dir.format( drivey_gpx_file )
+
+	i = invoke( ctx, cmd_import_local )
 
 # tagging
 

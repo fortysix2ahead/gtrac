@@ -33,7 +33,11 @@ MAXIMUM_OPEN = 8
 # also nice: https://github.com/luka1199/geo-heatmap
 
 def import_activities( ctx: ApplicationContext, sources: List[str], **kwargs ):
-	for src in (sources or ctx.registry.service_names() ):
+	sources = sources or ctx.registry.service_names()
+	from_fs = kwargs.get( 'from' )
+	from_takeouts = kwargs.get( 'from_takeouts' )
+
+	for src in sources or ctx.registry.service_names():
 		if service := ctx.registry.services.get( src ):
 			log.debug( f'importing activities from service {src}' )
 			service.import_activities(
