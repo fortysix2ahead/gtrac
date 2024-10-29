@@ -126,9 +126,9 @@ class Local( Service ):
 		import_path = kwargs.get( 'path' )
 		classifier = kwargs.get( 'classifier' ) or self.name
 
-		filters = [ '*.gpx' ] # todo: support tcx as well
+		filters, max_depth = [ '*.gpx' ], 0 # todo: support tcx as well
 		if import_path:
-			filters = [ import_path ]
+			filters, max_depth = [ import_path ], 1
 		exclude_dirs = ['__MACOSX']
 
 		# try:
@@ -153,7 +153,7 @@ class Local( Service ):
 
 		activities = Activities() # list of imported activities
 
-		for path, dirs, files in src_fs.walk.walk( '/', filter=filters, exclude_dirs=['__MACOSX'] ):
+		for path, dirs, files in src_fs.walk.walk( '/', filter=filters, exclude_dirs=exclude_dirs, max_depth=max_depth ):
 			for f in files:
 				try:
 					src_path = f'{path}/{f.name}'

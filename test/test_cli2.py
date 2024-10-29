@@ -59,13 +59,17 @@ def test_list( ctx: Context ):
 @mark.file( 'environments/default/takeouts' )
 def test_import( ctx: Context, path ):
 	# import single file
-	drivey_file = f'{str( path )}/drivey/drive-20240825-160655.gpx'
+	drivey_file = f'{str( path )}/drive-20240825-160655.gpx'
 	cmd = cmd_import_file_or_dir.format( drivey_file )
 	json = invoke( ctx, cmd ).json
 	assert [ a['id'] for a in json ] == [1]
-	
+
+	drivey_zip = f'{str( path )}/drive-20240826-132945.zip'
+	cmd = cmd_import_file_or_dir.format( drivey_zip )
+	json = invoke( ctx, cmd ).json
+	assert [ a['id'] for a in json ] == [2]
+
 	drivey_folder = f'{str( path )}/drivey'
-	drivey_zip = f'{str( path )}/drivey/drive-20240825-160655.gpx'
 
 # tagging
 
