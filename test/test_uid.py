@@ -68,6 +68,21 @@ def test_uid():
 	# works, but does not make sense
 	assert UID( classifier='polar', local_id=101, path='recording.gpx', part=1 ).uid == 'polar:101/recording.gpx#1'
 
+def test_uid_path():
+	uid_short = UID( 'polar:101', path='recording.gpx' )
+	uid_rel = UID( 'polar:101', path='1/0/1/101/recording.gpx' )
+	uid_abs = UID( 'polar:101', path='/home/user/1/0/1/101/recording.gpx' )
+
+	assert uid_short.base == 'polar:101/recording.gpx'
+	assert uid_rel.base == 'polar:101/recording.gpx'
+	assert uid_abs.base == 'polar:101/recording.gpx'
+
+	def resolver( id: int|str, path: str ) -> str:
+		id_str = str( id )
+		return f'{id_str[0]}/{id_str[1]}/{id_str[2]}/{id_str}/{path}'
+
+	assert uid_short.resolve( resolver ) == 'polar:101/1/0/1/101/recording.gpx'
+
 def test_eq():
 	uid1 = UID( 'polar:101/recording.gpx' )
 	uid2 = UID( 'polar:101/recording.gpx' )
