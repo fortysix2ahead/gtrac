@@ -16,6 +16,7 @@ from typing import Tuple
 from attr import define, field
 from click.testing import CliRunner, Result
 from more_itertools import first_true
+from orjson.orjson import loads
 from pytest import mark
 
 from tracs.cli import cli
@@ -80,6 +81,10 @@ class CliInvocation:
 		return self.result.exit_code
 
 	@property
+	def json( self ) -> Dict:
+		return loads( self.result.output )
+
+	@property
 	def out( self ) -> StringLines:
 		return StringLines( self.result.stdout.splitlines() )
 
@@ -105,10 +110,14 @@ class DbPath:
 
 def invoke_cli( ctx: ApplicationContext, cmdline: str, print_stdout: bool = False, print_stderr: bool = False ) -> CliInvocation:
 	runner = CliRunner( mix_stderr=False )
-	cmdline = f'-c {ctx.config_dir} {cmdline}'
+	command_line = f'-c {ctx.config_dir}'
+	command_line = f'{command_line} --debug' if ctx.debug else command_line
+	command_line = f'{command_line} --verbose' if ctx.verbose else command_line
+	command_line = f'{command_line} --json' if ctx.json else command_line
+	command_line = f'{command_line} {cmdline}'
 
-	log.info( f'invoking command line: {cmdline}' )
-	result: Result = runner.invoke( cli, cmdline, catch_exceptions=False )
+	log.info( f'invoking command line: {command_line}' )
+	result: Result = runner.invoke( cli, command_line, catch_exceptions=False )
 
 	if result.stdout and print_stdout:
 		ctx.console.print( result.stdout )

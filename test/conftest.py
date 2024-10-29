@@ -119,8 +119,12 @@ def db( request, fs: FS ) -> ActivityDb:
 @fixture
 def ctx( request, fs: FS ) -> ApplicationContext:
 
-	context = ApplicationContext( config_fs=fs, __kwargs__={ 'verbose': True } )
-	set_current_ctx( context )
+	json = marker( request, 'context', 'json', False )
+	verbose = marker( request, 'context', 'verbose', False )
+	debug = marker( request, 'context', 'debug', False )
+	flags = { 'verbose': verbose, 'debug': debug, 'json': json }
+
+	context = set_current_ctx( ApplicationContext( config_fs=fs, __kwargs__=flags ) )
 
 	yield context
 

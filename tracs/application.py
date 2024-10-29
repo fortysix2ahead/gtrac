@@ -51,7 +51,7 @@ class Application:
 	# 'None' as default value means value has not been provided from the outside (via command line switch)
 	def __setup__( self, *args, **kwargs ):
 		# console logging setup --
-		setup_console_logging( kwargs.get( 'verbose', False ), kwargs.get( 'debug', False ) )
+		setup_console_logging( kwargs.get( 'verbose', False ), kwargs.get( 'debug', False ), kwargs.get( 'json', False ) )
 
 		# log command line flags
 		log.debug( f'triggered CLI with flags {kwargs}' )

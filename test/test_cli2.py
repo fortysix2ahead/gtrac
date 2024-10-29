@@ -57,3 +57,7 @@ def test_tagging( ctx: Context ):
 @mark.context( env='default', persist='clone', cleanup=True )
 def test_version( ctx: Context ):
 	assert invoke( ctx, cmd_version ).out == '0.1.0'
+
+@mark.context( env='default', persist='clone', cleanup=True, json=True )
+def test_version_json( ctx: Context ):
+	assert invoke( ctx, cmd_version ).json == { 'version': '0.1.0' }
