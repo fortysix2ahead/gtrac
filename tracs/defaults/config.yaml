@@ -37,8 +37,9 @@ filters:
   default:
 
 import:
-  range: 90 # number of days to fetch activities from (today to -90 days), lowering will speed up import command
+  fetch_all: false # always fetch all activities, setting this to true will ignore the value for range
   first_year: 2000 # year to start from when fetching all activities, most likely there's nothing before 2000
+  range: 90 # number of days to fetch activities from (today to -90 days), lowering will speed up import command
 
 # gpx parser configuration
 

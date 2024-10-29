@@ -3,16 +3,18 @@ from logging import getLogger
 from os import system
 from pathlib import Path
 from shlex import quote
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from dateutil.tz import gettz
 from fs.copy import copy_file
+from fs.errors import CreateFailed, ResourceNotFound
 from fs.move import move_file
-from fs.path import dirname
+from fs.osfs import OSFS
+from fs.path import basename, dirname
 from rich.prompt import Confirm
 from tzlocal import get_localzone_name
 
-from tracs.activity import Activity
+from tracs.activity import Activities, Activity
 from tracs.config import ApplicationContext
 from tracs.db import ActivityDb
 from tracs.plugins.gpx import GPX_TYPE
@@ -21,6 +23,7 @@ from tracs.resources import Resource
 from tracs.service import Service
 from tracs.streams import as_str
 from tracs.ui import diff_table
+from utils import abspath, fspath
 
 log = getLogger( __name__ )
 
@@ -32,23 +35,41 @@ MAXIMUM_OPEN = 8
 # kepler: https://docs.kepler.gl/docs/user-guides/b-kepler-gl-workflow/a-add-data-to-the-map#geojson
 # also nice: https://github.com/luka1199/geo-heatmap
 
-def import_activities( ctx: ApplicationContext, sources: List[str], **kwargs ):
-	sources = sources or ctx.registry.service_names()
-	from_fs = kwargs.get( 'from' )
-	from_takeouts = kwargs.get( 'from_takeouts' )
+def import_activities( ctx: ApplicationContext, sources: List[str], **kwargs ) -> Activities:
+	if from_takeouts := kwargs.get( 'from_takeouts' ):
+		pass  # todo: support multiple sources?
 
-	for src in sources or ctx.registry.service_names():
+	if location := kwargs.get( 'location' ):
+		if location in ctx.registry.service_names():
+			fs, path = ctx.takeout_fs( location ), None
+		else:
+			try:
+				fs, path = fspath( location )
+			except ResourceNotFound:
+				log.error( f'import location {location} does not exist' )
+				return {}
+
+	else:
+		fs, path = None, None
+
+	if fs and not sources:
+		sources = [ 'local' ]
+	elif fs and sources:
+		raise NotImplementedError() # todo
+	else:
+		sources = sources or ctx.registry.service_names()
+
+	activities = Activities()
+
+	for src in sources:
 		if service := ctx.registry.services.get( src ):
 			log.debug( f'importing activities from service {src}' )
-			service.import_activities(
-				ctx=ctx,
-				force=ctx.force,
-				pretend=ctx.pretend,
-				first_year=ctx.config['import'].first_year,
-				days_range=ctx.config['import'].range,
-				**kwargs )
+			imported = service.import_activities( ctx.force, ctx.pretend, fs=fs, path=path, **kwargs )
+			activities.extend( imported )
 		else:
 			log.error( f'skipping import from service {src}, either service is unknown or disabled' )
+
+	return activities
 
 def open_activities( ctx: ApplicationContext, activities: List[Activity] ) -> None:
 	if len( activities ) > MAXIMUM_OPEN:

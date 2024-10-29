@@ -31,8 +31,6 @@ log = getLogger( __name__ )
 SERVICE_NAME = 'local'
 DISPLAY_NAME = 'Local'
 
-IMPORT_PATH = 'imports'
-
 class LocalActivity( Activity ):
 	pass
 
@@ -119,62 +117,68 @@ class Local( Service ):
 
 		return imported_data
 
-	def unified_import( self, ctx: ApplicationContext, force: bool = False, pretend: bool = False, **kwargs ) -> Tuple[Activities, FS]:
-		# prepare for import
-		ctx.tmp_fs.makedirs( IMPORT_PATH, recreate=True )
-		import_fs = SubFS( ctx.tmp_fs, IMPORT_PATH )
+	def supports_import_fs( self, fs: FS|None, path: str|None ) -> bool:
+		return True if fs else False
 
-		# classifier + location
-		classifier = kwargs.get( 'classifier', self.name )
+#	def unified_import( self, ctx: ApplicationContext, force: bool = False, pretend: bool = False, **kwargs ) -> Tuple[Activities, FS]:
+	def import_from_fs( self, src_fs: FS, dst_fs: FS, **kwargs ) -> Activities:
+		# classifier + optional location
+		import_path = kwargs.get( 'path' )
+		classifier = kwargs.get( 'classifier' ) or self.name
 
-		try:
-			location = abspath( kwargs.get( 'location' ) )
-			location_info = self._rootfs.getinfo( location )
+		filters = [ '*.gpx' ] # todo: support tcx as well
+		if import_path:
+			filters = [ import_path ]
+		exclude_dirs = ['__MACOSX']
 
-			if location_info.is_dir:
-				fs, filters = OSFS( location ), [ '*.gpx' ]
-			elif location_info.is_file:
-				if location_info.suffix == '.zip':
-					fs, filters = ReadZipFS( location ), [ '*.gpx' ]
-				elif location_info.suffix in [ '.gpx' ]:
-					fs, filters = OSFS( dirname( location ) ), [ location_info.name ]
-				else:
-					raise UnsupportedOperation
-			else:
-				raise UnsupportedOperation
-
-		except (ResourceNotFound, FileNotFoundError):
-			log.error( f'unsupported location: {location}' )
-			raise UnsupportedOperation
+		# try:
+		# 	location = abspath( kwargs.get( 'location' ) )
+		# 	location_info = self._rootfs.getinfo( location )
+		#
+		# 	if location_info.is_dir:
+		# 		fs, filters = OSFS( location ), [ '*.gpx' ]
+		# 	elif location_info.is_file:
+		# 		if location_info.suffix == '.zip':
+		# 			fs, filters = ReadZipFS( location ), [ '*.gpx' ]
+		# 		elif location_info.suffix in [ '.gpx' ]:
+		# 			fs, filters = OSFS( dirname( location ) ), [ location_info.name ]
+		# 		else:
+		# 			raise UnsupportedOperation
+		# 	else:
+		# 		raise UnsupportedOperation
+		#
+		# except (ResourceNotFound, FileNotFoundError):
+		# 	log.error( f'unsupported location: {location}' )
+		# 	raise UnsupportedOperation
 
 		activities = Activities() # list of imported activities
 
-		for path, dirs, files in fs.walk.walk( '/', filter=filters, exclude_dirs=[ '__MACOSX' ] ):
+		for path, dirs, files in src_fs.walk.walk( '/', filter=filters, exclude_dirs=['__MACOSX'] ):
 			for f in files:
 				try:
 					src_path = f'{path}/{f.name}'
-					activity = self._gpx_importer.load_as_activity( fs=fs, path=src_path )
+					activity = self._gpx_importer.load_as_activity( fs=src_fs, path=src_path )
 					activity.uid = UID( classifier, int( activity.starttime.strftime( "%y%m%d%H%M%S" ) ) )
 					dst_path = f'{classifier}/{path_for_date( activity.starttime )}/{activity.starttime.strftime( "%y%m%d%H%M%S" )}{f.suffix}'
 
-					if force or not self.db.contains_resource( activity.uid, dst_path ):
-						import_fs.makedirs( dirname( dst_path ), recreate=True )
-						copy_file( fs, src_path, import_fs, dst_path, preserve_time=True ) # todo: avoid file collisions
-						log.debug( f'copy {fs}/{src_path} to {import_fs}/{dst_path}' )
+					if self.ctx.force or not self.db.contains_resource( activity.uid, dst_path ):
+						dst_fs.makedirs( dirname( dst_path ), recreate=True )
+						copy_file( src_fs, src_path, dst_fs, dst_path, preserve_time=True ) # todo: avoid file collisions
+						log.debug( f'copy {src_fs}/{src_path} to {dst_fs}/{dst_path}' )
 
 						resource = activity.resources.first()
 						resource.path = dst_path
 						# source URL is better than before, but maybe not final
-						resource.source = fs.geturl( src_path, purpose='fs' ) if isinstance( fs, ReadZipFS ) else fs.geturl( src_path, purpose='download' )
+						resource.source = src_fs.geturl( src_path, purpose='fs' ) if isinstance( src_fs, ReadZipFS ) else src_fs.geturl( src_path, purpose='download' )
 						# don't need to set the resource uid as activity uid is set
 						# resource.uid = UID( classifier, int( activity.starttime.strftime( "%y%m%d%H%M%S" ) ) )
 						resource.unload()
 						activities.append( activity )
 
 					else:
-						log.info( f'skipping import of {fs}/{src_path}, resource already exists' )
+						log.info( f'skipping import of {src_fs}/{src_path}, resource already exists' )
 
 				except (AttributeError, ResourceImportException):
-					log.error( f'unable to read GPX file from FS {fs}, path {path}/{f.name}' )
+					log.error( f'unable to read GPX file from FS {src_fs}, path {path}/{f.name}' )
 
-		return activities, import_fs
+		return activities
