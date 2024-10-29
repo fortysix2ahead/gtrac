@@ -1,22 +1,19 @@
 
-from datetime import date
-from datetime import datetime
-from datetime import time
-from datetime import timedelta
-from datetime import timezone
-from typing import List
+from datetime import date, datetime, time, timedelta, timezone
+from random import choice
+from string import ascii_lowercase
 
-from arrow import Arrow, get as getarrow
+from arrow import Arrow
 from dateutil.tz import gettz
+from fs.errors import ResourceNotFound
+from fs.path import issamedir
+from fs.zipfs import ReadZipFS
+from pytest import mark, raises
 
 from tracs.activity_types import ActivityTypes
 from tracs.uid import UID
-from tracs.utils import as_datetime, floor_ceil_from, floor_ceil_str, str_to_timedelta, timedelta_to_iso8601, timedelta_to_str, unchain, unique_sorted
-from tracs.utils import fmt
-from tracs.utils import fromisoformat
-from tracs.utils import seconds_to_time
-from tracs.utils import toisoformat
-from tracs.utils import urlparse
+from tracs.utils import as_datetime, floor_ceil_from, floor_ceil_str, fmt, fromisoformat, fspath, ReadGzipFS, seconds_to_time, str_to_timedelta, \
+	timedelta_to_iso8601, timedelta_to_str, toisoformat, unchain, unique_sorted, urlparse
 
 def test_fmt():
 	assert fmt( None ) == ''
@@ -217,3 +214,26 @@ def test_floor_ceil():
 	assert floor_ceil_from( '10', as_str=True ) == ('0001-01-01T10:00:00+00:00', '0001-01-01T10:59:59.999999+00:00')
 	assert floor_ceil_from( '10:30', as_str=True ) == ('0001-01-01T10:30:00+00:00', '0001-01-01T10:30:59.999999+00:00')
 	assert floor_ceil_from( '10:30:50', as_str=True ) == ('0001-01-01T10:30:50+00:00', '0001-01-01T10:30:50.999999+00:00')
+
+# fs
+
+@mark.file( 'environments/default/takeouts' )
+def test_fspath( path ):
+	fs, p = fspath( path )
+	assert issamedir( str( path ), fs.getsyspath( '/' ) ) and p is None
+
+	fs, p = fspath( f'{path}/drive-20240825-160655.gpx' )
+	assert issamedir( str( path ), fs.getsyspath( '/' ) ) and p == 'drive-20240825-160655.gpx'
+
+	fs, p = fspath( f'{path}/drive-20240826-132945.zip' )
+	assert isinstance( fs, ReadZipFS ) and p is None
+
+	fs, p = fspath( f'{path}/drive-20240825-161341.gpx.gz' )
+	assert isinstance( fs, ReadGzipFS ) and p is None
+
+	random_name = ''.join( choice( ascii_lowercase ) for i in range( 32 ) )
+	fs, p = fspath( f'{path}/{random_name}' )
+	assert issamedir( str( path ), fs.getsyspath( '/' ) ) and p == random_name # works with non-existing files
+
+	with raises( ResourceNotFound ):
+		fspath( f'{path}/{random_name}/{random_name}' ) # ... but not with non-existing parent dirs

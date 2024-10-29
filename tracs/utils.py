@@ -3,11 +3,14 @@ from datetime import date, datetime, time, timedelta, timezone, tzinfo
 from difflib import SequenceMatcher
 from enum import Enum
 from functools import wraps
+from gzip import open as open_gzip
+from io import BytesIO
 from itertools import chain
 from os.path import abspath as abs_path, expanduser, expandvars, normpath
+from pathlib import Path
 from re import compile as rxcompile, match
 from time import gmtime, perf_counter
-from typing import Callable, Dict, Iterable, List, Literal, Optional, Tuple, TypeVar, Union
+from typing import BinaryIO, Callable, Dict, Iterable, List, Literal, Optional, Tuple, TypeVar, Union
 from urllib.parse import ParseResult, ParseResultBytes, urlparse as urllibparse
 
 from arrow import Arrow, get as getarrow
@@ -18,6 +21,13 @@ from click import style
 from dateutil.parser import parse as parse_datetime, ParserError
 from dateutil.tz import gettz, tzlocal
 from dynaconf import Dynaconf as Configuration
+from fs.base import FS
+from fs.errors import CreateFailed, ResourceNotFound, ResourceReadOnly
+from fs.info import Info
+from fs.osfs import OSFS
+from fs.path import basename, dirname
+from fs.tarfs import TarFS
+from fs.zipfs import ReadZipFS
 from rich import box
 from rich.table import Table
 
@@ -341,8 +351,56 @@ def urlparse( url ) -> ParseResult:
 
 # fs related
 
-def abspath( path: str ) -> str:
-	return normpath( abs_path( expanduser( expandvars( path ) ) ) )
+class ReadGzipFS( FS ):
+
+	def __init__( self, file: str ):
+		super().__init__()
+		self._file = file
+
+	def getinfo( self, path, namespaces=None ) -> Info:
+		return Info( {} ) # we might fill this later if required
+
+	def listdir( self, path ) -> List[str]:
+		return [ basename( self._file ) ]
+
+	def makedir( self, path, permissions=None, recreate=False ):
+		ResourceReadOnly( path ) # not supported
+
+	def openbin( self, path, mode='r', buffering=-1, **options ) -> BinaryIO:
+		with open_gzip( self._file, 'rb' ) as f:
+			return BytesIO( f.read() )
+
+	def remove( self, path ):
+		ResourceReadOnly( path ) # not supported
+
+	def removedir( self, path ):
+		ResourceReadOnly( path ) # not supported
+
+	def setinfo( self, path, info ):
+		ResourceReadOnly( path ) # not supported
+
+def abspath( path: Path|str ) -> str:
+	return normpath( abs_path( expanduser( expandvars( str( path ) ) ) ) )
+
+def fspath( path: Path|str ) -> Tuple[FS,str|None]:
+	path = abspath( path )
+
+	try:
+		fs, file = OSFS( path ), None
+	except CreateFailed:
+		# failure: location might be a file
+		try:
+			fs, file = OSFS( dirname( path ) ), basename( path )
+			if file.endswith( '.zip' ):
+				fs, file = ReadZipFS( path ), None
+			elif file.endswith( '.gz' ):
+				fs, file = ReadGzipFS( path ), None
+
+		except CreateFailed:
+			# dirname( location ) is also not a directory -> give up
+			raise ResourceNotFound( path )
+
+	return fs, file
 
 # styling helpers
 
