@@ -3,6 +3,7 @@
 
 debug: false # enables debug mode
 force: false # enable force mode, which does not ask any questions
+json: false # enable json output instead of plain text
 library: # absolute path to the activity library
 pretend: false # pretend mode, simulates all commands, but does not persist changes
 verbose: false # verbose mode, displays more log information

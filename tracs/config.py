@@ -519,12 +519,26 @@ def _subfs( parent: FS, path: str ) -> SubFS:
 	parent.makedirs( path, recreate=True )
 	return SubFS( parent_fs=parent, path=path )
 
+# global application context
+
 CURRENT_CONTEXT: Optional[ApplicationContext] = None
 
 def current_ctx() -> ApplicationContext:
+	"""
+	Returns the currently active context.
+
+	:return: active application context
+	"""
 	global CURRENT_CONTEXT
 	return CURRENT_CONTEXT
 
-def set_current_ctx( ctx: ApplicationContext ) -> None:
+def set_current_ctx( ctx: ApplicationContext ) -> ApplicationContext:
+	"""
+	Sets the current application context.
+
+	:param ctx: context to set
+	:return: current context, for convenience
+	"""
 	global CURRENT_CONTEXT
 	CURRENT_CONTEXT = ctx if ctx else CURRENT_CONTEXT
+	return CURRENT_CONTEXT
