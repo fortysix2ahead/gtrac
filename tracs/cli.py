@@ -41,10 +41,11 @@ def teardown_context( *args, **kwargs ) -> None:
 @option( '-v', '--verbose', is_flag=True, default=None, required=False, help='be more verbose when logging' )
 @option( '-d', '--debug', is_flag=True, default=None, required=False, help='enable output of debug messages' )
 @option( '-f', '--force', is_flag=True, default=None, required=False, help='forces operations to be carried out' )
+@option( '-j', '--json', is_flag=True, default=None, required=False, help='forces operations to be carried out' )
 @option( '--feature', required=False, multiple=True, help='forces operations to be carried out', type=str )
 @option( '-p', '--pretend', is_flag=True, default=None, required=False, help='pretends to work, only simulates everything and does not persist any changes' )
 @pass_context
-def cli( ctx: ClickContext, configuration, library, force, verbose, pretend, debug, feature: Tuple[str] ):
+def cli( ctx: ClickContext, configuration, library, force, verbose, pretend, debug, json, feature: Tuple[str] ):
 
 	ctx.call_on_close( teardown_context )
 
@@ -56,6 +57,7 @@ def cli( ctx: ClickContext, configuration, library, force, verbose, pretend, deb
 		debug=debug,
 		force=force,
 		pretend=pretend,
+		json=json,
 		features=list( feature )
 	)
 
@@ -367,7 +369,10 @@ def types( ctx, used_only: bool = False ):
 @cli.command( help='Displays the version number and exits.' )
 @pass_obj
 def version( ctx: ApplicationContext ):
-	ctx.console.print( '0.1.0' )
+	if ctx.json:
+		ctx.console.print_json( data={ 'version': '0.1.0' } )
+	else:
+		ctx.console.print( '0.1.0' )
 
 def main( args=None ):
 	cli()  # trigger cli

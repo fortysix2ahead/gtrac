@@ -39,7 +39,7 @@ FILE_HANDLER = None
 # create root logger 'tracs'
 log = getLogger( __name__ )
 
-def setup_console_logging( verbose: bool = False, debug: bool = False ):
+def setup_console_logging( verbose: bool = False, debug: bool = False, json: bool = False ):
 	global CONSOLE_HANDLER
 	log.removeHandler( CONSOLE_HANDLER )
 

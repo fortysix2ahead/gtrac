@@ -262,6 +262,24 @@ class ApplicationContext:
 	# main properties
 
 	@property
+	def cfg( self ) -> Configuration:
+		"""
+		Alias for self.config
+
+		:return: configuration object
+		"""
+		return self.config
+
+	@property
+	def settings( self ) -> Configuration:
+		"""
+		Alias for self.config
+
+		:return: configuration object
+		"""
+		return self.config
+
+	@property
 	def debug( self ) -> bool:
 		return self.config.debug
 
@@ -276,6 +294,10 @@ class ApplicationContext:
 	@property
 	def force( self ) -> bool:
 		return self.config.force
+
+	@property
+	def json( self ) -> bool:
+		return self.config.json
 
 	# lib/config related properties
 
