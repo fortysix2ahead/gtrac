@@ -378,7 +378,7 @@ class Service( Plugin ):
 		skip_fetch = kwargs.get( 'skip_fetch', False )
 		skip_download = kwargs.get( 'skip_download', False )
 
-		dst_fs = self.ctx.import_fs( classifier )
+		dst_fs = self.ctx.import_fs()
 
 		# actual import from local fs or remote
 		if src_fs and self.supports_import_fs( src_fs, src_path ):
@@ -412,7 +412,8 @@ class Service( Plugin ):
 			else:
 				self.ctx.db.insert( a )
 
-			self.ctx.db.commit()
+		# commit changes to db
+		self.ctx.db.commit()
 
 		# return imported activities
 		return activities

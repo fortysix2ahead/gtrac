@@ -169,7 +169,12 @@ class Local( Service ):
 						resource = activity.resources.first()
 						resource.path = dst_path
 						# source URL is better than before, but maybe not final
-						resource.source = src_fs.geturl( src_path, purpose='fs' ) if isinstance( src_fs, ReadZipFS ) else src_fs.geturl( src_path, purpose='download' )
+						# todo: support gzip
+						if isinstance( src_fs, ReadZipFS ):
+							resource.source = src_fs.geturl( src_path, purpose='fs' )
+						else:
+							resource.source = src_fs.geturl( src_path, purpose='download' )
+
 						# don't need to set the resource uid as activity uid is set
 						# resource.uid = UID( classifier, int( activity.starttime.strftime( "%y%m%d%H%M%S" ) ) )
 						resource.unload()

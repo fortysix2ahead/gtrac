@@ -239,8 +239,8 @@ class ApplicationContext:
 		self.var_fs = _subfs( self.config_fs, VAR_DIRNAME )
 		self.backup_fs = _subfs( self.config_fs, BACKUP_DIRNAME )
 		self.cache_fs = _subfs( self.config_fs, CACHE_DIRNAME )
-		self.tmp_fs = _subfs( self.config_fs, TMP_DIRNAME )
-		self.imports_fs = _subfs( self.config_fs, IMPORT_DIRNAME )
+		self.tmp_fs = _subfs( self.var_fs, TMP_DIRNAME )
+		self.imports_fs = _subfs( self.var_fs, IMPORT_DIRNAME )
 
 #	def __init__( self, *args, **kwargs ):
 #		extra_kwargs = { k: kwargs.pop( k, False ) for k in EXTRA_KWARGS }
@@ -408,8 +408,8 @@ class ApplicationContext:
 	def imports_path( self ) -> Path:
 		return Path( self.imports_dir )
 
-	def import_fs( self, name: str ) -> FS:
-		return self.imports_fs.makedirs( f'{name}/{datetime.now( tz=tzlocal() ).strftime( "%y%m%d_%H%M%S" )}', recreate=True )
+	def import_fs( self ) -> FS:
+		return self.imports_fs.makedirs( f'{datetime.now( tz=tzlocal() ).strftime( "%y%m%d_%H%M%S" )}', recreate=True )
 
 	@property
 	def backup_dir( self ) -> str:
