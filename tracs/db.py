@@ -307,12 +307,11 @@ class ActivityDb:
 		return any( u == uid for u in self._activities.iter_uids() )
 
 	def contains_resource( self, uid: UID|str, path: Optional[str] ) -> bool:
-		# todo: we might also accept paths with directories, but then we need to iterate over resources below
 		if isinstance( uid, UID ):
-			uid = UID( uid.classifier, uid.local_id, uid.path or basename( path ) )
+			uid = UID( uid.classifier, uid.local_id, path or uid.path )
 		else:
-			uid = UID( uid, path=basename( path ) if path else None )
-		return any( u == uid for u in self._activities.iter_resource_uids() )
+			uid = UID( uid, path=path if path else None )
+		return any( (u == uid or u.base == uid.base) for u in self._activities.iter_resource_uids() )
 
 	# get methods
 
