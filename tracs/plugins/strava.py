@@ -14,6 +14,7 @@ from dateutil.tz import tzlocal, UTC
 from fs.base import FS
 from fs.path import dirname
 from lxml.etree import tostring
+from orjson import dumps
 from requests import get as rqget
 from rich.prompt import Prompt
 from stravalib.client import Client
@@ -197,9 +198,12 @@ class Strava( Service ):
 				da = self._client.get_activity( sa.id, include_all_efforts=True )  # get detailed data for activity
 
 				# summary
+				dump = da.model_dump_json( exclude_unset=True, exclude_defaults=True, exclude_none=True )
+				data = self.json_handler.load_raw( dump ) # todo: check if there's a better way or getting a sorted json
+				sorted_dump = self.json_handler.save_raw( data )
 				summary = Resource(
-					content=da.model_dump_json( exclude_unset=True, exclude_defaults=True, exclude_none=True, indent=2 ).encode( 'UTF-8' ),
-					raw=da.model_dump( exclude_unset=True, exclude_defaults=True, exclude_none=True ),
+					content=sorted_dump,
+					raw=data,
 					data=da,
 					uid=uid,
 					path=path,
