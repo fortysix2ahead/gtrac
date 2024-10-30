@@ -26,7 +26,6 @@ from fs.errors import CreateFailed, ResourceNotFound, ResourceReadOnly
 from fs.info import Info
 from fs.osfs import OSFS
 from fs.path import basename, dirname
-from fs.tarfs import TarFS
 from fs.zipfs import ReadZipFS
 from rich import box
 from rich.table import Table
@@ -358,10 +357,21 @@ class ReadGzipFS( FS ):
 		self._file = file
 
 	def getinfo( self, path, namespaces=None ) -> Info:
-		return Info( {} ) # we might fill this later if required
+		_path = self.validatepath( path )
+		raw_info = {}
+
+		if _path == "/":
+			raw_info['basic'] = { 'name': '', 'is_dir': True }
+		else:
+			raw_info['basic'] = { 'name': self._name(), 'is_dir': False }
+
+		return Info( raw_info )
+
+	def _name( self ) -> str:
+		return basename( self._file ).removesuffix( '.gz' )
 
 	def listdir( self, path ) -> List[str]:
-		return [ basename( self._file ) ]
+		return [ self._name() ]
 
 	def makedir( self, path, permissions=None, recreate=False ):
 		ResourceReadOnly( path ) # not supported
@@ -378,6 +388,9 @@ class ReadGzipFS( FS ):
 
 	def setinfo( self, path, info ):
 		ResourceReadOnly( path ) # not supported
+
+	def geturl( self, path, purpose="download" ):
+		return "gzip://{}!/{}".format( self._file, self._name() )
 
 def abspath( path: Path|str ) -> str:
 	return normpath( abs_path( expanduser( expandvars( str( path ) ) ) ) )

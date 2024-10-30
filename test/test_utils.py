@@ -217,6 +217,13 @@ def test_floor_ceil():
 
 # fs
 
+@mark.file( 'environments/default/takeouts/drive-20240825-161341.gpx.gz' )
+def test_gzip_fs( path ):
+	fs = ReadGzipFS( str( path ) )
+	assert fs.listdir( '/' ) == [ 'drive-20240825-161341.gpx' ]
+	assert fs.readtext( '/' ).startswith( '<?xml version="1.0" encoding="UTF-8" standalone="no" ?>' )
+	assert [f for p, d, f in fs.walk.walk( '/' )] == []
+
 @mark.file( 'environments/default/takeouts' )
 def test_fspath( path ):
 	fs, p = fspath( path )
