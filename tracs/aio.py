@@ -37,21 +37,19 @@ def import_activities( ctx: ApplicationContext, sources: List[str], **kwargs ) -
 
 	if location := kwargs.get( 'location' ):
 		if location in ctx.registry.service_names():
-			fs, path = ctx.takeout_fs( location ), None
+			fs, path, sources = ctx.takeout_fs( location ), None, [ location ]
 		else:
 			try:
 				fs, path = fspath( location )
 			except ResourceNotFound:
 				log.error( f'import location {location} does not exist' )
-				return {}
+				return Activities()
 
 	else:
 		fs, path = None, None
 
 	if fs and not sources:
 		sources = [ 'local' ]
-	elif fs and sources:
-		raise NotImplementedError() # todo
 	else:
 		sources = sources or ctx.registry.service_names()
 
