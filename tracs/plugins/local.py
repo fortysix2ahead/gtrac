@@ -1,28 +1,18 @@
-from io import UnsupportedOperation
 from logging import getLogger
 from pathlib import Path
-from shutil import copy2 as copy, move
-from typing import Any, List, Optional, Tuple, Union
-from urllib.parse import urlparse
-from urllib.request import url2pathname
+from typing import Optional, Union
 
 from fs.base import FS
 from fs.copy import copy_file
-from fs.errors import ResourceNotFound
-from fs.osfs import OSFS
 from fs.path import dirname
-from fs.subfs import SubFS
 from fs.zipfs import ReadZipFS
 
 from tracs.activity import Activities, Activity
-from tracs.config import ApplicationContext
 from tracs.errors import ResourceImportException
 from tracs.pluginmgr import service
 from tracs.plugins.gpx import GPXImporter
-from tracs.resources import Resource
 from tracs.service import path_for_date, Service
 from tracs.uid import UID
-from tracs.utils import abspath
 
 log = getLogger( __name__ )
 
@@ -56,71 +46,9 @@ class Local( Service ):
 	def login( self ) -> bool:
 		return True
 
-	def fetch( self, force: bool, pretend: bool, **kwargs ) -> List[Resource]:
-		resources = []
-
-		if (path := kwargs.get( 'path' )) and (overlay_id := kwargs.get( 'as_overlay', False )):
-			ctx = kwargs.get( 'ctx' )
-			resource = ctx.db.resources.get( doc_id = overlay_id )
-			if resource:
-				overlay_path = self.path_for( resource=resource, ignore_overlay=False )
-				overlay_path.parent.mkdir( parents=True, exist_ok=True )
-				if kwargs.get( 'move', False ):
-					move( path, overlay_path )
-				else:
-					copy( path, overlay_path )
-
-		if path := kwargs.get( 'path' ):
-			if path.is_file():
-				paths = [ path ]
-			elif path.is_dir():
-				paths = [ f for f in path.iterdir() ]
-			else:
-				paths = []
-
-			for p in paths:
-				activity = self.import_from_file( p )
-				resource = activity.resources[0]
-				resource.uid = f'{self.name}:{activity.starttime.strftime( "%y%m%d%H%M%S" )}'
-				resource.path = f'{resource.local_id}.{resource.path.rsplit( ".", 1 )[1]}'
-				resource.status = 200
-				resources.append( resource )
-
-		return resources
-
-	# noinspection PyMethodMayBeStatic
-	def postprocess( self, activity: Optional[Activity], resources: Optional[List[Resource]], **kwargs ) -> None:
-		# todo: is this always correct?
-		activity.uid = activity.resources[0].uid
-
-	def persist_resource_data( self, activity: Activity, force: bool, pretend: bool, **kwargs ) -> None:
-		if kwargs.get( 'move', False ):
-			for r in activity.resources:
-				src_path = Path( urlparse( url2pathname( r.source ) ).path )
-				dest_path = self.path_for( resource=r )
-				dest_path.parent.mkdir( parents=True, exist_ok=True )
-				move( src_path, dest_path )
-				r.dirty = True
-		else:
-			super().persist_resource_data( activity, force, pretend, **kwargs )
-
-	# noinspection PyMethodMayBeStatic
-	def import_from_file( self, path: Path ) -> Any:
-		importers = Registry.importers_for_suffix( path.suffix[1:] )
-		try:
-			imported_data = None
-			for i in importers:
-				imported_data = i.load_as_activity( path=path )
-				break
-		except AttributeError:
-			imported_data = None
-
-		return imported_data
-
 	def supports_import_fs( self, fs: FS|None, path: str|None ) -> bool:
 		return True if fs else False
 
-#	def unified_import( self, ctx: ApplicationContext, force: bool = False, pretend: bool = False, **kwargs ) -> Tuple[Activities, FS]:
 	def import_from_fs( self, src_fs: FS, dst_fs: FS, **kwargs ) -> Activities:
 		# classifier + optional location
 		import_path = kwargs.get( 'path' )
@@ -131,26 +59,6 @@ class Local( Service ):
 			filters, max_depth = [ import_path ], 1
 		exclude_dirs = ['__MACOSX']
 
-		# try:
-		# 	location = abspath( kwargs.get( 'location' ) )
-		# 	location_info = self._rootfs.getinfo( location )
-		#
-		# 	if location_info.is_dir:
-		# 		fs, filters = OSFS( location ), [ '*.gpx' ]
-		# 	elif location_info.is_file:
-		# 		if location_info.suffix == '.zip':
-		# 			fs, filters = ReadZipFS( location ), [ '*.gpx' ]
-		# 		elif location_info.suffix in [ '.gpx' ]:
-		# 			fs, filters = OSFS( dirname( location ) ), [ location_info.name ]
-		# 		else:
-		# 			raise UnsupportedOperation
-		# 	else:
-		# 		raise UnsupportedOperation
-		#
-		# except (ResourceNotFound, FileNotFoundError):
-		# 	log.error( f'unsupported location: {location}' )
-		# 	raise UnsupportedOperation
-
 		activities = Activities() # list of imported activities
 
 		for path, dirs, files in src_fs.walk.walk( '/', filter=filters, exclude_dirs=exclude_dirs, max_depth=max_depth ):
@@ -160,10 +68,6 @@ class Local( Service ):
 					activity = self._gpx_importer.load_as_activity( fs=src_fs, path=src_path )
 					activity.uid = UID( classifier, int( activity.starttime.strftime( "%y%m%d%H%M%S" ) ) )
 					dst_path = f'{classifier}/{path_for_date( activity.starttime )}/{activity.starttime.strftime( "%y%m%d%H%M%S" )}{f.suffix}'
-
-					a_uid = [ ( a.id, str( a.uid ) ) for a in self.db.activities ]
-					ar_uid = [ str( u ) for u in self.db._activities.iter_resource_uids() ]
-					act_uid = str( activity.uid )
 
 					if self.ctx.force or not self.db.contains_resource( activity.uid, dst_path ):
 						dst_fs.makedirs( dirname( dst_path ), recreate=True )
