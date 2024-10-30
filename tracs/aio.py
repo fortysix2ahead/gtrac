@@ -3,14 +3,10 @@ from logging import getLogger
 from os import system
 from pathlib import Path
 from shlex import quote
-from typing import Dict, List, Optional, Union
+from typing import List, Optional, Union
 
 from dateutil.tz import gettz
-from fs.copy import copy_file
-from fs.errors import CreateFailed, ResourceNotFound
-from fs.move import move_file
-from fs.osfs import OSFS
-from fs.path import basename, dirname
+from fs.errors import ResourceNotFound
 from rich.prompt import Confirm
 from tzlocal import get_localzone_name
 
@@ -23,7 +19,7 @@ from tracs.resources import Resource
 from tracs.service import Service
 from tracs.streams import as_str
 from tracs.ui import diff_table
-from utils import abspath, fspath
+from tracs.utils import fspath
 
 log = getLogger( __name__ )
 
