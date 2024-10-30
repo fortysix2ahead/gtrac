@@ -12,6 +12,7 @@ from datetimerange import DateTimeRange
 from dateutil.parser import parse
 from dateutil.tz import tzlocal, UTC
 from fs import open_fs
+from fs.base import FS
 from fs.errors import CreateFailed
 from fs.zipfs import ReadZipFS
 from more_itertools import first_true
@@ -20,7 +21,7 @@ from requests_cache import CachedSession
 from rich.pretty import pprint
 from rich.prompt import Prompt
 
-from tracs.activity import Activity, ActivityPart
+from tracs.activity import Activities, Activity, ActivityPart
 from tracs.activity_types import ActivityTypes, ActivityTypes as Types
 from tracs.aio import load_resource
 from tracs.config import ApplicationContext, APPNAME
@@ -457,6 +458,11 @@ class Polar( Service ):
 
 		return url
 
+	# service methods
+
+	def supports_remote_import( self ) -> bool:
+		return True
+
 	def login( self ) -> bool:
 		if self._logged_in and self._session:
 			return self._logged_in
@@ -464,7 +470,7 @@ class Polar( Service ):
 		if not self._session:
 			self._session = CachedSession( cache_control=True, backend='memory' )
 
-		if not self._cfg['username'] and self._cfg['password']:
+		if self._cfg.username is None or self._cfg.password is None:
 			log.error( f'application setup not complete for Polar Flow, consider running {APPNAME} setup' )
 			return False
 
@@ -493,7 +499,7 @@ class Polar( Service ):
 
 			# login with xsrf token and auth url as referer
 			headers = HEADERS_LOGIN | { 'Referer': auth_url }
-			data = { '_csrf': xsrf_token, 'username': self._cfg['username'], 'password': self._cfg['password'] }
+			data = { '_csrf': xsrf_token, 'username': self._cfg.username, 'password': self._cfg.password }
 			# does not work ...
 			# username, password = quote_plus( self.cfg_value( 'username' ) ), self.cfg_value( 'password' )
 			# data = f'_csrf={xsrf_token_cookie.value}&username={username}&password={password}'
@@ -514,6 +520,10 @@ class Polar( Service ):
 			log.error( f'unable to detect CSRF Token on {self.ajax_login_url}', exc_info=True )
 
 		return self._logged_in
+
+	def import_from_remote( self, dst_fs: FS, **kwargs ) -> Activities:
+		if not self.login():
+			return Activities()
 
 	def fetch( self, force: bool, pretend: bool, **kwargs ) -> List[Resource]:
 		try:
