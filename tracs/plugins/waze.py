@@ -8,9 +8,11 @@ from typing import Any, cast, List, Optional, Tuple, Union
 from attrs import define, field
 from dateutil.parser import parse as parse_datetime
 from dateutil.tz import gettz, UTC
+from fs.base import FS
+from fs.path import dirname
 from gpxpy.gpx import GPX, GPXTrack, GPXTrackPoint, GPXTrackSegment
 
-from tracs.activity import Activity
+from tracs.activity import Activities, Activity
 from tracs.activity_types import ActivityTypes
 from tracs.handlers import ResourceHandler
 from tracs.pluginmgr import importer, resourcetype, service
@@ -24,6 +26,7 @@ log = getLogger( __name__ )
 
 TAKEOUTS_DIRNAME = 'takeouts'
 ACTIVITY_FILE = 'account_activity_3.csv'
+INFO_FILE = 'account_info.csv'
 
 SERVICE_NAME = 'waze'
 DISPLAY_NAME = 'Waze'
@@ -472,82 +475,73 @@ class Waze( Service ):
 	def url_for_resource_type( self, local_id: Union[int, str], type: str ) -> Optional[str]:
 		return None
 
-	def login( self ) -> bool:
-		return self._logged_in
+	# noinspection PyMethodMayBeStatic
+	def supports_fs_import( self, fs: FS | None, path: str | None ) -> bool:
+		return any ( [ f for f in fs.walk.files( '/', filter=[ ACTIVITY_FILE ] ) ] )
 
-	def fetch( self, force: bool, pretend: bool, **kwargs ) -> List[Resource]:
-		if not kwargs.get( 'from_takeouts', False ):
-			return []
+	def import_from_fs( self, src_fs: FS, dst_fs: FS, **kwargs ) -> Activities:
+		log.debug( f'fetching Waze activities from {src_fs}' )
+		activity_files = sorted( [ f for f in src_fs.walk.files( '/', filter=[ ACTIVITY_FILE ] ) ] )
 
-		takeouts_dir = self.ctx.takeout_dir_path( self.name )
-		log.debug( f"fetching Waze activities from {takeouts_dir}" )
+		self.ctx.total( len( activity_files ) )
 
-		takeout_files = sorted( takeouts_dir.rglob( ACTIVITY_FILE ) )
+		activities = Activities()
 
-		self.ctx.total( len( takeout_files ) )
-		# last_fetch = self.state_value( KEY_LAST_FETCH )
-
-		summaries = []
-
-		for file in takeout_files:
-			self.ctx.advance( f'{file}' )
+		for file in activity_files:
 			log.debug( f'fetching activities from Waze takeout in {file}' )
+			self.ctx.advance( f'{file}' )
 
-			takeout_resource = self._takeout_importer.load( path=file )
+			takeout_resource = self._takeout_importer.load( fs=src_fs, path=file )
 			account_activity = cast( AccountActivity, takeout_resource.data )
 			for ld in account_activity.location_details:
 				# ignore drives without timestamps, see issue #74
 				if not all( p.time for p in ld.as_point_list() ):
 					continue
 
-				summaries.append( Resource(
-					content=ld.coordinates.encode( 'UTF-8' ),
-					path=f'{ld.id()}.txt',
-					raw=ld, # this allows to skip parsing again
-					source=str( f'{self.name}/{file.relative_to( takeouts_dir )}' ),
-					type=WAZE_TYPE,
-					uid=f'{self.name}:{ld.id()}'
-				) )
+				uid = f'{self.name}:{ld.id()}'
+				path = f'{self.path_for_id( ld.id(), self.name )}/{ld.id()}.txt'
+
+				if self.ctx.force or not self.db.contains_resource( uid, path ):
+					# create and write summary
+					summary = Resource(
+						content=ld.coordinates.encode( 'UTF-8' ),
+						path=path,
+						raw=ld, # this allows to skip parsing again
+						source=f'{self.name}{file}',
+						type=WAZE_TYPE,
+						uid=uid
+					)
+
+					# create and write gpx
+					recording = Resource(
+						path=f'{summary.path[0:-3]}gpx',
+						source=summary.source,
+						type=GPX_TYPE,
+						uid=summary.uid
+					)
+					recording.raw, recording.content = to_gpx( summary.raw.as_point_list() )
+
+					dst_fs.makedirs( dirname( path ), recreate=True )
+					dst_fs.writebytes( summary.path, contents=summary.content )
+					dst_fs.writebytes( recording.path, contents=recording.content )
+					log.debug( f'wrote summary and recording to {dst_fs}/{summary.path} + {recording.path}' )
+
+					# create activity and unload resources
+					drive = self._drive_importer.load_as_activity( resource=summary )
+					drive.resources.append( recording )
+					summary.unload()
+					recording.unload()
+					activities.append( drive )
 
 		# self.ctx.complete( 'done' )
 
-		log.debug( f'fetched {len( summaries )} Waze activities' )
+		log.debug( f'fetched {len( activities )} Waze activities' )
 
-		return summaries
+		return activities
 
-	def download( self, summary: Resource, force: bool = False, pretend: bool = False, **kwargs ) -> List[Resource]:
-		try:
-			gpx_resource = Resource(
-				type=GPX_TYPE,
-				path=f'{summary.local_id}.gpx',
-				source=summary.source,
-				uid=summary.uid
-			)
-			self.download_resource( gpx_resource, summary=summary )
-			return [gpx_resource]
-		except RuntimeError:
-			log.error( f'error fetching resource from {summary.uid}', exc_info=True )
-			return []
-
-	def download_resource( self, resource: Resource, **kwargs ) -> Tuple[Any, int]:
-		if (summary := kwargs.get( 'summary' )) and summary.raw:
-			resource.raw, resource.content = to_gpx( cast( LocationDetail, summary.raw ).as_point_list() )
-			resource.status = 200
-		else:
-			local_path = Path( self.path_for( resource=resource ).parent, f'{resource.local_id}.txt' )
-			with open( local_path, mode='r', encoding='UTF-8' ) as p:
-				content = p.read()
-				drive = self._drive_importer.read_drive( content )
-				gpx = to_gpx( drive )
-				return gpx, 200  # return always 200
-
-	# def postdownload( self, ctx: ApplicationContext ) -> None:
-	# 	summary = import_session.last_summary
-	# 	if activity := import_session.fetched_activities.get( (summary.uid, summary.path) ):
-	# 		gpx_activity = self.gpx_importer.as_activity( import_session.last_download[0] )
-	# 		new_activity = Activity().init_from( activity ).init_from( other=gpx_activity )
-	# 		new_activity.uids.append( activity.uid )
-	# 		ctx.db.upsert_activity( new_activity, uid=activity.uid )
+	# noinspection PyMethodMayBeStatic
+	def supports_remote_import( self ) -> bool:
+		return False
 
 # helper functions
 

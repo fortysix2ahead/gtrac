@@ -380,12 +380,15 @@ class Service( Plugin ):
 		dst_fs = self.ctx.import_fs()
 
 		# actual import from local fs or remote
-		if src_fs and self.supports_import_fs( src_fs, src_path ):
+		if src_fs and self.supports_fs_import( src_fs, src_path ):
 			log.debug( f'service {self.name} supports import from {src_fs}' )
 			activities = self.import_from_fs( src_fs, dst_fs, path=src_path, classifier=classifier )
 
-		else:
+		elif self.supports_remote_import():
 			activities = self.import_from_remote( dst_fs )
+
+		else:
+			activities = Activities()
 
 		# post-process activities
 		for a in activities:
@@ -418,12 +421,16 @@ class Service( Plugin ):
 		return activities
 
 	# noinspection PyMethodMayBeStatic
-	def supports_import_fs( self, fs: FS|None, path: str|None ) -> bool:
+	def supports_fs_import( self, fs: FS | None, path: str | None ) -> bool:
 		return False
 
 	# noinspection PyMethodMayBeStatic
 	def import_from_fs( self, src_fs: FS, dst_fs: FS, **kwargs ) -> Activities:
 		return Activities()
+
+	# noinspection PyMethodMayBeStatic
+	def supports_remote_import( self ) -> bool:
+		return False
 
 	# noinspection PyMethodMayBeStatic
 	def import_from_remote( self, dst_fs: FS, **kwargs ) -> Activities:

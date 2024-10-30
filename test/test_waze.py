@@ -1,11 +1,10 @@
 from pathlib import Path
 from typing import cast
 
-from gpxpy.gpx import GPX
-
 from pytest import mark
 
-from tracs.plugins.waze import AccountActivity, Waze, WAZE_ACCOUNT_ACTIVITY_TYPE, WAZE_ACCOUNT_INFO_TYPE, WAZE_TYPE, WazeAccountActivityImporter, WazeImporter
+from tracs.plugins.waze import AccountActivity, Waze, WazeAccountActivityImporter, WazeImporter
+from tracs.utils import fspath
 
 @mark.file( 'environments/default/takeouts/waze/2020-09/account_activity_3.csv' )
 def test_read_account_activity_2020( path ):
@@ -51,15 +50,10 @@ def test_path_for( service ):
 
 @mark.context( env='default', persist='clone', cleanup=True )
 @mark.service( cls=Waze, init=True, register=True )
-def test_fetch_from_takeouts( service ):
-	# this does not do anything because from_takeouts is not set
-	resources = service.fetch( force=False, pretend=False )
-	assert len( resources ) == 0
-
-	# set takeouts flat
-	resources = service.fetch( force=False, pretend=False, from_takeouts=True )
-	assert len( resources ) == 4
-
-	for r in resources:
-		gpx = service.download( r, force=False, pretend=False )
-		assert len( gpx ) == 1 and isinstance( gpx[0].raw, GPX )
+def test_import( service ):
+	src_fs, src_path = fspath( service.ctx.config_fs.getsyspath( 'takeouts/waze' ) )
+	activities = service.import_activities( fs=src_fs, path=src_path )
+	# todo: actually there should be 5 imports?
+	assert [ a.uid.to_str() for a in activities ] == [
+		'waze:200712102429', 'waze:211222051711', 'waze:220102191316', 'waze:230310152717'
+	]

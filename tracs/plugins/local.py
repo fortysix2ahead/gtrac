@@ -46,7 +46,7 @@ class Local( Service ):
 	def login( self ) -> bool:
 		return True
 
-	def supports_import_fs( self, fs: FS|None, path: str|None ) -> bool:
+	def supports_fs_import( self, fs: FS | None, path: str | None ) -> bool:
 		return True if fs else False
 
 	def import_from_fs( self, src_fs: FS, dst_fs: FS, **kwargs ) -> Activities:
