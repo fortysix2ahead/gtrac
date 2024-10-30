@@ -71,55 +71,6 @@ class Service( Protocol ):
 	def url_for_resource_type( self, local_id: Union[int, str], type: str ):
 		...
 
-	def fetch( self, force: bool, pretend: bool, **kwargs ) -> List[Resource]:
-		"""
-		This method has to be implemented by a service class. It shall fetch information for
-		activities from an external service and return a list of summary resources. This way it can be checked
-		what activities exist and which identifier they have.
-
-		:param force: flag to signal force execution
-		:param pretend: pretend flag, do not persist anything
-		:param kwargs: additional parameters
-		:return: list of fetched summary resources
-		"""
-		...
-
-	def fetch_ids( self ) -> List[int]:
-		...
-
-	def download( self, activity: Optional[Activity] = None, summary: Optional[Resource] = None, force: bool = False, pretend: bool = False, **kwargs ) -> List[Resource]:
-		"""
-		Downloads related resources like GPX recordings based on a provided activity or summary resource.
-		TODO: create a method for all services to ease implementation of subclasses.
-
-		:param activity: activity
-		:param summary: summary resource
-		:param force: flag force
-		:param pretend: pretend flag
-		:param kwargs: additional parameters
-		:return: a list of downloaded resources
-		"""
-		...
-
-	def download_resource( self, resource: Resource, **kwargs ) -> Tuple[Any, int]:
-		"""
-		Downloads a single resource and returns the content + a status to signal that something has gone wrong.
-
-		:param resource: resource to be downloaded
-		:param kwargs: additional parameters
-		:return: tuple containing the content + status
-		"""
-		...
-
-	def persist_resource_data( self, activity: Activity, force: bool, pretend: bool, **kwargs ) -> None:
-		...
-
-	def postprocess( self, activity: Optional[Activity], resources: Optional[List[Resource]], **kwargs ) -> None:
-		...
-
-	def upsert_activity( self, activity: Activity, force: bool, pretend: bool, **kwargs ) -> None:
-		...
-
 	def import_activities( self, force: bool = False, pretend: bool = False, **kwargs ):
 		...
 
