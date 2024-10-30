@@ -359,7 +359,7 @@ class Service( Plugin ):
 		[ self._db.upsert_activity( a ) for a in activities ]
 
 	def import_activities( self, force: bool = False, pretend: bool = False, **kwargs ) -> Activities:
-		fetch_all = self.ctx.config['import'].fetch_all
+		fetch_all = kwargs.get( 'fetch_all' ) or self.ctx.config['import'].fetch_all
 		first_year = self.ctx.config['import'].first_year
 		days_range = self.ctx.config['import'].range
 
@@ -385,7 +385,7 @@ class Service( Plugin ):
 			activities = self.import_from_fs( src_fs, dst_fs, path=src_path, classifier=classifier )
 
 		elif self.supports_remote_import():
-			activities = self.import_from_remote( dst_fs )
+			activities = self.import_from_remote( dst_fs, range_from=range_from, range_to=range_to )
 
 		else:
 			activities = Activities()

@@ -324,7 +324,6 @@ class Bikecitizens( Service ):
 						uid=summary.uid,
 					)
 
-
 					dst_fs.makedirs( dirname( path ), recreate=True )
 					dst_fs.writebytes( summary.path, contents=summary.content )
 					dst_fs.writebytes( point_list.path, contents=point_list.content )
