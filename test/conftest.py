@@ -32,14 +32,15 @@ class Environment( NamedTuple ):
 	db: ActivityDb
 	registry: Registry
 
-def marker( request, name, key, default ):
+def marker( request, name, key, default = None ):
 	try:
 		m = request.node.get_closest_marker( name )
 		if key:
 			return m.kwargs[key]
 		elif not key:
 			return m.args[0]
-	except (AttributeError, KeyError, TypeError):
+
+	except (AttributeError, IndexError, KeyError, TypeError):
 		log.error( f'unable to access marker {name}.{key}', exc_info=True )
 		return default
 
@@ -175,7 +176,10 @@ def json( request ) -> Optional[Dict]:
 @fixture
 def path( request ) -> Optional[Path]:
 	with pkgpath( 'test', '__init__.py' ) as test_path:
-		return Path( test_path.parent, marker( request, 'file', None, None ) )
+		if p := marker( request, 'file', None, None ):
+			return Path( test_path.parent, p )
+		else:
+			return Path( test_path.parent )
 
 @fixture
 def fspath( request ) -> FsPath:

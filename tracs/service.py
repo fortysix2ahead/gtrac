@@ -17,7 +17,7 @@ from fs.multifs import MultiFS
 from fs.osfs import OSFS
 from fs.path import basename, combine, dirname, isabs, join, parts, split
 
-from tracs.activity import Activity
+from tracs.activity import Activity, Activities
 from tracs.config import current_ctx, DB_DIRNAME
 from tracs.db import ActivityDb
 from tracs.plugin import Plugin
@@ -358,24 +358,81 @@ class Service( Plugin ):
 	def persist_activities( self, activities: List[Activity], force: bool, pretend: bool, **kwargs ) -> None:
 		[ self._db.upsert_activity( a ) for a in activities ]
 
-	def import_activities( self, force: bool = False, pretend: bool = False, **kwargs ):
-		if 'unified_import' in dir( self ):
-			log.info( f'using feature unified_import for service {self.name}' )
-			self._import_activities( force, **kwargs )
-
-		fetch_all = kwargs.get( 'fetch_all', False )
-		first_year = kwargs.get( 'first_year', 2000 )
-		days_range = kwargs.get( 'days_range', 90 )
+	def import_activities( self, force: bool = False, pretend: bool = False, **kwargs ) -> Activities:
+		fetch_all = kwargs.get( 'fetch_all' ) or self.ctx.config['import'].fetch_all
+		first_year = self.ctx.config['import'].first_year
+		days_range = self.ctx.config['import'].range
 
 		if fetch_all:
 			range_from = datetime( first_year, 1, 1, tzinfo=UTC )
 		else:
-			range_from = datetime.utcnow().astimezone( UTC ) - timedelta( days = days_range )
-		range_to = datetime.utcnow().astimezone( UTC ) + timedelta( days=1 )
+			range_from = datetime.now( UTC ) - timedelta( days = days_range )
+		range_to = datetime.now( UTC ) + timedelta( days=1 )
+
+		src_fs = kwargs.get( 'fs' )
+		src_path = kwargs.get( 'path' )
+
+		classifier = kwargs.get( 'classifier' ) or self.name
 
 		skip_fetch = kwargs.get( 'skip_fetch', False )
 		skip_download = kwargs.get( 'skip_download', False )
 
+		dst_fs = self.ctx.import_fs()
+
+		# actual import from local fs or remote
+		if src_fs and self.supports_fs_import( src_fs, src_path ):
+			log.debug( f'service {self.name} supports import from {src_fs}' )
+			activities = self.import_from_fs( src_fs, dst_fs, path=src_path, classifier=classifier )
+
+		elif self.supports_remote_import():
+			activities = self.import_from_remote( dst_fs, range_from=range_from, range_to=range_to )
+
+		else:
+			activities = Activities()
+
+		# post-process activities
+		for a in activities:
+			# move imported resources
+			for r in a.resources:
+				if force or not self.ctx.db_fs.exists( r.path ):
+					try:
+						self.ctx.db_fs.makedirs( dirname( r.path ), recreate=True )
+						copy_file( dst_fs, r.path, self.ctx.db_fs, r.path, preserve_time=True )
+						dst_fs.remove( r.path )
+						# don't know why move_file fails, maybe a bug?
+						# move_file( import_fs, r.path, ctx.db_fs, r.path, preserve_time=True )
+						log.info( f'imported resource {UID( a.uid.classifier, a.uid.local_id, path=basename( r.path ) )}' )
+					except ResourceNotFound:
+						log.error( f'error importing from resource {UID( a.uid.classifier, a.uid.local_id, path=basename( r.path ) )}' )
+
+				else:
+					log.info( f'skipping import of resource {r}, file already exists, use option -f/--force to force overwrite' )
+
+			# insert / upsert newly created activities
+			if self.ctx.db.contains_activity( a.uid ):
+				self.ctx.db.upsert_activity( a )
+			else:
+				self.ctx.db.insert( a )
+
+		# commit changes to db
+		self.ctx.db.commit()
+
+		# return imported activities
+		return activities
+
+	# noinspection PyMethodMayBeStatic
+	def supports_fs_import( self, fs: FS | None, path: str | None ) -> bool:
+		return False
+
+	# noinspection PyMethodMayBeStatic
+	def import_from_fs( self, src_fs: FS, dst_fs: FS, **kwargs ) -> Activities:
+		return Activities()
+
+	# noinspection PyMethodMayBeStatic
+	def supports_remote_import( self ) -> bool:
+		return False
+
+	def import_from_remote( self, dst_fs: FS, **kwargs ) -> Activities:
 		if not self.login():
 			return
 
@@ -386,15 +443,15 @@ class Service( Plugin ):
 		summaries = self.fetch_summary_resources( skip_fetch, force, pretend, **{ 'range_from': range_from, 'range_to': range_to, **kwargs } )
 		summaries = self.postprocess_summaries( summaries, **kwargs )  # post process summaries
 
-		log.debug( f'fetched {len( summaries)} from service {self.display_name}' )
+		log.debug( f'fetched {len( summaries )} from service {self.display_name}' )
 
 		# filter out summaries that are already known
 		if not force:
 			summaries = [s for s in summaries if not self.ctx.db.contains_resource( s.uid, s.path )]
-			# this should also work
-			# summaries = [s for s in summaries if not self.ctx.db.contains_activity( s.uid )]
+		# this should also work
+		# summaries = [s for s in summaries if not self.ctx.db.contains_activity( s.uid )]
 
-		log.debug( f'downloading activity data for {len( summaries)}' )
+		log.debug( f'downloading activity data for {len( summaries )}' )
 
 		# mark task as done
 		self.ctx.complete( 'done' )
@@ -403,7 +460,7 @@ class Service( Plugin ):
 
 		self.ctx.start( f'downloading activity data from {self.display_name}', len( summaries ) )
 
-		while summaries and ( summary := summaries.pop() ):
+		while summaries and (summary := summaries.pop()):
 			# download resources for summary
 			self.ctx.advance( f'{summary.uid}' )
 
@@ -424,37 +481,6 @@ class Service( Plugin ):
 		# mark download task as done
 		self._db.commit()
 		self.ctx.complete( 'done' )
-
-	def _import_activities( self, force: bool = False, **kwargs ):
-		# call to import of service
-		# assumption: new/updated activities with new/updated resources are returned + fs which is used to resolve paths in resources
-		activities, import_fs = self.unified_import( force=force, **kwargs )
-
-		# process activities
-		for a in activities:
-			# move imported resources
-			for r in a.resources:
-				if force or not self.ctx.db_fs.exists( r.path ):
-					try:
-						self.ctx.db_fs.makedirs( dirname( r.path ), recreate=True )
-						copy_file( import_fs, r.path, self.ctx.db_fs, r.path, preserve_time=True )
-						import_fs.remove( r.path )
-						# don't know why move_file fails, maybe a bug?
-						# move_file( import_fs, r.path, ctx.db_fs, r.path, preserve_time=True )
-						log.info( f'imported resource {UID( a.uid.classifier, a.uid.local_id, path=basename( r.path ) )}' )
-					except ResourceNotFound:
-						log.error( f'error importing from resource {UID( a.uid.classifier, a.uid.local_id, path=basename( r.path ) )}' )
-
-				else:
-					log.info( f'skipping import of resource {r}, file already exists, use option -f/--force to force overwrite' )
-
-			# insert / upsert newly created activities
-			if self.ctx.db.contains_activity( a.uid ):
-				self.ctx.db.upsert_activity( a )
-			else:
-				self.ctx.db.insert( a )
-
-			self.ctx.db.commit()
 
 # helper functions
 

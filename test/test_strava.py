@@ -40,7 +40,9 @@ def test_init_from_raw( path ):
 @skip_live
 @mark.context( env='live', persist='clone', cleanup=False )
 @mark.service( cls=Strava, init=True, register=True )
-def test_workflow( service ):
-	service.login()
-	fetched = service.fetch( False, False, range_from = datetime( 2020, 1, 1 ), range_to=datetime( 2023, 12, 31 ) )
-	assert len( fetched ) > 0
+def test_import( service ):
+	activities = service.import_activities( fetch_all=True )
+	assert [ a.uid.to_str() for a in activities ] == [
+		'strava:8213576551', 'strava:8213576554', 'strava:8213576563', 'strava:8213576615',
+		'strava:7973155107', 'strava:7961381195', 'strava:7956459613', 'strava:7956459639'
+	]

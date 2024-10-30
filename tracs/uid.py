@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import ClassVar, List, Optional, Tuple
+from typing import Callable, ClassVar, List, Optional, Tuple
 from urllib.parse import SplitResult, urlsplit, urlunsplit
 
 from attrs import define, field
 from cattrs import Converter, GenConverter
+from fs.path import basename
 
 @define( eq=False, order=False )
 class UID:
@@ -83,6 +84,13 @@ class UID:
 			return str( self.part )
 		else:
 			return None
+
+	@property
+	def base( self ) -> UID:
+		return UID( self.classifier, self.local_id, basename( self.path ), self.part )
+
+	def resolve( self, fn: Callable ) -> UID:
+		return UID( self.classifier, self.local_id, fn( self.local_id, basename( self.path ) ), self.part )
 
 	@property
 	def as_str( self ) -> str:

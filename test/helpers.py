@@ -16,7 +16,7 @@ from typing import Tuple
 from attr import define, field
 from click.testing import CliRunner, Result
 from more_itertools import first_true
-from orjson.orjson import loads
+from orjson.orjson import JSONDecodeError, loads
 from pytest import mark
 
 from tracs.cli import cli
@@ -82,7 +82,10 @@ class CliInvocation:
 
 	@property
 	def json( self ) -> Dict:
-		return loads( self.result.output )
+		try:
+			return loads( self.result.output )
+		except JSONDecodeError:
+			return {}
 
 	@property
 	def out( self ) -> StringLines:

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, cast, Dict, Optional, Tuple
 
 from attrs import define, field
+from dateutil.tz import tzlocal
 from dynaconf import Dynaconf as Configuration
 from dynaconf.utils.boxing import DynaBox
 from dynaconf.vendor.box.exceptions import BoxKeyError
@@ -32,6 +33,7 @@ BACKUP_DIRNAME = 'backup'
 CACHE_DIRNAME = 'cache'
 DB_DIRNAME = 'db'
 DB_FILENAME = 'db.json'
+IMPORT_DIRNAME = 'imports'
 LOG_DIRNAME = 'logs'
 LOG_FILENAME = f'{APPNAME}.log'
 OVERLAY_DIRNAME = 'overlay'
@@ -112,12 +114,13 @@ class ApplicationContext:
 	# takeouts
 	takeouts_fs: FS = field( default=None )
 
-	# logs
+	# auxillary FS
 	log_fs: FS = field( default=None )
 	var_fs: FS = field( default=None )
 	backup_fs: FS = field( default=None )
 	cache_fs: FS = field( default=None )
 	tmp_fs: FS = field( default=None )
+	imports_fs: FS = field( default=None )
 
 	# needed?
 	instance: Any = field( default=None )
@@ -236,7 +239,8 @@ class ApplicationContext:
 		self.var_fs = _subfs( self.config_fs, VAR_DIRNAME )
 		self.backup_fs = _subfs( self.config_fs, BACKUP_DIRNAME )
 		self.cache_fs = _subfs( self.config_fs, CACHE_DIRNAME )
-		self.tmp_fs = _subfs( self.config_fs, TMP_DIRNAME )
+		self.tmp_fs = _subfs( self.var_fs, TMP_DIRNAME )
+		self.imports_fs = _subfs( self.var_fs, IMPORT_DIRNAME )
 
 #	def __init__( self, *args, **kwargs ):
 #		extra_kwargs = { k: kwargs.pop( k, False ) for k in EXTRA_KWARGS }
@@ -395,6 +399,17 @@ class ApplicationContext:
 	@property
 	def var_path( self ) -> Path:
 		return Path( self.var_dir )
+
+	@property
+	def imports_dir( self ) -> str:
+		return self.imports_fs.getsyspath( '' )
+
+	@property
+	def imports_path( self ) -> Path:
+		return Path( self.imports_dir )
+
+	def import_fs( self ) -> FS:
+		return self.imports_fs.makedirs( f'{datetime.now( tz=tzlocal() ).strftime( "%y%m%d_%H%M%S" )}', recreate=True )
 
 	@property
 	def backup_dir( self ) -> str:
