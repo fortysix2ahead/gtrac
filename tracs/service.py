@@ -432,7 +432,6 @@ class Service( Plugin ):
 	def supports_remote_import( self ) -> bool:
 		return False
 
-	# noinspection PyMethodMayBeStatic
 	def import_from_remote( self, dst_fs: FS, **kwargs ) -> Activities:
 		if not self.login():
 			return

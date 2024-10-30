@@ -2,23 +2,24 @@ from datetime import datetime, timedelta
 from logging import getLogger
 from re import DOTALL, match
 from sys import exit as sysexit
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from attrs import define, field
 from bs4 import BeautifulSoup
 from dateutil.parser import parse
 from dateutil.tz import tzlocal
+from fs.base import FS
+from fs.path import dirname
 from requests import options, Session
 from rich.prompt import Prompt
 
-from tracs.activity import Activity
+from tracs.activity import Activities, Activity
 from tracs.activity_types import ActivityTypes
 from tracs.config import ApplicationContext, APPNAME
 from tracs.pluginmgr import importer, resourcetype, service, setup
 from tracs.plugins.json import DataclassFactoryHandler, JSONHandler
 from tracs.resources import Resource
 from tracs.service import Service
-from .gpx import GPX_TYPE
 
 log = getLogger( __name__ )
 
@@ -152,8 +153,8 @@ class Bikecitizens( Service ):
 		self._api_key = None
 		self._session = None
 
-		self.importer: BikecitizensImporter = BikecitizensImporter()
-		self.json_handler: JSONHandler = JSONHandler()
+		self._importer: BikecitizensImporter = BikecitizensImporter()
+		self._json_handler: JSONHandler = JSONHandler()
 
 	@property
 	def api_url( self ) -> str:
@@ -180,7 +181,13 @@ class Bikecitizens( Service ):
 	def stats_url( self, year: int ) -> str:
 		return f'{self.user_url}/stats?start={year}-01-01&end={year}-12-31'
 
+	def url_for_id( self, local_id: Union[int, str] ) -> Optional[str]:
+		return f'https://api.bikecitizens.net/api/v1/tracks/{local_id}'
+
 	# service methods
+
+	def supports_remote_import( self ) -> bool:
+		return True
 
 	def login( self ) -> bool:
 		if self.logged_in and self._session:
@@ -254,79 +261,88 @@ class Bikecitizens( Service ):
 		self._logged_in = True
 		return self._logged_in
 
-	def fetch( self, force: bool, pretend: bool, **kwargs ) -> List[Resource]:
+	def import_from_remote( self, dst_fs: FS, **kwargs ) -> Activities:
+		if not self.login():
+			return Activities()
+
+		range_from = kwargs.get( 'range_from' )
+		range_to = kwargs.get( 'range_to' )
+
+		# start fetch task
+		self.ctx.start( f'fetching activity data from {self.display_name}' )
+
+		activities = Activities()
+
 		try:
-			url = self.tracks_url( range_from=kwargs.get( 'range_from' ) , range_to=kwargs.get( 'range_to' ) )
+			url = self.tracks_url( range_from=range_from, range_to=range_to )
 			response = options( url=url, headers=HEADERS_OPTIONS )
-			json_list = self.json_handler.load( url=url, headers={ **HEADERS_OPTIONS, **{ 'X-API-Key': self._api_key } }, session=self._session )
+			json_list = self._json_handler.load( url=url, headers={ **HEADERS_OPTIONS, **{ 'X-API-Key': self._api_key } }, session=self._session )
+			log.debug( f'fetched {len( json_list.data )} from service {self.display_name}' )
 
-			resources = [
-				self.importer.save_to_resource(
-					content=self.json_handler.save_raw( j ),
-					raw=j,
-					data=self.importer.load_data( j ),
-					uid=f'{self.name}:{j.get( "id" )}',
-					path=f'{j.get( "id" )}.json',
-					type=BIKECITIZENS_TYPE,
-				) for j in json_list.raw
-			]
+			for j in json_list.data:
+				uid = f'{self.name}:{j.get( "id" )}'
+				path = f'{self.path_for_id( j.get( "id" ), self.name )}/{j.get( "id" )}.json'
 
-			for r in resources:
-				r.path = self.path_for( r )
+				if self.ctx.force or not self.db.contains_resource( uid, path ):
+					# summary
+					summary = Resource(
+						content=self._json_handler.save_raw( j ),
+						raw=j,
+						data=self._importer.load_data( j ),
+						uid=uid,
+						path=path,
+						type=BIKECITIZENS_TYPE,
+					)
 
-			return resources
+					# point list
+					log.debug( f'downloading point list for {summary.uid.to_str()}' )
+
+					url = f'{self.url_for_id( summary.local_id )}/points'
+					response = options( url, headers=HEADERS_OPTIONS )
+					response = self._session.get( url, headers={ **HEADERS_OPTIONS, **{ 'X-API-Key': self._api_key } } )
+					point_list = Resource(
+						content=response.content,
+						path=f'{summary.path[0:-4]}rec.json',
+						source=url,
+						text=response.text,
+						type=BIKECITIZENS_RECORDING_TYPE,
+						uid=summary.uid,
+					)
+
+					# gpx recording
+					log.debug( f'downloading GPX recording for {summary.uid.to_str()}' )
+
+					url = f'{self.url_for_id( summary.local_id )}/gpx'
+					response = options( url, headers=HEADERS_OPTIONS )
+					response = self._session.get( url, headers={ **HEADERS_OPTIONS, **{ 'X-API-Key': self._api_key } } )
+					recording = Resource(
+						content=response.content,
+						path=f'{summary.path[0:-4]}gpx',
+						source=url,
+						text=response.text,
+						type=BIKECITIZENS_RECORDING_TYPE,
+						uid=summary.uid,
+					)
+
+
+					dst_fs.makedirs( dirname( path ), recreate=True )
+					dst_fs.writebytes( summary.path, contents=summary.content )
+					dst_fs.writebytes( point_list.path, contents=point_list.content )
+					dst_fs.writebytes( recording.path, contents=recording.content )
+					log.debug( f'wrote summary, point list and recording to {dst_fs}/{summary.path}, {point_list.path}, {recording.path}' )
+
+					# create activity and unload resources
+					ride = self._importer.load_as_activity( resource=summary )
+					ride.resources.extend( [ point_list, recording ] )
+					summary.unload()
+					point_list.unload()
+					recording.unload()
+					activities.append( ride )
 
 		except RuntimeError:
 			log.error( f'error fetching summaries', exc_info=True )
-			return []
 
-	def download( self, summary: Resource = None, force: bool = False, pretend: bool = False, **kwargs ) -> List[Resource]:
-		resources = [
-			Resource(
-				uid=summary.uid,
-				path=f'{summary.local_id}.rec.json',
-				type=BIKECITIZENS_RECORDING_TYPE,
-				source=f'{self.url_for_id( summary.local_id )}/points'
-			),
-			Resource(
-				uid=summary.uid,
-				path=f'{summary.local_id}.gpx',
-				type=GPX_TYPE,
-				source=f'{self.url_for_id( summary.local_id )}/gpx'
-			)
-		]
-
-		for r in resources:
-			if r not in self._db.resources or force:
-				try:
-					self.download_resource( r )
-				except RuntimeError:
-					log.error( f'error fetching resource from {r.source}', exc_info=True )
-			else:
-				log.info( f'skipping download from {r.source}, resource already exists' )
-
-		return [ r for r in resources if r.content ]
-
-	def download_resource( self, resource: Resource, **kwargs ) -> Tuple[Any, int]:
-		log.debug( f'downloading resource from {resource.source}' )
-		# noinspection PyUnusedLocal
-		response = options( resource.source, headers=HEADERS_OPTIONS )
-		response = self._session.get( resource.source, headers={ **HEADERS_OPTIONS, **{ 'X-API-Key': self._api_key } } )
-		resource.content, resource.text, resource.status = response.content, response.text, response.status_code
-		return response.content, response.status_code
-
-	def url_for_id( self, local_id: Union[int, str] ) -> Optional[str]:
-		return f'https://api.bikecitizens.net/api/v1/tracks/{local_id}'
-
-	def url_for_resource_type( self, local_id: Union[int, str], type: str ) -> Optional[str]:
-		url = None
-
-		if type == GPX_TYPE:
-			url = f'{self.url_for_id( local_id )}/gpx'
-		elif type == BIKECITIZENS_RECORDING_TYPE:
-			url = f'{self.url_for_id( local_id )}/points'
-
-		return url
+		return activities
 
 # plugin setup
 

@@ -24,25 +24,6 @@ def test_service_creation( service: Bikecitizens ):
 @skip_live
 @mark.context( env='live', persist='clone', cleanup=False )
 @mark.service( cls=Bikecitizens, init=True, register=True )
-def test_workflow( service: Service ):
-	assert service.login()
-
-	fetched = list( service.fetch( False, False ) )
-	assert len( fetched ) == 2
-
-	downloaded = []
-	for r in fetched:
-		downloaded.extend( service.download( r ) )
-	assert len( downloaded ) == 4
-
-	service.persist_resources( downloaded, force=False, pretend=False )
-
-	fs = service.ctx.lib_fs
-	paths = list( fs.walk.files( 'db/bikecitizens' ) )
-	assert any( p.endswith( '8201735.gpx' ) for p in paths )
-
-	# re-download should result in no results
-	downloaded = []
-	for r in fetched:
-		downloaded.extend( service.download( r ) )
-	assert len( downloaded ) == 0
+def test_import( service: Service ):
+	activities = service.import_activities()
+	assert [ a.uid.to_str() for a in activities ] == ['bikecitizens:8201734', 'bikecitizens:8201735']
