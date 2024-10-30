@@ -67,6 +67,9 @@ plugins:
     enabled: true
     username:
     password:
+    accesslink: false
+    client_id:
+    client_secret:
 
   strava:
     enabled: true
