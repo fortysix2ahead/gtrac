@@ -69,7 +69,15 @@ def test_import( ctx: Context, path ):
 	json = invoke( ctx, cmd ).json
 	assert [ a['id'] for a in json ] == [2]
 
+	drivey_gzip = f'{str( path )}/drive-20240825-161341.gpx.gz'
+	cmd = cmd_import_file_or_dir.format( drivey_gzip )
+	json = invoke( ctx, cmd ).json
+	assert [ a['id'] for a in json ] == [3]
+
 	drivey_folder = f'{str( path )}/drivey'
+	cmd = cmd_import_file_or_dir.format( drivey_folder )
+	json = invoke( ctx, cmd ).json
+	assert [ a['id'] for a in json ] == [2]
 
 # tagging
 

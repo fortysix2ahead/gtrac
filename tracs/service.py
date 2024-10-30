@@ -17,8 +17,7 @@ from fs.multifs import MultiFS
 from fs.osfs import OSFS
 from fs.path import basename, combine, dirname, isabs, join, parts, split
 
-from activity import Activities
-from tracs.activity import Activity
+from tracs.activity import Activity, Activities
 from tracs.config import current_ctx, DB_DIRNAME
 from tracs.db import ActivityDb
 from tracs.plugin import Plugin

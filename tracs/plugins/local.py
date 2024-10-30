@@ -161,6 +161,10 @@ class Local( Service ):
 					activity.uid = UID( classifier, int( activity.starttime.strftime( "%y%m%d%H%M%S" ) ) )
 					dst_path = f'{classifier}/{path_for_date( activity.starttime )}/{activity.starttime.strftime( "%y%m%d%H%M%S" )}{f.suffix}'
 
+					a_uid = [ ( a.id, str( a.uid ) ) for a in self.db.activities ]
+					ar_uid = [ str( u ) for u in self.db._activities.iter_resource_uids() ]
+					act_uid = str( activity.uid )
+
 					if self.ctx.force or not self.db.contains_resource( activity.uid, dst_path ):
 						dst_fs.makedirs( dirname( dst_path ), recreate=True )
 						copy_file( src_fs, src_path, dst_fs, dst_path, preserve_time=True ) # todo: avoid file collisions
