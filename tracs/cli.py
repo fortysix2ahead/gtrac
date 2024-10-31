@@ -98,9 +98,8 @@ def fields():
 @cli.command( 'import', hidden=True, help='imports activities' )
 @option( '-a', '--fetch-all', required=False, hidden=True, default=False, is_flag=True, type=bool, help='always fetch all activities instead of the most recent ones' )
 @option( '-c', '--classifier', required=False, type=str, help='classifier to use during import' )
-@option( '-f', '--from', 'location', required=False, type=str, help='import from local file system' )
 @option( '-m', '--move', required=False, hidden=True, is_flag=True, help='remove resources after import (dangerous, applies for imports from takeouts only)' )
-@option( '-sd', '--skip-download', required=False, is_flag=True, help='skips download of activities' )
+@option( '-sd', '--skip-download', hidden=True, required=False, is_flag=True, help='skips download of activities' )
 @option( '-t', '--from-takeouts', required=False, is_flag=True, help='imports activities from takeouts folder (plugin needs to support this)' )
 @argument( 'sources', nargs=-1 )
 @pass_obj
@@ -111,11 +110,8 @@ def imprt( ctx: ApplicationContext,
            move: bool = False,
            from_takeouts: str = None,
            classifier: str = None,
-           location: str = None,
            ):
-	activities = import_activities( ctx, sources, fetch_all=fetch_all, skip_download=skip_download, move=move,
-	   from_takeouts=from_takeouts, classifier=classifier, location=location
-	)
+	activities = import_activities( ctx, sources, fetch_all=fetch_all, skip_download=skip_download, move=move, from_takeouts=from_takeouts, classifier=classifier )
 
 	if ctx.json:
 		ctx.console.print_json( data=activities.to_dict() )
