@@ -43,7 +43,7 @@ def import_activities( ctx: ApplicationContext, sources: List[str], **kwargs ) -
 			if kwargs.get( 'from_takeouts' ):
 				fs, path = ctx.takeout_fs( src ), None
 			else:
-				fs, path = None
+				fs, path = None, None
 			imported.extend( service.import_activities( ctx.force, ctx.pretend, fs=fs, path=path, **kwargs ) )
 
 		else:
