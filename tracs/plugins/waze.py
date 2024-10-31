@@ -9,9 +9,9 @@ from attrs import define, field
 from dateutil.parser import parse as parse_datetime
 from dateutil.tz import gettz, UTC
 from fs.base import FS
-from fs.path import dirname
+from fs.path import dirname, frombase, parts, relpath
 from gpxpy.gpx import GPX, GPXTrack, GPXTrackPoint, GPXTrackSegment
-
+from more_itertools import unique
 from tracs.activity import Activities, Activity
 from tracs.activity_types import ActivityTypes
 from tracs.handlers import ResourceHandler
@@ -481,7 +481,14 @@ class Waze( Service ):
 
 	def import_from_fs( self, src_fs: FS, dst_fs: FS, **kwargs ) -> Activities:
 		log.debug( f'fetching Waze activities from {src_fs}' )
+
+		# check if activity files are already known
 		activity_files = sorted( [ f for f in src_fs.walk.files( '/', filter=[ ACTIVITY_FILE ] ) ] )
+		known_files = list( unique( [ r.source for r in self.db.resources if r.source is not None ] ) )
+		known_files = [ frombase( self.name, kf ) for kf in known_files if parts( relpath( kf ) )[1] == self.name ]
+
+		if not self.ctx.force:
+			activity_files = [ af for af in activity_files if af not in known_files ]
 
 		self.ctx.total( len( activity_files ) )
 
