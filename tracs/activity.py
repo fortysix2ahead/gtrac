@@ -11,7 +11,7 @@ from typing import Any, Callable, ClassVar, Dict, List, Optional, TypeVar, Union
 from attrs import define, evolve, Factory, field
 from cattrs import Converter, GenConverter
 from dateutil.tz import UTC
-from more_itertools import first_true, unique
+from more_itertools import first, first_true, last, unique
 from tzlocal import get_localzone_name
 
 from tracs.activity_types import ActivityTypes
@@ -305,9 +305,9 @@ class Activity( VirtualFieldsBase, FormattedFieldsBase ):
 		self.tags.remove( tag )
 
 	@classmethod
-	def group_of( cls, *activities: Activity, ignored_fields: List[str] = None, force: bool = False, target: Activity = None ) -> Activity:
-		target = target if target else Activity()
-		ignored_fields = ignored_fields if ignored_fields else []
+	def union_of( cls, *activities: Activity, ignored_fields: List[str] = None, force: bool = False, target: Activity = None ) -> Activity:
+		target = target or Activity()
+		ignored_fields = ignored_fields or []
 
 		for f in target.fields():
 			if f.name.startswith( '__' ) or f.name in ignored_fields: # never touch internal or ignored fields
@@ -342,6 +342,15 @@ class Activity( VirtualFieldsBase, FormattedFieldsBase ):
 						pass
 					else:
 						raise RuntimeError( f'unsupported factory datatype: {f.default.factory}' )
+
+		# treatment of special fields
+		target.uid = last( activities ).uid if force else first( activities ).uid
+
+		return target
+
+	@classmethod
+	def group_of( cls, *activities: Activity, ignored_fields: List[str] = None, force: bool = False, target: Activity = None ) -> Activity:
+		target = cls.union_of( *activities, ignored_fields=ignored_fields, force=force, target=target )
 
 		# treatment of special fields
 		target.uid = f'group:{activities[0].starttime.strftime( "%y%m%d%H%M%S" )}'
