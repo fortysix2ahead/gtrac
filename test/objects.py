@@ -2,12 +2,12 @@ from datetime import datetime, timedelta
 
 from dateutil.tz import tzlocal, tzoffset, UTC
 
-from activity import Activity, ActivityPart
-from activity_types import ActivityTypes
-from core import Metadata
-from plugins.gpx import GPX_TYPE
-from resources import Resource, Resources
-from uid import UID
+from tracs.activity import Activity, ActivityPart
+from tracs.activity_types import ActivityTypes
+from tracs.core import Metadata
+from tracs.plugins.gpx import GPX_TYPE
+from tracs.resources import Resource, Resources
+from tracs.uid import UID
 
 # collection of test objects
 

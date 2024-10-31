@@ -100,6 +100,37 @@ def test_group_of():
 	assert group.uid == 'group:240201100000' and group.uids == ['polar:1', 'polar:2']
 	assert group.type == ActivityTypes.walk
 
+def test_union_of():
+	a1 = Activity(
+		id=1,
+		name='One',
+		distance=10,
+		uid='polar:1',
+		type=ActivityTypes.walk,
+		starttime=datetime( 2024, 2, 1, 10, 0, 0 ),
+		tags=['a'],
+	)
+	a2 = Activity(
+		id=2,
+		name='Two',
+		calories=20,
+		uid='polar:2',
+		starttime = datetime( 2024, 2, 1, 10, 1, 0 ),
+		tags=['b'],
+		type=ActivityTypes.run,
+	)
+
+	u = Activity.union_of( a1, a2 )
+	assert u.name == 'One' and u.distance == 10 and u.calories == 20
+	assert u.uid == 'polar:1' and u.uids == [ 'polar:1' ]
+	assert u.type == ActivityTypes.walk and u.tags == [ 'a', 'b' ]
+
+	# union with force == True
+	u = Activity.union_of( a1, a2, force=True )
+	assert u.name == 'Two' and u.distance == 10 and u.calories == 20
+	assert u.uid == 'polar:2' and u.uids == ['polar:2']
+	assert u.type == ActivityTypes.run and u.tags == ['a', 'b']
+
 def test_activity_part():
 	p = ActivityPart( uids=[ 'polar:1234' ] )
 	assert p.as_uids == [ UID( classifier='polar', local_id=1234 ) ]

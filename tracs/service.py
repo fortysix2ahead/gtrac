@@ -287,7 +287,7 @@ class Service( Plugin ):
 
 			# insert / upsert newly created activities
 			if self.ctx.db.contains_activity( a.uid ):
-				self.ctx.db.upsert_activity( a )
+				self.ctx.db.upsert( a )
 			else:
 				self.ctx.db.insert( a )
 

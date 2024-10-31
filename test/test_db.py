@@ -14,6 +14,7 @@ from tracs.plugins.polar import POLAR_FLOW_TYPE
 from tracs.plugins.strava import STRAVA_TYPE
 from tracs.plugins.tcx import TCX_TYPE
 from tracs.resources import Resource
+from tracs.uid import UID
 
 def test_new_db_without_path():
 	db = ActivityDb( path=None )
@@ -65,21 +66,43 @@ def test_open_db( db ):
 def test_insert_upsert_remove( db ):
 	assert len( db.activities ) == 0 and len( db.resources ) == 0
 
+	a1 = Activity( uid='a:1', starttime=datetime( 2024, 3, 1, 10, 0, 0, tzinfo=UTC ) )
+	a2 = Activity( uid='a:2' )
+	a3 = Activity( uid='a:3' )
+
 	# insert activities and check keys
-	id = db.insert( Activity( uid='a:1', starttime=datetime( 2024, 3, 1, 10, 0, 0, tzinfo=UTC ) ) )
-	assert len( db.activities ) == 1 and id == [1]
-	ids = db.insert( Activity( uid='a:2' ), Activity( uid='a:3' ) )
-	assert len( db.activities ) == 3 and ids == [2, 3]
+	id = db.insert( a1 )
+	assert [ a.id for a in db.activities ] == [ 1 ] and id == [ 1 ]
+
+	ids = db.insert( a2, a3 )
+	assert [ a.id for a in db.activities ] == [ 1, 2, 3 ] and ids == [2, 3]
 	assert db.activity_keys == [1, 2, 3]
 
 	# upsert
-	a = Activity( name='one', uid='one:101', starttime=datetime( 2024, 3, 1, 10, 0, 0, tzinfo=UTC ) )
-	id = db.upsert_activity( a )
-	assert db.get_by_id( id )
-	a = Activity( name='two', uid='one:101', calories=100, starttime=datetime( 2024, 3, 1, 10, 0, 0, tzinfo=UTC ) )
-	id = db.upsert_activity( a )
-	a = db.get_by_id( id )
-	assert a.name == 'one' and a.uid == 'group:240301100000' and a.calories == 100
+	dt = datetime( 2024, 3, 1, 10, 0, 0, tzinfo=UTC )
+	a1 = Activity( name='one', uid='one:101', starttime=dt )
+	a2 = Activity( name='two', uid='one:101', calories=100, starttime=dt )
+
+	# like insert
+	id = db.upsert( a1 )
+	assert id == 4
+	assert db.activity_keys == [1, 2, 3, 4]
+
+	# update a1 with a2
+	id = db.upsert( a2 )
+	assert id == 4
+	a = db.get_by_id( 4 )
+	assert a.name == 'two' and a.uid == 'one:101' and a.calories == 100 and a.starttime == dt
+
+	# upsert with group
+	grp = db.get_by_id( 4 )
+	grp.name, grp.uid, grp.calories = 'group', 'group:101', None
+	grp.metadata.members = [ UID( 'one:101' ), UID( 'one:102' ) ]
+
+	id = db.upsert( a2 )
+	assert id == 4
+	a = db.get_by_id( 4 )
+	assert a.name == 'group' and a.uid == 'group:101' and a.calories == 100 and a.starttime == dt
 
 @mark.context( env='default', persist='clone', cleanup=True )
 def test_contains( db ):
