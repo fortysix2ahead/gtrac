@@ -344,7 +344,13 @@ class Activity( VirtualFieldsBase, FormattedFieldsBase ):
 						raise RuntimeError( f'unsupported factory datatype: {f.default.factory}' )
 
 		# treatment of special fields
+		# todo: really set target uid or leave it untouched?
 		target.uid = last( activities ).uid if force else first( activities ).uid
+
+		# update times
+		target.metadata.modified = datetime.now( UTC )
+		if not target.metadata.created:
+			target.metadata.created = target.metadata.modified
 
 		return target
 
@@ -353,8 +359,10 @@ class Activity( VirtualFieldsBase, FormattedFieldsBase ):
 		target = cls.union_of( *activities, ignored_fields=ignored_fields, force=force, target=target )
 
 		# treatment of special fields
-		target.uid = f'group:{activities[0].starttime.strftime( "%y%m%d%H%M%S" )}'
-		target.metadata.created = datetime.now( UTC )
+		if target.uid.classifier != 'group':
+			target.uid = f'group:{activities[0].starttime.strftime( "%y%m%d%H%M%S" )}'
+
+		# update members + resources
 		target.metadata.members = sorted( [ a.uid for a in activities ] )
 		target.resources = Resources( lst=sorted( [ r for a in activities for r in a.resources ], key=lambda r: r.path ) )
 

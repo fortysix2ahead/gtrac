@@ -244,12 +244,22 @@ class ActivityDb:
 	def insert_activities( self, activities: List[Activity] ) -> List[int]:
 		return [ self.insert_activity( a ) for a in activities ]
 
+	def upsert( self, *activities ) -> int|List[int]:
+		return l[0] if len( l := [self.upsert_activity( a ) for a in activities] ) == 1 else l
+
 	def upsert_activity( self, activity: Activity ) -> int:
-		if existing := self.get_by_uid( activity.uid ):
-			Activity.group_of( activity, target=existing )
+		#if existing := self.get_by_uid( activity.uid ):
+		if existing := self.get_for_uid( activity.uid ):
+			if existing.group:
+				Activity.group_of( existing, activity, target=existing )
+			else:
+				Activity.union_of( activity, target=existing, force=True )
 			return existing.id
 		else:
 			return self.insert_activity( activity )
+
+	def upsert_activities( self, activities: List[Activity] ) -> List[int]:
+		return [ self.upsert_activity( a ) for a in activities ]
 
 	# def replace_activity( self, new: Activity, old: Activity = None, id: int = None, uid = None ) -> None:
 	# 	self._activities.replace( new, old, id, uid )
