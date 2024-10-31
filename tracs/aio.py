@@ -32,36 +32,30 @@ MAXIMUM_OPEN = 8
 # also nice: https://github.com/luka1199/geo-heatmap
 
 def import_activities( ctx: ApplicationContext, sources: List[str], **kwargs ) -> Activities:
-	if from_takeouts := kwargs.get( 'from_takeouts' ):
-		pass  # todo: support multiple sources?
-
-	if location := kwargs.get( 'location' ):
-		if location in ctx.registry.service_names():
-			fs, path, sources = ctx.takeout_fs( location ), None, [ location ]
-		else:
-			try:
-				fs, path = fspath( location )
-			except ResourceNotFound:
-				log.error( f'import location {location} does not exist' )
-				return Activities()
-
-	else:
-		fs, path = None, None
-
-	if fs and not sources:
-		sources = [ 'local' ]
-	else:
-		sources = sources or ctx.registry.service_names()
-
+	sources = sources or ctx.registry.service_names()
 	activities = Activities()
 
 	for src in sources:
+		imported = Activities()
+
 		if service := ctx.registry.services.get( src ):
 			log.debug( f'importing activities from service {src}' )
-			imported = service.import_activities( ctx.force, ctx.pretend, fs=fs, path=path, **kwargs )
-			activities.extend( imported )
+			if kwargs.get( 'from_takeouts' ):
+				fs, path = ctx.takeout_fs( src ), None
+			else:
+				fs, path = None
+			imported.extend( service.import_activities( ctx.force, ctx.pretend, fs=fs, path=path, **kwargs ) )
+
 		else:
-			log.error( f'skipping import from service {src}, either service is unknown or disabled' )
+			try:
+				service = ctx.registry.services.get( 'local' )
+				fs, path = fspath( src )
+				imported.extend( service.import_activities( ctx.force, ctx.pretend, fs=fs, path=path, **kwargs ) )
+
+			except ResourceNotFound:
+				log.error( f'import location {src} does not exist' )
+
+		activities.extend( imported )
 
 	return activities
 
