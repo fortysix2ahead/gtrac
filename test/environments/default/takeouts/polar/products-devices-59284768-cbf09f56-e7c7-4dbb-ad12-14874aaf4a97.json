@@ -1,0 +1,23 @@
+{
+  "exportVersion": "2.4",
+  "devices": [
+    {
+      "name": "Polar Vantage V",
+      "deviceId": "47813520",
+      "deviceUuid": "0e030000-0084-0000-0000-000047813520",
+      "registered": "2022-12-06",
+      "settings": [
+        {
+          "name": "handedness",
+          "value": "1"
+        },
+        {
+          "name": "language",
+          "value": "de"
+        }
+      ]
+    }
+  ],
+  "archivedDevices": [],
+  "productRegistrationEvents": []
+}

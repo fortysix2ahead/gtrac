@@ -1,0 +1,53 @@
+{
+  "exportVersion": "2.4",
+  "username": "fortysix2ahead@gmail.com",
+  "firstName": "Fortysix & 2",
+  "lastName": "Ahead",
+  "physicalInformation": {
+    "sex": "MALE",
+    "birthday": "1980-01-01",
+    "height, cm": 180.0,
+    "weight, kg": 80.0,
+    "trainingBackground": "OCCASIONAL",
+    "sleepGoal": "PT28800S",
+    "typicalDay": "MOSTLY_SITTING",
+    "speedCalibrationOffset": 0.0
+  },
+  "linkedApplications": [
+    {
+      "name": "Strava",
+      "url": "https://www.strava.com",
+      "active": true,
+      "registered": "2022-10-14T10:44:25.000Z",
+      "lastLogin": "2022-10-14T10:44:25.000Z",
+      "oauthScopes": [
+        "read",
+        "activity:write",
+        "profile:read_all",
+        "read_all"
+      ]
+    }
+  ],
+  "linkedOrganisations": [],
+  "settings": {
+    "firstDayOfWeek": "MONDAY",
+    "measurementUnit": "METRIC",
+    "dateFormat": "DAY_MONTH_YEAR",
+    "dateSeparator": "PERIOD",
+    "timeFormat": "TIMEFORMAT_24",
+    "timeFormatSeparator": "COLON",
+    "timeZone": "UTC",
+    "language": "en",
+    "flowLanguage": "de",
+    "newsletter": "OFF",
+    "newFollower": "ON",
+    "receivedInvitation": "ON",
+    "newComment": "ON",
+    "guidanceOrArticles": "ON",
+    "sessionLiked": "ON",
+    "activitySummaryLiked": "ON",
+    "activitySummaryCommented": "ON",
+    "myCommentCommented": "ON",
+    "clubCommunication": "OFF"
+  }
+}
