@@ -115,10 +115,16 @@ class Activity( VirtualFieldsBase, FormattedFieldsBase ):
 	distance: float = field( default=None, metadata={ 'multipart': 'sum' } ) #
 	ascent: float = field( default=None ) #
 	descent: float = field( default=None ) #
+	elevation: float = field( default=None ) #
 	elevation_max: float = field( default=None ) #
 	elevation_min: float = field( default=None ) #
 	speed: float = field( default=None ) #
 	speed_max: float = field( default=None ) #
+
+	cadence: float = field( default=None ) #
+	cadence_max: float = field( default=None ) #
+	power: float = field( default=None ) #
+	power_max: float = field( default=None ) #
 
 	heartrate: int = field( default=None, metadata={ 'multipart': 'average' } ) #
 	heartrate_max: int = field( default=None ) #

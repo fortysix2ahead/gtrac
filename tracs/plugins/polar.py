@@ -14,12 +14,15 @@ from datetimerange import DateTimeRange
 from dateutil.parser import parse
 from dateutil.tz import tzlocal, UTC
 from fs import open_fs
+from fs.base import FS
 from fs.errors import CreateFailed
+from fs.path import dirname
 from fs.zipfs import ReadZipFS
+from regex import compile
 from requests_cache import CachedSession
 from rich.prompt import Prompt
 
-from tracs.activity import Activity, ActivityPart
+from tracs.activity import Activities, Activity, ActivityPart
 from tracs.activity_types import ActivityTypes, ActivityTypes as Types
 from tracs.aio import load_resource
 from tracs.config import ApplicationContext, APPNAME
@@ -30,8 +33,9 @@ from tracs.plugins.polar_takeout import PolarFlowTakeoutImporter
 from tracs.plugins.tcx import TCX_TYPE
 from tracs.plugins.xml import XMLHandler
 from tracs.resources import Resource
-from tracs.service import Service
+from tracs.service import Service, path_for_id
 from tracs.utils import seconds_to_time
+from tracs.uid import UID
 
 log = getLogger( __name__ )
 
@@ -46,9 +50,16 @@ POLAR_FLOW_TYPE = 'application/vnd.polar+json'
 POLAR_FITNESS_TEST_TYPE = 'application/vnd.polar.fitness+json'
 POLAR_ORTHOSTATIC_TEST_TYPE = 'application/vnd.polar.orthostatic+json'
 POLAR_RRRECORDING_TYPE = 'application/vnd.polar.rrrecording+json'
+POLAR_SESSION_TYPE = 'application/vnd.polar.session+json'
 POLAR_EXERCISE_DATA_TYPE = 'application/vnd.polar.ped+xml'
 POLAR_ZIP_GPX_TYPE = 'application/vnd.polar.gpx+zip'
 POLAR_ZIP_TCX_TYPE = 'application/vnd.polar.tcx+zip'
+
+ACCOUNT_DATA_GLOB = 'account-data-*.json'
+ACCOUNT_PROFILE_GLOB = 'account-profile-*.json'
+TRAINING_SESSION_GLOB = 'training-session-*.json'
+
+TRAINING_SESSION_REGEX = compile( r'^.*training-session-\d{4}-\d{2}-\d{2}-(\d+)\.json$' )
 
 PED_NS = 'http://www.polarpersonaltrainer.com'
 
@@ -243,6 +254,12 @@ class PolarFlowExerciseHrv:
 
 	pass
 
+@resourcetype( type=POLAR_SESSION_TYPE )
+@define
+class PolarTrainingSession:
+
+	pass
+
 # todo: this needs an update, but has low priority
 @resourcetype( type=POLAR_EXERCISE_DATA_TYPE )
 class PolarExerciseDataActivity( Activity ):
@@ -320,6 +337,44 @@ class PolarRRRecordingImporter( DataclassFactoryHandler ):
 			starttime_local= parse( activity.datetime, ignoretz=True ).replace( tzinfo=tzlocal() ),
 		)
 
+@importer
+class PolarTrainingSessionImporter( JSONHandler ):
+
+	TYPE: str = POLAR_SESSION_TYPE
+	ACTIVITY_CLS = PolarTrainingSession
+
+	def as_activity( self, resource: Resource ) -> Activity:
+		data, activity = resource.data, Activity()
+		if len( data.get( 'exercises', [] ) ) == 0:
+			pass
+		elif len( data.get( 'exercises', [] ) ) == 1:
+			data = data.get( 'exercises' )[0]
+			activity.ascent = data.get( 'ascent' )
+			activity.cadence = data.get( 'cadence', {} ).get( 'avg' )
+			activity.cadence_max = data.get( 'cadence', {} ).get( 'max' )
+			activity.calories = data.get( 'kiloCalories' )
+			activity.descent = data.get( 'descent' )
+			activity.distance = data.get( 'distance' )
+			# activity.duration = data.get( 'duration' )
+			activity.elevation = data.get( 'altitude', {} ).get( 'avg' )
+			activity.elevation_max = data.get( 'altitude', {} ).get( 'max' )
+			activity.elevation_min = data.get( 'altitude', {} ).get( 'min' )
+			activity.heartrate = data.get( 'heartRate', {} ).get( 'avg' )
+			activity.heartrate_max = data.get( 'heartRate', {} ).get( 'max' )
+			activity.heartrate_min = data.get( 'heartRate', {} ).get( 'min' )
+			activity.location_latitude_start = data.get( 'latitude' )
+			activity.location_longitude_start = data.get( 'longitude' )
+			activity.power = data.get( 'power', {} ).get( 'avg' )
+			activity.power_max = data.get( 'power', {} ).get( 'max' )
+			activity.speed = data.get( 'speed', {} ).get( 'avg' )
+			activity.speed_max = data.get( 'speed', {} ).get( 'max' )
+			activity.starttime = data.get( 'startTime' )
+			activity.endtime = data.get( 'stopTime' )
+		else:
+			pass
+
+		return activity
+
 @importer( type=POLAR_EXERCISE_DATA_TYPE )
 class PersonalTrainerImporter( XMLHandler ):
 
@@ -359,6 +414,7 @@ class Polar( Service ):
 		self._logged_in = False
 
 		self.importer: PolarFlowImporter = PolarFlowImporter()
+		self._session_importer = PolarTrainingSessionImporter()
 		self.take_importer: PolarFlowTakeoutImporter = PolarFlowTakeoutImporter()
 		self.json_handler: JSONHandler = JSONHandler()
 		self.gpx_importer = GPXImporter()
@@ -427,6 +483,47 @@ class Polar( Service ):
 
 		return url
 
+	# FS import
+	def supports_fs_import( self, fs: FS | None, path: str | None ) -> bool:
+		return any ( [ f for f in fs.walk.files( '/', filter=[ ACCOUNT_PROFILE_GLOB ] ) ] )
+
+	def import_from_fs( self, src_fs: FS, dst_fs: FS, **kwargs ) -> Activities:
+		log.debug( f'fetching {self.name} activities from {src_fs}' )
+		imported_activities = Activities()
+
+		activity_files = sorted( [ f for f in src_fs.walk.files( '/', filter=[ TRAINING_SESSION_GLOB ] ) ] )
+		log.debug( f'found {len( activity_files )} activity files in {src_fs}' )
+
+		if not self.ctx.force:
+			log.debug( f'checking db for already existing activities ...' )
+
+			existing = []
+			for af in activity_files:
+				if not self.db.contains_activity( UID( f'{self.name}:{TRAINING_SESSION_REGEX.fullmatch( af ).groups()[0]}' ) ):
+					existing.append( af )
+			activity_files = existing
+
+			log.debug( f'found {len( activity_files)} activities which do not yet exist in db' )
+
+		for file in activity_files:
+			id = TRAINING_SESSION_REGEX.fullmatch( file ).groups()[0]
+			session = self.json_handler.load( fs=src_fs, path=file )
+			session.path = path_for_id( id, self.name, f'{id}.session.json' )
+			session.source = f'{self.name}{file}'
+			session.type = POLAR_SESSION_TYPE
+			session.uid = UID( f'{self.name}:{id}' )
+
+			dst_fs.makedirs( dirname( session.path ), recreate=True )
+			dst_fs.writebytes( session.path, contents=session.content )
+			log.debug( f'wrote summary to {dst_fs}/{session.path}' )
+
+			session_activity = self._session_importer.load_as_activity( resource=session )
+			session_activity.uid = UID( f'{self.name}:{id}' )
+			session.unload()
+			imported_activities.append( session_activity )
+
+		return imported_activities
+
 	def login( self ) -> bool:
 		if self._logged_in and self._session:
 			return self._logged_in
@@ -451,7 +548,7 @@ class Polar( Service ):
 
 		if not self.cfg_value( 'username' ) and not self.cfg_value( 'password' ):
 			log.error( f"application setup not complete for Polar Flow, consider running {APPNAME} setup" )
-			sysexit( -1 )
+			sysexit( -1 )#
 
 		data = {
 			'csrfToken': token,

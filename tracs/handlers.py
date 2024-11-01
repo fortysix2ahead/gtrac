@@ -59,7 +59,7 @@ class ResourceHandler:
 		# return the result
 		return self.load_resource( path, url, **kwargs )
 
-	def load_as_activity( self, path: Optional[Union[Path, str]] = None, url: Optional[str] = None, fs: Optional[FS] = None, **kwargs ) -> Optional[Activity]:
+	def load_as_activity( self, path: Path|str = None, url: str = None, fs: FS = None, **kwargs ) -> Activity:
 		if resource := kwargs.get( 'resource' ):
 			# lazy (re-)loading of an existing resource
 			if resource.content and resource.raw is None and resource.data is None:

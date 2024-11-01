@@ -311,11 +311,11 @@ class Service( Plugin ):
 
 # helper functions
 
-def path_for_id( local_id: Union[int, str], base_path: Optional[Path] = None, resource_path: Optional[Path] = None ) -> Path:
+def path_for_id( local_id: int|str, base_path: str = None, resource_path: str = None ) -> str:
 	local_id_rjust = str( local_id ).rjust( 3, '0' )
-	path = Path( f'{local_id_rjust[0]}/{local_id_rjust[1]}/{local_id_rjust[2]}/{local_id}' )
-	path = Path( base_path, path ) if base_path else path
-	path = Path( path, resource_path ) if resource_path else path
+	path = f'{local_id_rjust[0]}/{local_id_rjust[1]}/{local_id_rjust[2]}/{local_id}'
+	path = f'{base_path}/{path}' if base_path else path
+	path = f'{path}/{resource_path}' if resource_path else path
 	return path
 
 def path_for_date( date_id: Union[int, str, datetime] ) -> str:
