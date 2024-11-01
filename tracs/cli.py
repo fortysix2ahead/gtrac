@@ -205,24 +205,24 @@ def rename( ctx: ApplicationContext, filters: str ):
 	ctx.db.commit()
 
 @cli.command( help='reimports activities' )
-@option( '-fr', '--from-remote', is_flag=False, required=False, help='reimport from remote source instead of local data only' )
 @option( '-if', '--ignore-field', is_flag=False, required=False, multiple=True, help='fields to be ignored when calculating new field values' )
 @option( '-o', '--offset', is_flag=False, required=False, help='offset for correcting value for time' )
-@option( '-r', '--include-recordings', is_flag=True, required=False, help='include data from recordings like GPX or TCX when reimporting' )
-# @option( '-s', '--strategy', is_flag=False, required=False, hidden=True, help='strategy to use when calculating fields (experimental)' )
+@option( '-rc', '--recordings', is_flag=True, required=False, help='include data from recordings like GPX or TCX when reimporting' )
+@option( '-r', '--from-remote', is_flag=False, required=False, help='reimport from remote source instead of local data only' )
+@option( '-t', '--from-takeouts', is_flag=False, required=False, help='timezone for calculating value for local time' )
 @option( '-tz', '--timezone', is_flag=False, required=False, help='timezone for calculating value for local time' )
 @argument( 'filters', nargs=-1 )
 @pass_obj
 def reimport( ctx: ApplicationContext, filters, include_recordings: bool = False, from_remote: bool = False, strategy: str = None, offset: str = None, timezone: str = None, ignore_field: Tuple = None ):
 	reimport_activities(
+		ctx=ctx,
 		activities=_flt( *filters ),
 		include_recordings=include_recordings,
 		from_remote=from_remote,
 		ignore_fields=list( ignore_field ),
 		strategy=strategy,
 		offset=offset,
-		timezone=timezone,
-		ctx=ctx
+		timezone=timezone
 	)
 
 @cli.command( 'open', help='opens activities in an external application' )

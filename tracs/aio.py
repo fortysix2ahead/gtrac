@@ -5,6 +5,7 @@ from pathlib import Path
 from shlex import quote
 from typing import List, Optional, Union
 
+from config import current_ctx
 from dateutil.tz import gettz
 from fs.errors import ResourceNotFound
 from rich.prompt import Confirm
@@ -63,35 +64,21 @@ def import_activities( ctx: ApplicationContext, sources: List[str], **kwargs ) -
 
 	return activities
 
-def open_activities( ctx: ApplicationContext, activities: List[Activity] ) -> None:
-	if len( activities ) > MAXIMUM_OPEN:
-		log.warning( f'limit of number of activities to open is {MAXIMUM_OPEN}, ignoring the rest of provided {len( activities )} activities' )
-		activities = activities[:MAXIMUM_OPEN]
-
-	resource_type = GPX_TYPE # todo: make this configurable
-
-	resources = [ a.resource_of_type( resource_type ) for a in activities ]
-	paths = [ quote( p ) for p in [ ctx.db_fs.getsyspath( r.path ) for r in resources ] if p is not None ]
-
-	if paths:
-		system( 'open ' + ' '.join( paths ) )
-
-		# os.system( "open " + shlex.quote( filename ) )  # MacOS/X
-		# os.system( "start " + filename )  # windows
-
 def reimport_activities(
-		activities: List[Activity],
+		ctx: ApplicationContext = None,
+		activities: List[Activity] = None,
 		include_recordings: bool = False,
 		from_remote: bool = False,
 		strategy: str = None,
 		offset: str = None,
 		timezone: str = None,
 		ignore_fields: List[str] = None,
-		ctx: ApplicationContext = None ):
+	):
 
-	log.debug( f'reimporting {len( activities )} activities, with force={ctx.force}' )
+	ctx = ctx or current_ctx()
+	ignore_fields = ignore_fields or []
 
-	ignore_fields = ignore_fields if ignore_fields is not None else []
+	log.debug( f'reimporting {len( activities )} activities, with force={ctx.cfg.force}' )
 
 	try:
 		if offset.startswith( '-' ):
@@ -139,6 +126,22 @@ def reimport_activities(
 
 	ctx.db.commit()
 	ctx.complete( 'done' )
+
+def open_activities( ctx: ApplicationContext, activities: List[Activity] ) -> None:
+	if len( activities ) > MAXIMUM_OPEN:
+		log.warning( f'limit of number of activities to open is {MAXIMUM_OPEN}, ignoring the rest of provided {len( activities )} activities' )
+		activities = activities[:MAXIMUM_OPEN]
+
+	resource_type = GPX_TYPE # todo: make this configurable
+
+	resources = [ a.resource_of_type( resource_type ) for a in activities ]
+	paths = [ quote( p ) for p in [ ctx.db_fs.getsyspath( r.path ) for r in resources ] if p is not None ]
+
+	if paths:
+		system( 'open ' + ' '.join( paths ) )
+
+		# os.system( "open " + shlex.quote( filename ) )  # MacOS/X
+		# os.system( "start " + filename )  # windows
 
 def load_all_resources( db: ActivityDb, activity: Activity ) -> List[Resource]:
 	resources = []
