@@ -1,4 +1,5 @@
 from fs.osfs import OSFS
+from plugins.json import JSONHandler
 from pytest import mark, raises
 
 from plugins.gpx import GPXImporter
@@ -102,6 +103,29 @@ def test_resource_io( path ):
 
 	r1 = Resource( uid='polar:100001', name='100001.gpx', type='application/gpx+xml', path='100001.gpx' )
 	r1.load( fs, None, handler )
+
+@mark.file( 'environments/default/takeouts/polar/training-session-2022-12-06-7537918051-91b48d8f-dea2-4cf5-b807-c2aeefc5a072.json' )
+def test_resource_access( path ):
+	resource = JSONHandler().load( path=path )
+	assert type( resource.raw ) is dict
+
+	assert resource.strg( 'deviceId' ) == '47813520'
+	assert resource.strg( 'timeZoneOffset' ) == '60'
+	assert resource.strg( 'name' ) is None
+	assert resource.strg( 'non_existing_name' ) is None
+	assert resource.strg( 'physicalInformationSnapshot', 'sex' ) == 'MALE'
+	assert resource.strg( 'physicalInformationSnapshot', '__sex__' ) is None
+	assert resource.strg( 'physicalInformationSnapshot', 'sex', 'treat_parent_str_as dict' ) is None
+
+	assert resource.int( 'deviceId' ) == 47813520
+	assert resource.int( 'timeZoneOffset' ) == 60
+	assert resource.int( 'name' ) is None
+	assert resource.int( 'duration' ) is None
+
+	assert resource.float( 'loadInformation', 'muscleLoad' ) == -1.0
+
+	assert isinstance( ( l := resource.list( 'exercises' ) ), list ) and l[0].get( 'kiloCalories' ) == 38
+	assert resource.int( 'kiloCalories', parent = l[0] ) == 38
 
 def test_resources():
 	r1 = Resource( uid='polar:1234', name='test1.gpx', type='application/gpx+xml', path='test1.gpx' )

@@ -13,7 +13,7 @@ from fs.base import FS
 from fs.errors import ResourceNotFound
 from fs.path import basename, split
 from more_itertools import unique
-from more_itertools.more import first
+from more_itertools.more import first, last, rstrip
 
 from tracs.protocols import Exporter, Importer
 from tracs.uid import UID
@@ -184,6 +184,32 @@ class Resource:
 
 	def get_child( self, resource_type: str ) -> Optional[Resource]:
 		return next( (r for r in self.resources if r.type == resource_type), None )
+
+	# helper for convenient data access (only when raw field contains a dict)
+
+	def _value( self, *args, parent: Dict = None, conv: Callable, default: Any = None ) -> Any:
+		parent, item = parent or self.raw, last( args )
+		for s in rstrip( args, lambda e: e is item ):
+			parent = parent[s]
+
+		try:
+			return conv( val ) if ( val := parent[item] ) not in [ '', None, 0, 0.0 ] else default
+		except (KeyError, TypeError, ValueError):
+			return default
+
+	def float( self, *args, parent: Dict = None, default=None ) -> Optional[float]:
+		return self._value( *args, parent=parent, conv=float, default=default )
+
+	def list( self, *args, parent: Dict = None, default=None ) -> Optional[List]:
+		return self._value( *args, parent=parent, conv=list, default=default )
+
+	def int( self, *args, parent: Dict = None, default=None ) -> Optional[int]:
+		return self._value( *args, parent=parent, conv=int, default=default )
+
+	# can't name this method str() because of cattrs weirdness ...
+
+	def strg( self, *args, parent: Dict = None, default=None ) -> Optional[str]:
+		return self._value( *args, parent=parent, conv=str, default=default )
 
 	# serialization
 

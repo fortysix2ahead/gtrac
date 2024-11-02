@@ -62,30 +62,6 @@ def test_json_handler( path ):
 	assert type( resource.content ) is bytes and len( resource.content ) > 0
 	assert type( resource.raw ) is list
 
-@mark.file( 'environments/default/takeouts/polar/training-session-2022-12-06-7537918051-91b48d8f-dea2-4cf5-b807-c2aeefc5a072.json' )
-def test_json_handler_access( path ):
-	handler = JSONHandler()
-	resource = handler.load( path=path )
-	assert type( resource.raw ) is dict
-
-	assert handler.str( 'deviceId' ) == '47813520'
-	assert handler.str( 'timeZoneOffset' ) == '60'
-	assert handler.str( 'name' ) is None
-	assert handler.str( 'non_existing_name' ) is None
-	assert handler.str( 'physicalInformationSnapshot', 'sex' ) == 'MALE'
-	assert handler.str( 'physicalInformationSnapshot', '__sex__' ) is None
-	assert handler.str( 'physicalInformationSnapshot', 'sex', 'treat_parent_str_as dict' ) is None
-
-	assert handler.int( 'deviceId' ) == 47813520
-	assert handler.int( 'timeZoneOffset' ) == 60
-	assert handler.int( 'name' ) is None
-	assert handler.int( 'duration' ) is None
-
-	assert handler.float( 'loadInformation', 'muscleLoad' ) == -1.0
-
-	assert isinstance( ( l := handler.list( 'exercises' ) ), list ) and l[0].get( 'kiloCalories' ) == 38
-	assert handler.int( 'kiloCalories', parent = l[0] ) == 38
-
 @mark.file( 'templates/polar/empty.gpx' )
 def test_xml_importer( path ):
 	handler = XMLHandler()
