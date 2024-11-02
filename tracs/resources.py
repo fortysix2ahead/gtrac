@@ -192,11 +192,10 @@ class Resource:
 	# helper for convenient data access (only when raw field contains a dict)
 
 	def _value( self, *args, parent: Dict = None, conv: Callable, default: Any = None ) -> Any:
-		parent, item = parent or self.raw, last( args )
-		for s in rstrip( args, lambda e: e is item ):
-			parent = parent[s]
-
 		try:
+			parent, item = parent or self.raw, last( args )
+			for s in rstrip( args, lambda e: e is item ):
+				parent = parent[s]
 			return conv( val ) if ( val := parent[item] ) not in [ '', None, 0, 0.0 ] else default
 		except (KeyError, TypeError, ValueError):
 			return default
@@ -211,7 +210,6 @@ class Resource:
 		return self._value( *args, parent=parent, conv=int, default=default )
 
 	# can't name this method str() because of cattrs weirdness ...
-
 	def strg( self, *args, parent: Dict = None, default=None ) -> Optional[str]:
 		return self._value( *args, parent=parent, conv=str, default=default )
 
