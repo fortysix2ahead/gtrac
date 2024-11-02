@@ -1,10 +1,12 @@
 from fs.osfs import OSFS
+from dateutil.tz import UTC
 from plugins.json import JSONHandler
 from pytest import mark, raises
 
 from plugins.gpx import GPXImporter
 from tracs.resources import Resource, Resources, ResourceType, ResourceTypes
 from tracs.uid import UID
+from utils import to_isotime
 
 def test_resource_type():
 	rt = ResourceType( 'application/xml' )
@@ -126,6 +128,9 @@ def test_resource_access( path ):
 
 	assert isinstance( ( l := resource.list( 'exercises' ) ), list ) and l[0].get( 'kiloCalories' ) == 38
 	assert resource.int( 'kiloCalories', parent = l[0] ) == 38
+
+	assert resource.dt( 'startTime' ) == to_isotime( '2022-12-06T08:53:05.425' )
+	assert resource.utc( 'startTime' ) == to_isotime( '2022-12-06T08:53:05.425' ).astimezone( UTC )
 
 def test_resources():
 	r1 = Resource( uid='polar:1234', name='test1.gpx', type='application/gpx+xml', path='test1.gpx' )

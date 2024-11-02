@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from enum import Enum
 from functools import cached_property
 from logging import getLogger
@@ -9,6 +10,7 @@ from typing import Any, Callable, ClassVar, Dict, List, Optional, Union
 from attrs import Attribute, define, evolve, field, fields
 from cattrs import Converter, GenConverter
 from cattrs.gen import make_dict_unstructure_fn, override
+from dateutil.tz import UTC
 from fs.base import FS
 from fs.errors import ResourceNotFound
 from fs.path import basename, split
@@ -17,6 +19,7 @@ from more_itertools.more import first, last, rstrip
 
 from tracs.protocols import Exporter, Importer
 from tracs.uid import UID
+from utils import to_isotime
 
 log = getLogger( __name__ )
 
@@ -210,6 +213,13 @@ class Resource:
 
 	def strg( self, *args, parent: Dict = None, default=None ) -> Optional[str]:
 		return self._value( *args, parent=parent, conv=str, default=default )
+
+	def dt( self, *args, parent: Dict = None, default=None ) -> Optional[datetime]:
+		return self._value( *args, parent=parent, conv=to_isotime, default=default )
+
+	def utc( self, *args, parent: Dict = None, default=None ) -> Optional[datetime]:
+		utc: datetime = self._value( *args, parent=parent, conv=to_isotime, default=default )
+		return utc.astimezone( UTC ) if utc else default
 
 	# serialization
 
