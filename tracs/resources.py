@@ -14,6 +14,7 @@ from dateutil.tz import UTC
 from fs.base import FS
 from fs.errors import ResourceNotFound
 from fs.path import basename, split
+from isodate import parse_duration
 from more_itertools import unique
 from more_itertools.more import first, last, rstrip
 
@@ -220,6 +221,9 @@ class Resource:
 	def utc( self, *args, parent: Dict = None, default=None ) -> Optional[datetime]:
 		utc: datetime = self._value( *args, parent=parent, conv=to_isotime, default=default )
 		return utc.astimezone( UTC ) if utc else default
+
+	def td( self, *args, parent: Dict = None, default=None ) -> Optional[datetime]:
+		return self._value( *args, parent=parent, conv=parse_duration, default=default )
 
 	# serialization
 

@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from fs.osfs import OSFS
 from dateutil.tz import UTC
 from plugins.json import JSONHandler
@@ -131,6 +133,9 @@ def test_resource_access( path ):
 
 	assert resource.dt( 'startTime' ) == to_isotime( '2022-12-06T08:53:05.425' )
 	assert resource.utc( 'startTime' ) == to_isotime( '2022-12-06T08:53:05.425' ).astimezone( UTC )
+	assert resource.utc( 'deviceId' ) is None
+	assert resource.td( 'duration' ) == timedelta( seconds=1368, microseconds=627000 )
+	assert resource.td( 'deviceId' ) is None
 
 def test_resources():
 	r1 = Resource( uid='polar:1234', name='test1.gpx', type='application/gpx+xml', path='test1.gpx' )
