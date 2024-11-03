@@ -1,4 +1,5 @@
 from datetime import datetime, time, timedelta
+from itertools import zip_longest
 from logging import getLogger
 from pathlib import Path
 from re import compile, match
@@ -19,10 +20,13 @@ from fs.base import FS
 from fs.errors import CreateFailed
 from fs.path import dirname
 from fs.zipfs import ReadZipFS
-from more_itertools import first
+from helpers import gpx_resource
+from lxml.etree import tostring
+from more_itertools import first, first_true
 from regex import compile
 from requests_cache import CachedSession
 from rich.prompt import Prompt
+from streams import Point, Stream
 
 from tracs.activity import Activities, Activity, ActivityPart
 from tracs.activity_types import ActivityTypes, ActivityTypes as Types
@@ -36,7 +40,7 @@ from tracs.plugins.tcx import TCX_TYPE
 from tracs.plugins.xml import XMLHandler
 from tracs.resources import Resource
 from tracs.service import Service, path_for_id
-from tracs.utils import seconds_to_time
+from tracs.utils import seconds_to_time, to_isotime
 from tracs.uid import UID
 
 log = getLogger( __name__ )
@@ -346,10 +350,12 @@ class PolarTrainingSessionImporter( JSONHandler ):
 	ACTIVITY_CLS = PolarTrainingSession
 
 	def as_activity( self, resource: Resource ) -> Activity:
+		activity = super().as_activity( resource )
+		activity.uid = resource.uid
+		activities = Activities( activity )
 		data = resource.data
-		activities = Activities()
+
 		for e in data.get( 'exercises', [] ):
-			activity = Activity()
 
 			activity.ascent = resource.float( 'ascent', parent=e )
 			activity.cadence = resource.float( 'cadence', 'avg', parent=e )
@@ -378,12 +384,66 @@ class PolarTrainingSessionImporter( JSONHandler ):
 			activity.starttime_local= activity.starttime.astimezone( tzlocal() )
 			activity.endtime_local= activity.endtime.astimezone( tzlocal() )
 
-			activities.append( activity )
+			# create streams, todo: make this part more resilient, at the moment it's not clear what data can exist or be missing
+
+			if samples := e.get( 'samples' ):
+				points = [ Point() for p in range( len( samples.get( 'heartRate', [] ) ) ) ]
+				for pnt, alt, dst, hr, rr, spd in zip_longest(
+					points,
+					samples.get( 'altitude', [] ),
+					# samples.get( 'cadence', [] ),
+					samples.get( 'distance', [] ),
+					samples.get( 'heartRate', [] ),
+					# samples.get( 'leftPedalCrankBasedPower' ),
+					samples.get( 'recordedRoute', [] ),
+					samples.get( 'speed', [] ),
+					# samples.get( 'strideLength' ),
+					# samples.get( 'temperature' ),
+					fillvalue={}
+				):
+					pnt.time = to_isotime( hr.get( 'dateTime' ) ).astimezone( UTC )
+					pnt.alt = alt.get( 'value', None )
+					pnt.distance = dst.get( 'value', None )
+					pnt.hr = hr.get( 'value', None )
+					pnt.lat = rr.get( 'latitude', None )
+					pnt.lon = rr.get( 'longitude', None )
+					pnt.alt = rr.get( 'altitude', None )
+					pnt.speed = spd.get( 'value', None )
+
+				stream = Stream( points )
+				gpx = stream.as_gpx()
+				tcx = stream.as_tcx(
+					average_heart_rate_bpm=activity.heartrate,
+					calories=activity.calories,
+					distance_meters=activity.distance,
+					# id=f'{summary.raw.get( "start_date_local" )}Z',
+					intensity='Active', # todo: don't know where to get this from
+					maximum_heart_rate_bpm=activity.heartrate_max,
+					maximum_speed=activity.speed_max,
+					start_date=activity.starttime,
+					# trigger_method = 'Distance', # todo: this is not correct
+					total_time_seconds=round( activity.duration.total_seconds() ),
+				)
+
+				activity.resources.append( Resource(
+					content = gpx.to_xml( prettyprint=True ).encode( 'UTF-8' ),
+					path = 'activity.gpx',
+					# source = None,
+					type = GPX_TYPE,
+					uid = resource.uid,
+				) )
+				activity.resources.append( Resource(
+					content = tostring( tcx.as_xml(), pretty_print=True ),
+					path = 'activity.tcx',
+					# source = None,
+					type = TCX_TYPE,
+					uid = resource.uid,
+				) )
 
 		if len( activities ) == 1:
 			return first( activities )
 		elif len( activities ) > 1:
-			pass
+			raise NotImplementedError
 		else:
 			pass
 
@@ -525,13 +585,25 @@ class Polar( Service ):
 			session.type = POLAR_SESSION_TYPE
 			session.uid = UID( f'{self.name}:{id}' )
 
-			dst_fs.makedirs( dirname( session.path ), recreate=True )
-			dst_fs.writebytes( session.path, contents=session.content )
-			log.debug( f'wrote summary to {dst_fs}/{session.path}' )
-
 			session_activity = self._session_importer.load_as_activity( resource=session )
 			session_activity.uid = UID( f'{self.name}:{id}' )
-			session.unload()
+			# session_activity.resources.append( session ) # todo: check why session is not appended automatically
+
+			session_gpx = first_true( session_activity.resources, pred=lambda r: r.type == GPX_TYPE )
+			session_gpx.path = path_for_id( id, self.name, f'{id}.gpx' )
+			session_gpx.source = f'{self.name}{file}'
+
+			session_tcx = first_true( session_activity.resources, pred=lambda r: r.type == TCX_TYPE )
+			session_tcx.path = path_for_id( id, self.name, f'{id}.tcx' )
+			session_tcx.source = f'{self.name}{file}'
+
+			dst_fs.makedirs( dirname( session.path ), recreate=True )
+			dst_fs.writebytes( session.path, contents=session.content )
+			dst_fs.writebytes( session_gpx.path, contents=session_gpx.content )
+			dst_fs.writebytes( session_tcx.path, contents=session_tcx.content )
+			log.debug( f'wrote summary + recordings to {dst_fs}/{session.path}' )
+
+			[ r.unload() for r in session_activity.resources ]
 			imported_activities.append( session_activity )
 
 		return imported_activities

@@ -37,7 +37,7 @@ def test_resource_handler( path ):
 	data = handler.load( fs=fs, path=path.name ).data
 	assert isinstance( data, list ) and all( [ isinstance( l, dict ) for l in data ] )
 
-	with raises( FileNotFoundError ):
+	with raises( ResourceNotFound ):
 		handler.load( path='/some_non_existing_path' )
 
 	with raises( ResourceNotFound ):

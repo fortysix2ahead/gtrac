@@ -6,11 +6,13 @@ from pathlib import Path
 from typing import Any, Callable, Optional, Type, Union
 
 from fs.base import FS
+from fs.osfs import OSFS
 from fs.path import basename
 from requests import Response, Session
 
 from tracs.activity import Activity
-from tracs.resources import Resource
+from tracs.resources import Resource, Resources
+from utils import abspath
 
 log = getLogger( __name__ )
 
@@ -25,6 +27,7 @@ class ResourceHandler:
 		self._type: Optional[str] = resource_type
 		self._activity_cls: Optional[Type] = activity_cls
 		self._factory: Callable = self.transform_data
+		self._osfs: OSFS = OSFS( '/' )
 
 		# todo: are these fields really needed? probably not ...
 		self.resource: Optional[Resource] = None
@@ -32,56 +35,49 @@ class ResourceHandler:
 		self.raw: Any = None
 		self.data: Any = None
 
-	def load( self, path: Optional[Path|str] = None, url: Optional[str] = None, content: Optional[bytes] = None, fs: Optional[FS] = None, **kwargs ) -> Optional[Resource]:
-		# load from either from path, url or provided content
-		if content:
-			self.content = self.load_from_content( content, **kwargs )
+	def load( self, path: Path|str = None, url: str = None, content: bytes|str = None, fs: FS = None, **kwargs ) -> Optional[Resource]:
+		# load from either from path, fs or url, if neither is provided use content
+		if path and not fs:
+			fs, path = self._osfs, abspath( path )
 
-		elif path:
-			if fs:
-				self.content = self.load_from_fs( fs, path, **kwargs )
-			else:
-				self.content = self.load_from_path( path, **kwargs )
-
+		if path and fs:
+			content = self.load_from_fs( fs, path, **kwargs )
 		elif url:
-			self.content = self.load_from_url( url, **kwargs )
+			content = self.load_from_url( url, **kwargs )
+		else:
+			content = self.load_from_content( content, **kwargs ) # todo: do we really need this or just reuse provided content?
 
 		# try to transform content into structured data (i.e. from bytes to a dict)
 		# by default this does nothing and has to be implemented in subclasses
-		self.raw = self.load_raw( self.content, **kwargs )
+		raw = self.load_raw( content, **kwargs )
 
-		# postprocess data
-		# if resource.raw is dict-like  structure and there's a factory function,
-		# the factory will be used to transfrom the data from raw and populate the data field
-		# if not, the data field will be set to raw
-		self.data = self.load_data( self.raw, **kwargs )
+		# postprocess data, transform from raw into structured data
+		data = self.load_data( raw, **kwargs )
 
 		# return the result
-		return self.load_resource( path, url, **kwargs )
+		return self.load_resource( fs, path, url, content=content, raw=raw, data=data, **kwargs )
 
-	def load_as_activity( self, path: Path|str = None, url: str = None, fs: FS = None, **kwargs ) -> Activity:
-		if resource := kwargs.get( 'resource' ):
-			# lazy (re-)loading of an existing resource
-			if resource.content and resource.raw is None and resource.data is None:
-				resource.raw = self.load_raw( resource.content )
-
-			if resource.raw is not None and resource.data is None:
-				resource.data = self.load_data( resource.raw )
+	def load_as_activity( self, path: Path|str = None, url: str = None, content: bytes|str = None, fs: FS = None, **kwargs ) -> Activity:
+		"""This is basically the same as load(), but transforms the loaded activity into a resource.
+		This calls load() and provides the loaded resource to as_activity() and returns the result.
+		In addition, it's possible to provide a resource as kwarg. In this case the content/raw/data from the resource
+		will be used to construct the activity or the resource will be populated.
+		"""
+		resource = kwargs.pop( 'resource', None ) or Resource()
+		if resource.content:
+			resource = self.load( content=resource.content, resource=resource, **kwargs )
 		else:
-			resource = self.load( path=path, url=url, fs=fs, **kwargs )
+			resource = self.load( path=path, fs=fs, url=url, content=content, resource=resource, **kwargs )
 
-		activity = self.as_activity( resource )
-		activity.resources.append( resource )
-		return activity
+		return self.as_activity( resource )
 
-	# todo: leave this method empty?
-	def as_activity( self, resource: Resource ) -> Optional[Activity]:
-		return self._factory.load( resource.raw, self.activity_cls ) if self.activity_cls else None
+	def as_activity( self, resource: Resource ) -> Activity:
+		return Activity( resources=Resources( resource ) )
 
 	# load methods
 
 	# noinspection PyMethodMayBeStatic
-	def load_from_content( self, content: Union[bytes,str], **kwargs ) -> Optional[Union[bytes, str]]:
+	def load_from_content( self, content: bytes|str, **kwargs ) -> bytes|str:
 		"""
 		By default, this does nothing. Only returns the content, subclasses may override.
 
@@ -91,7 +87,7 @@ class ResourceHandler:
 		return content
 
 	# noinspection PyMethodMayBeStatic
-	def load_from_path( self, path: str|Path, **kwargs ) -> Optional[bytes]:
+	def load_from_path( self, path: str|Path, **kwargs ) -> bytes:
 		"""
 		Reads from the provided path and returns the files content as bytes.
 
@@ -100,10 +96,10 @@ class ResourceHandler:
 		:return: bytes read from the provided path
 		:raise: FileNotFoundError, ResourceNotFound
 		"""
-		return (Path( path ) if isinstance( path, str ) else path).read_bytes()
+		return self.load_from_fs( self._osfs, str( path ), **kwargs )
 
 	# noinspection PyMethodMayBeStatic
-	def load_from_fs( self, fs: FS, path: str, **kwargs ) -> Optional[bytes]:
+	def load_from_fs( self, fs: FS, path: str, **kwargs ) -> bytes:
 		"""
 		Reads data from a path in the provided file system.
 
@@ -115,7 +111,7 @@ class ResourceHandler:
 		return fs.readbytes( path )
 
 	# noinspection PyMethodMayBeStatic
-	def load_from_url( self, url: str, **kwargs ) -> Optional[bytes]:
+	def load_from_url( self, url: str, **kwargs ) -> bytes:
 		"""
 		Loads data from a url.
 
@@ -130,7 +126,7 @@ class ResourceHandler:
 		response: Response = session.get( url, headers=headers, allow_redirects=allow_redirects, stream=stream )
 		return response.content
 
-	def load_raw( self, content: Union[bytes,str], **kwargs ) -> Any:
+	def load_raw( self, content: bytes|str, **kwargs ) -> Any:
 		"""
 		Loads raw data from provided content.
 		Example: load a json from a string and return a dict. The default implementation of this method
@@ -151,32 +147,21 @@ class ResourceHandler:
 		:param raw: structured raw data to be transformed
 		:return: well-defined structured data
 		"""
-		if self._factory is not None: # todo: remove factory or move it into a subclass?
-			try:
-				return self._factory( raw, activity_cls=self._activity_cls )
-			except RuntimeError:
-				log.error( f'unable to transform raw data into structured data using the factory function', exc_info=True )
-
 		return raw
 
 	# noinspection PyMethodMayBeStatic
 	def transform_data( self, raw: Any, **kwargs ):
 		return raw
 
-	def load_resource( self, path: Optional[Path|str] = None, url: Optional[str] = None, **kwargs ) -> Resource:
-		if isinstance( path, Path ):
-			path, source = path.name, path.as_uri()
-		elif isinstance( path, str ):
-			path, source = basename( path ), None
-		else:
-			path, source = None, None
+	def load_resource( self, fs: FS, path: str = None, url: str = None, **kwargs ) -> Resource:
+		content, raw, data = kwargs.get( 'content' ), kwargs.get( 'raw' ), kwargs.get( 'data' )
+		source = kwargs.get( 'source' ) or url
+		resource = kwargs.get( 'resource' ) or Resource()
 
-		if resource := kwargs.get( 'resource' ):
-			resource.content = self.content
-			resource.raw = self.raw
-			resource.data = self.data
-		else:
-			resource = Resource( type=self.__class__.TYPE, path=path, source=source, content=self.content, raw=self.raw, data=self.data )
+		resource.content, resource.raw, resource.data = content, raw, data
+		resource.type = self.__class__.TYPE
+		# resource.path = path
+		# resource.source = source # todo: we might already set the source depending on FS
 
 		return resource
 
