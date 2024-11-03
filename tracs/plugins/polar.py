@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 from zipfile import BadZipFile
 
 from attrs import define, field
+from babel.dates import get_timezone
 from bs4 import BeautifulSoup
 from click import echo
 from datetimerange import DateTimeRange
@@ -18,6 +19,7 @@ from fs.base import FS
 from fs.errors import CreateFailed
 from fs.path import dirname
 from fs.zipfs import ReadZipFS
+from more_itertools import first
 from regex import compile
 from requests_cache import CachedSession
 from rich.prompt import Prompt
@@ -344,36 +346,46 @@ class PolarTrainingSessionImporter( JSONHandler ):
 	ACTIVITY_CLS = PolarTrainingSession
 
 	def as_activity( self, resource: Resource ) -> Activity:
-		data, activity = resource.data, Activity()
-		if len( data.get( 'exercises', [] ) ) == 0:
+		data = resource.data
+		activities = Activities()
+		for e in data.get( 'exercises', [] ):
+			activity = Activity()
+
+			activity.ascent = resource.float( 'ascent', parent=e )
+			activity.cadence = resource.float( 'cadence', 'avg', parent=e )
+			activity.cadence_max = resource.float( 'cadence', 'max', parent=e )
+			activity.calories = resource.int( 'kiloCalories', parent=e )
+			activity.descent = resource.float( 'descent', parent=e )
+			activity.distance = resource.float( 'distance', parent=e )
+			activity.duration = resource.td( 'duration', parent=e )
+			activity.elevation = resource.float( 'altitude', 'avg', parent=e )
+			activity.elevation_max = resource.float( 'altitude', 'max', parent=e )
+			activity.elevation_min = resource.float( 'altitude', 'min', parent=e )
+			activity.heartrate = resource.int( 'heartRate', 'avg', parent=e )
+			activity.heartrate_max = resource.int( 'heartRate', 'max', parent=e )
+			activity.heartrate_min = resource.int( 'heartRate', 'min', parent=e )
+			activity.location_latitude_start = resource.float( 'latitude', parent=e )
+			activity.location_longitude_start = resource.float( 'longitude', parent=e )
+			activity.power = resource.float( 'power', 'avg', parent=e )
+			activity.power_max = resource.float( 'power', 'max', parent=e )
+			activity.speed = resource.float( 'speed', 'avg', parent=e )
+			activity.speed_max = resource.float( 'speed', 'max', parent=e )
+			activity.starttime = resource.utc( 'startTime', parent=e )
+			activity.endtime = resource.utc( 'stopTime', parent=e )
+
+			# todo: actually this not always correct - when an activity took place in a different timezone than the home zone
+			activity.timezone = get_timezone().zone
+			activity.starttime_local= activity.starttime.astimezone( tzlocal() )
+			activity.endtime_local= activity.endtime.astimezone( tzlocal() )
+
+			activities.append( activity )
+
+		if len( activities ) == 1:
+			return first( activities )
+		elif len( activities ) > 1:
 			pass
-		elif len( data.get( 'exercises', [] ) ) == 1:
-			data = data.get( 'exercises' )[0]
-			activity.ascent = resource.float( 'ascent', parent=data )
-			activity.cadence = resource.float( 'cadence', 'avg', parent=data )
-			activity.cadence_max = resource.float( 'cadence', 'max', parent=data )
-			activity.calories = resource.int( 'kiloCalories', parent=data )
-			activity.descent = resource.float( 'descent', parent=data )
-			activity.distance = resource.float( 'distance', parent=data )
-			activity.duration = resource.td( 'duration', parent=data )
-			activity.elevation = resource.float( 'altitude', 'avg', parent=data )
-			activity.elevation_max = resource.float( 'altitude', 'max', parent=data )
-			activity.elevation_min = resource.float( 'altitude', 'min', parent=data )
-			activity.heartrate = resource.int( 'heartRate', 'avg', parent=data )
-			activity.heartrate_max = resource.int( 'heartRate', 'max', parent=data )
-			activity.heartrate_min = resource.int( 'heartRate', 'min', parent=data )
-			activity.location_latitude_start = resource.float( 'latitude', parent=data )
-			activity.location_longitude_start = resource.float( 'longitude', parent=data )
-			activity.power = resource.float( 'power', 'avg', parent=data )
-			activity.power_max = resource.float( 'power', 'max', parent=data )
-			activity.speed = resource.float( 'speed', 'avg', parent=data )
-			activity.speed_max = resource.float( 'speed', 'max', parent=data )
-			activity.starttime = resource.utc( 'startTime', parent=data )
-			activity.endtime = resource.utc( 'stopTime', parent=data )
 		else:
 			pass
-
-		return activity
 
 @importer( type=POLAR_EXERCISE_DATA_TYPE )
 class PersonalTrainerImporter( XMLHandler ):
