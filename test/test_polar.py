@@ -75,7 +75,6 @@ def test_live_workflow( service ):
 def test_takeout_import( service ):
 	src_fs, src_path = fspath( service.ctx.config_fs.getsyspath( 'takeouts/polar' ) )
 	activities = service.import_activities( fs=src_fs, path=src_path )
-	# todo: actually there should be 5 imports?
 	assert [ a.uid.to_str() for a in activities ] == [
-		'waze:200712102429', 'waze:211222051711', 'waze:220102191316', 'waze:230310152717'
+		'polar:7505780534', 'polar:7537918035', 'polar:7537918035#1', 'polar:7537918035#2', 'polar:7537918035#3', 'polar:7537918051'
 	]

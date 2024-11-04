@@ -1,6 +1,7 @@
 from datetime import datetime, time, timedelta
-from itertools import zip_longest
+from itertools import chain, zip_longest
 from logging import getLogger
+from math import remainder
 from pathlib import Path
 from re import compile, match
 from sys import exit as sysexit
@@ -348,12 +349,13 @@ class PolarTrainingSessionImporter( JSONHandler ):
 
 	TYPE: str = POLAR_SESSION_TYPE
 	ACTIVITY_CLS = PolarTrainingSession
-
+	
+	def __init__( self ):
+		super().__init__()
+		self.remainders: Optional[List[Activity]] = None
+	
 	def as_activity( self, resource: Resource ) -> Activity:
-		parent_activity = super().as_activity( resource )
-		data = resource.data
-
-		for exc, act in zip( el := data.get( 'exercises', [] ), activities := [Activity() for e in el] ):
+		for exc, act in zip( el := resource.data.get( 'exercises', [] ), activities := [Activity() for e in el] ):
 
 			act.ascent = resource.float( 'ascent', parent=exc )
 			act.cadence = resource.float( 'cadence', 'avg', parent=exc )
@@ -439,11 +441,32 @@ class PolarTrainingSessionImporter( JSONHandler ):
 					type = TCX_TYPE,
 				) )
 
-		if len( activities ) == 1:
+		if len( activities ) == 1: # if there's only one activity, we can return it directly -> main case
+			self.remainders = None
 			return first( activities )
-		elif len( activities ) > 1:
-			raise NotImplementedError
-		else:
+
+		elif len( activities ) > 1: # if there's more than one activity, we have to create a multipart activity
+			parent_activity = Activity()
+			self.remainders = activities # save parts as remainders
+
+			parent_activity.starttime = resource.utc( 'startTime' )
+			parent_activity.endtime = resource.utc( 'stopTime' )
+			parent_activity.duration = resource.td( 'duration' )
+			parent_activity.distance = resource.float( 'distance' )
+			parent_activity.heartrate = resource.int( 'averageHeartRate' )
+			parent_activity.heartrate_max = resource.int( 'maximumHeartRate' )
+			parent_activity.calories = resource.int( 'kiloCalories' )
+
+			# "timeZoneOffset": 60 # todo: convert timezone offset into proper timezone
+			parent_activity.timezone = get_timezone().zone
+			parent_activity.starttime_local= parent_activity.starttime.astimezone( tzlocal() )
+			parent_activity.endtime_local= parent_activity.endtime.astimezone( tzlocal() )
+
+			# append main resource + recordings
+			parent_activity.resources.append( resource )
+			return parent_activity
+
+		else: # can this happen?
 			pass
 
 @importer( type=POLAR_EXERCISE_DATA_TYPE )
@@ -579,32 +602,63 @@ class Polar( Service ):
 
 		for file in activity_files:
 			id = TRAINING_SESSION_REGEX.fullmatch( file ).groups()[1]
+			uid, src = UID( f'{self.name}:{id}' ), f'{self.name}{file}'
 			session_activity = self._session_importer.load_as_activity( fs=src_fs, path=file )
-			session_activity.uid = UID( f'{self.name}:{id}' )
+			session_activity.uid = uid
 
-			session_resource = first_true( session_activity.resources, pred=lambda r: r.type == POLAR_SESSION_TYPE )
-			session_resource.path = path_for_id( id, self.name, f'{id}.session.json' )
-			session_resource.source = f'{self.name}{file}'
-			session_resource.uid = session_activity.uid
+			if not self._session_importer.remainders:
+				session = first_true( session_activity.resources, pred=lambda r: r.type == POLAR_SESSION_TYPE )
+				gpx = first_true( session_activity.resources, pred=lambda r: r.type == GPX_TYPE )
+				tcx = first_true( session_activity.resources, pred=lambda r: r.type == TCX_TYPE )
 
-			session_gpx = first_true( session_activity.resources, pred=lambda r: r.type == GPX_TYPE )
-			session_gpx.path = path_for_id( id, self.name, f'{id}.gpx' )
-			session_gpx.source = f'{self.name}{file}'
-			session_gpx.uid = session_activity.uid
+				# update resource metadata
+				for r, ext in zip( [session, gpx, tcx], ['.session.json', '.gpx', '.tcx'] ):
+					r.path = path_for_id( id, self.name, f'{id}{ext}' )
+					r.uid, r.source = uid, src
 
-			session_tcx = first_true( session_activity.resources, pred=lambda r: r.type == TCX_TYPE )
-			session_tcx.path = path_for_id( id, self.name, f'{id}.tcx' )
-			session_tcx.source = f'{self.name}{file}'
-			session_tcx.uid = session_activity.uid
+				# write resources
+				dst_fs.makedirs( dirname( session.path ), recreate=True )
+				for r in [session, gpx, tcx]:
+					dst_fs.writebytes( r.path, contents=r.content )
+					log.debug( f'wrote {len( r.content )} bytes of resource content to {dst_fs}/{r.path}' )
+					r.unload()
 
-			dst_fs.makedirs( dirname( session_resource.path ), recreate=True )
-			dst_fs.writebytes( session_resource.path, contents=session_resource.content )
-			dst_fs.writebytes( session_gpx.path, contents=session_gpx.content )
-			dst_fs.writebytes( session_tcx.path, contents=session_tcx.content )
-			log.debug( f'wrote summary to {dst_fs}/{session_resource.path}' )
+				imported_activities.append( session_activity )
 
-			[ r.unload() for r in session_activity.resources ]
-			imported_activities.append( session_activity )
+			else:
+				remainders = sorted( self._session_importer.remainders, key=lambda r: r.starttime )
+
+				for i, a in enumerate( remainders ):
+					summary = first_true( a.resources, pred=lambda r: r.type == POLAR_SESSION_TYPE )
+					gpx = first_true( a.resources, pred=lambda r: r.type == GPX_TYPE )
+					tcx = first_true( a.resources, pred=lambda r: r.type == TCX_TYPE )
+
+					# update resource metadata
+					for r, ext in zip( [ summary, gpx, tcx ], [ '.session.json', '.gpx', '.tcx' ] ):
+						r.path = path_for_id( id, self.name, f'{id}.{i + 1}{ext}' )
+						r.uid, r.source = UID( uid.classifier, uid.local_id, part=i + 1 ), src
+
+					# write resources
+					dst_fs.makedirs( dirname( summary.path ), recreate=True )
+					for r in [summary, gpx, tcx]:
+						dst_fs.writebytes( r.path, contents=r.content )
+						log.debug( f'wrote {len( r.content )} bytes of resource content to {dst_fs}/{r.path}' )
+						r.unload()
+
+					# update activity
+					a.uid = UID( uid.classifier, uid.local_id, part=i + 1 )
+
+				# update and write session resource
+				session = first_true( session_activity.resources, pred=lambda r: r.type == POLAR_SESSION_TYPE )
+				session.path = path_for_id( id, self.name, f'{id}.session.json' )
+				session.uid, session.source = uid, src
+				dst_fs.writebytes( session.path, contents=session.content )
+				log.debug( f'wrote {len( session.content )} bytes of resource content to {dst_fs}/{session.path}' )
+				session.unload()
+
+				# update session activity to be multipart
+				session_activity.parts = [ ActivityPart( uid=part.uid, gap=part.starttime - session_activity.starttime ) for part in remainders ]
+				imported_activities.extend( [ session_activity, *remainders ] )
 
 		return imported_activities
 

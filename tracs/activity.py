@@ -62,7 +62,7 @@ class ActivityPart:
 	def to_dict( self ) -> Dict[str, Any]:
 		return ActivityPart.converter.unstructure( self )
 
-@define( eq=True ) # todo: mark fields with proper eq attributes
+@define( eq=True, repr=False ) # todo: mark fields with proper eq attributes
 class Activity( VirtualFieldsBase, FormattedFieldsBase ):
 
 	converter: ClassVar[Converter] = GenConverter( omit_if_default=True )
@@ -202,6 +202,9 @@ class Activity( VirtualFieldsBase, FormattedFieldsBase ):
 		# convenience: allow init from other activities
 		if self.other_parts:
 			self.add( self.other_parts )
+
+	def __repr__( self ) -> str:
+		return f'{self.name} [{self.uid}] [{self.starttime}]'
 
 	# additional methods
 

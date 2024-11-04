@@ -93,7 +93,7 @@ class ResourceTypes( dict[str, ResourceType] ):
 	def summaries( cls ) -> List[ResourceType]:
 		return [rt for rt in cls.inst().values() if rt.summary]
 
-@define
+@define( repr=False )
 class Resource:
 
 	converter: ClassVar[Converter] = GenConverter( omit_if_default=True )
@@ -137,6 +137,9 @@ class Resource:
 
 	def __hash__( self ):
 		return hash( (self.uid, self.path) )
+
+	def __repr__( self ):
+		return f'{self.name} [{self.uid}] [{self.path}]'
 
 	# class methods
 

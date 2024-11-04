@@ -7,7 +7,7 @@ from attrs import define, field
 from cattrs import Converter, GenConverter
 from fs.path import basename
 
-@define( eq=False, order=False )
+@define( eq=False, order=False, repr=False )
 class UID:
 
 	converter: ClassVar[Converter] = GenConverter()
@@ -65,6 +65,9 @@ class UID:
 
 	def __str__( self ) -> str:
 		return self.uid
+
+	def __repr__( self ) -> str:
+		return self.__str__()
 
 	@property
 	def uid( self ):
