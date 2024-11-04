@@ -1,0 +1,64 @@
+{
+  "exportVersion": "2.4",
+  "perceivedRecovery": [],
+  "physicalInformations": [
+    {
+      "dateTime": "2022-10-13T18:06:23.000",
+      "height, cm": 180.0,
+      "weight, kg": 80.0,
+      "trainingBackground": "FREQUENT",
+      "vo2Max": 43,
+      "functionalThresholdPower": 209
+    },
+    {
+      "dateTime": "2022-12-06T07:48:51.000",
+      "height, cm": 170.0,
+      "weight, kg": 70.0,
+      "trainingBackground": "REGULAR",
+      "vo2Max": 50,
+      "maximumHeartRate": 178,
+      "restingHeartRate": 55,
+      "aerobicThreshold": 134,
+      "anaerobicThreshold": 160,
+      "sleepGoal": "PT28800S",
+      "typicalDay": "MOSTLY_SITTING",
+      "functionalThresholdPower": 280
+    },
+    {
+      "dateTime": "2022-12-06T07:48:52.000",
+      "height, cm": 170.0,
+      "weight, kg": 70.0,
+      "trainingBackground": "REGULAR",
+      "vo2Max": 48,
+      "maximumHeartRate": 178,
+      "restingHeartRate": 55,
+      "aerobicThreshold": 134,
+      "anaerobicThreshold": 160,
+      "sleepGoal": "PT28800S",
+      "typicalDay": "MOSTLY_SITTING",
+      "functionalThresholdPower": 280
+    }
+  ],
+  "notes": [],
+  "feelings": [],
+  "weights": [
+    {
+      "weight": 80.0,
+      "date": "2022-10-13"
+    },
+    {
+      "weight": 80.0,
+      "date": "2022-10-13"
+    },
+    {
+      "weight": 80.0,
+      "date": "2022-10-13"
+    }
+  ],
+  "feedbacks": [
+    {
+      "trainingLoadBalance": "DB_NOT_CALCULATED",
+      "date": "2022-12-06"
+    }
+  ]
+}

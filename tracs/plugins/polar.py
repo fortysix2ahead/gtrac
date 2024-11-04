@@ -1,5 +1,7 @@
 from datetime import datetime, time, timedelta
+from itertools import chain, zip_longest
 from logging import getLogger
+from math import remainder
 from pathlib import Path
 from re import compile, match
 from sys import exit as sysexit
@@ -8,29 +10,39 @@ from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 from zipfile import BadZipFile
 
 from attrs import define, field
+from babel.dates import get_timezone
 from bs4 import BeautifulSoup
 from click import echo
 from datetimerange import DateTimeRange
 from dateutil.parser import parse
 from dateutil.tz import tzlocal, UTC
 from fs import open_fs
+from fs.base import FS
 from fs.errors import CreateFailed
+from fs.path import dirname
 from fs.zipfs import ReadZipFS
+from helpers import gpx_resource
+from lxml.etree import tostring
+from more_itertools import first, first_true
+from regex import compile
 from requests_cache import CachedSession
 from rich.prompt import Prompt
+from streams import Point, Stream
 
-from tracs.activity import Activity, ActivityPart
+from tracs.activity import Activities, Activity, ActivityPart
 from tracs.activity_types import ActivityTypes, ActivityTypes as Types
 from tracs.aio import load_resource
 from tracs.config import ApplicationContext, APPNAME
 from tracs.pluginmgr import importer, resourcetype, service, setup
 from tracs.plugins.gpx import GPX_TYPE, GPXImporter
 from tracs.plugins.json import DataclassFactoryHandler, JSONHandler
+from tracs.plugins.polar_takeout import PolarFlowTakeoutImporter
 from tracs.plugins.tcx import TCX_TYPE
 from tracs.plugins.xml import XMLHandler
 from tracs.resources import Resource
-from tracs.service import Service
-from tracs.utils import seconds_to_time
+from tracs.service import Service, path_for_id
+from tracs.utils import seconds_to_time, to_isotime
+from tracs.uid import UID
 
 log = getLogger( __name__ )
 
@@ -45,9 +57,16 @@ POLAR_FLOW_TYPE = 'application/vnd.polar+json'
 POLAR_FITNESS_TEST_TYPE = 'application/vnd.polar.fitness+json'
 POLAR_ORTHOSTATIC_TEST_TYPE = 'application/vnd.polar.orthostatic+json'
 POLAR_RRRECORDING_TYPE = 'application/vnd.polar.rrrecording+json'
+POLAR_SESSION_TYPE = 'application/vnd.polar.session+json'
 POLAR_EXERCISE_DATA_TYPE = 'application/vnd.polar.ped+xml'
 POLAR_ZIP_GPX_TYPE = 'application/vnd.polar.gpx+zip'
 POLAR_ZIP_TCX_TYPE = 'application/vnd.polar.tcx+zip'
+
+ACCOUNT_DATA_GLOB = 'account-data-*.json'
+ACCOUNT_PROFILE_GLOB = 'account-profile-*.json'
+TRAINING_SESSION_GLOB = 'training-session-*.json'
+
+TRAINING_SESSION_REGEX = compile( r'^.*training-session-(\d{4}-\d{2}-\d{2})-(\d+)(-([a-f0-9-]+))*\.json$' )
 
 PED_NS = 'http://www.polarpersonaltrainer.com'
 
@@ -242,6 +261,12 @@ class PolarFlowExerciseHrv:
 
 	pass
 
+@resourcetype( type=POLAR_SESSION_TYPE )
+@define
+class PolarTrainingSession:
+
+	pass
+
 # todo: this needs an update, but has low priority
 @resourcetype( type=POLAR_EXERCISE_DATA_TYPE )
 class PolarExerciseDataActivity( Activity ):
@@ -319,6 +344,131 @@ class PolarRRRecordingImporter( DataclassFactoryHandler ):
 			starttime_local= parse( activity.datetime, ignoretz=True ).replace( tzinfo=tzlocal() ),
 		)
 
+@importer
+class PolarTrainingSessionImporter( JSONHandler ):
+
+	TYPE: str = POLAR_SESSION_TYPE
+	ACTIVITY_CLS = PolarTrainingSession
+	
+	def __init__( self ):
+		super().__init__()
+		self.remainders: Optional[List[Activity]] = None
+	
+	def as_activity( self, resource: Resource ) -> Activity:
+		for exc, act in zip( el := resource.data.get( 'exercises', [] ), activities := [Activity() for e in el] ):
+
+			act.ascent = resource.float( 'ascent', parent=exc )
+			act.cadence = resource.float( 'cadence', 'avg', parent=exc )
+			act.cadence_max = resource.float( 'cadence', 'max', parent=exc )
+			act.calories = resource.int( 'kiloCalories', parent=exc )
+			act.descent = resource.float( 'descent', parent=exc )
+			act.distance = resource.float( 'distance', parent=exc )
+			act.duration = resource.td( 'duration', parent=exc )
+			act.elevation = resource.float( 'altitude', 'avg', parent=exc )
+			act.elevation_max = resource.float( 'altitude', 'max', parent=exc )
+			act.elevation_min = resource.float( 'altitude', 'min', parent=exc )
+			act.heartrate = resource.int( 'heartRate', 'avg', parent=exc )
+			act.heartrate_max = resource.int( 'heartRate', 'max', parent=exc )
+			act.heartrate_min = resource.int( 'heartRate', 'min', parent=exc )
+			act.location_latitude_start = resource.float( 'latitude', parent=exc )
+			act.location_longitude_start = resource.float( 'longitude', parent=exc )
+			act.power = resource.float( 'power', 'avg', parent=exc )
+			act.power_max = resource.float( 'power', 'max', parent=exc )
+			act.speed = resource.float( 'speed', 'avg', parent=exc )
+			act.speed_max = resource.float( 'speed', 'max', parent=exc )
+			act.starttime = resource.utc( 'startTime', parent=exc )
+			act.endtime = resource.utc( 'stopTime', parent=exc )
+
+			# todo: actually this not always correct - when an activity took place in a different timezone than the home zone
+			act.timezone = get_timezone().zone
+			act.starttime_local= act.starttime.astimezone( tzlocal() )
+			act.endtime_local= act.endtime.astimezone( tzlocal() )
+
+			act.resources.append( Resource(
+				content=resource.content,
+				type=POLAR_SESSION_TYPE,
+			) )
+
+			# create streams, todo: make this part more resilient, at the moment it's not clear what data can exist or be missing
+
+			if samples := exc.get( 'samples' ):
+				name, values = first( samples.items() )
+				points = [ Point() for p in range( len( values ) ) ]
+				for pnt, fst, alt, dst, hr, rr, spd in zip_longest(
+					points,
+					samples.get( name, [] ),
+					samples.get( 'altitude', [] ),
+					# samples.get( 'cadence', [] ),
+					samples.get( 'distance', [] ),
+					samples.get( 'heartRate', [] ),
+					# samples.get( 'leftPedalCrankBasedPower' ),
+					samples.get( 'recordedRoute', [] ),
+					samples.get( 'speed', [] ),
+					# samples.get( 'strideLength' ),
+					# samples.get( 'temperature' ),
+					fillvalue={}
+				):
+					pnt.time = to_isotime( fst.get( 'dateTime' ) ).astimezone( UTC )
+					pnt.alt = alt.get( 'value', None )
+					pnt.distance = dst.get( 'value', None )
+					pnt.hr = hr.get( 'value', None )
+					pnt.lat = rr.get( 'latitude', None )
+					pnt.lon = rr.get( 'longitude', None )
+					pnt.alt = rr.get( 'altitude', None )
+					pnt.speed = spd.get( 'value', None )
+
+				stream = Stream( points )
+				gpx = stream.as_gpx()
+				tcx = stream.as_tcx(
+					average_heart_rate_bpm=act.heartrate,
+					calories=act.calories,
+					distance_meters=act.distance,
+					# id=f'{summary.raw.get( "start_date_local" )}Z',
+					intensity='Active', # todo: don't know where to get this from
+					maximum_heart_rate_bpm=act.heartrate_max,
+					maximum_speed=act.speed_max,
+					start_date=act.starttime,
+					# trigger_method = 'Distance', # todo: this is not correct
+					total_time_seconds=round( act.duration.total_seconds() ),
+				)
+
+				act.resources.append( Resource(
+					content = gpx.to_xml( prettyprint=True ).encode( 'UTF-8' ),
+					type = GPX_TYPE,
+				) )
+				act.resources.append( Resource(
+					content = tostring( tcx.as_xml(), pretty_print=True ),
+					type = TCX_TYPE,
+				) )
+
+		if len( activities ) == 1: # if there's only one activity, we can return it directly -> main case
+			self.remainders = None
+			return first( activities )
+
+		elif len( activities ) > 1: # if there's more than one activity, we have to create a multipart activity
+			parent_activity = Activity()
+			self.remainders = activities # save parts as remainders
+
+			parent_activity.starttime = resource.utc( 'startTime' )
+			parent_activity.endtime = resource.utc( 'stopTime' )
+			parent_activity.duration = resource.td( 'duration' )
+			parent_activity.distance = resource.float( 'distance' )
+			parent_activity.heartrate = resource.int( 'averageHeartRate' )
+			parent_activity.heartrate_max = resource.int( 'maximumHeartRate' )
+			parent_activity.calories = resource.int( 'kiloCalories' )
+
+			# "timeZoneOffset": 60 # todo: convert timezone offset into proper timezone
+			parent_activity.timezone = get_timezone().zone
+			parent_activity.starttime_local= parent_activity.starttime.astimezone( tzlocal() )
+			parent_activity.endtime_local= parent_activity.endtime.astimezone( tzlocal() )
+
+			# append main resource + recordings
+			parent_activity.resources.append( resource )
+			return parent_activity
+
+		else: # can this happen?
+			pass
+
 @importer( type=POLAR_EXERCISE_DATA_TYPE )
 class PersonalTrainerImporter( XMLHandler ):
 
@@ -358,6 +508,8 @@ class Polar( Service ):
 		self._logged_in = False
 
 		self.importer: PolarFlowImporter = PolarFlowImporter()
+		self._session_importer = PolarTrainingSessionImporter()
+		self.take_importer: PolarFlowTakeoutImporter = PolarFlowTakeoutImporter()
 		self.json_handler: JSONHandler = JSONHandler()
 		self.gpx_importer = GPXImporter()
 
@@ -425,6 +577,91 @@ class Polar( Service ):
 
 		return url
 
+	# FS import
+	def supports_fs_import( self, fs: FS | None, path: str | None ) -> bool:
+		return any ( [ f for f in fs.walk.files( '/', filter=[ ACCOUNT_PROFILE_GLOB ] ) ] )
+
+	def import_from_fs( self, src_fs: FS, dst_fs: FS, **kwargs ) -> Activities:
+		log.debug( f'fetching {self.name} activities from {src_fs}' )
+		imported_activities = Activities()
+
+		activity_files = sorted( [ f for f in src_fs.walk.files( '/', filter=[ TRAINING_SESSION_GLOB ] ) ] )
+		log.debug( f'found {len( activity_files )} activity files in {src_fs}' )
+
+		if not self.ctx.force:
+			log.debug( f'checking db for already existing activities ...' )
+
+			for af, ex in zip_longest( activity_files, existing := [] ):
+				if m := TRAINING_SESSION_REGEX.fullmatch( af ):
+					uid = UID( f'{self.name}:{m.groups()[1]}' )
+					if not self.db.contains_activity( uid ):
+						existing.append( af )
+			activity_files = existing
+
+			log.debug( f'found {len( activity_files)} activities which do not yet exist in db' )
+
+		for file in activity_files:
+			id = TRAINING_SESSION_REGEX.fullmatch( file ).groups()[1]
+			uid, src = UID( f'{self.name}:{id}' ), f'{self.name}{file}'
+			session_activity = self._session_importer.load_as_activity( fs=src_fs, path=file )
+			session_activity.uid = uid
+
+			if not self._session_importer.remainders:
+				session = first_true( session_activity.resources, pred=lambda r: r.type == POLAR_SESSION_TYPE )
+				gpx = first_true( session_activity.resources, pred=lambda r: r.type == GPX_TYPE )
+				tcx = first_true( session_activity.resources, pred=lambda r: r.type == TCX_TYPE )
+
+				# update resource metadata
+				for r, ext in zip( [session, gpx, tcx], ['.session.json', '.gpx', '.tcx'] ):
+					r.path = path_for_id( id, self.name, f'{id}{ext}' )
+					r.uid, r.source = uid, src
+
+				# write resources
+				dst_fs.makedirs( dirname( session.path ), recreate=True )
+				for r in [session, gpx, tcx]:
+					dst_fs.writebytes( r.path, contents=r.content )
+					log.debug( f'wrote {len( r.content )} bytes of resource content to {dst_fs}/{r.path}' )
+					r.unload()
+
+				imported_activities.append( session_activity )
+
+			else:
+				remainders = sorted( self._session_importer.remainders, key=lambda r: r.starttime )
+
+				for i, a in enumerate( remainders ):
+					summary = first_true( a.resources, pred=lambda r: r.type == POLAR_SESSION_TYPE )
+					gpx = first_true( a.resources, pred=lambda r: r.type == GPX_TYPE )
+					tcx = first_true( a.resources, pred=lambda r: r.type == TCX_TYPE )
+
+					# update resource metadata
+					for r, ext in zip( [ summary, gpx, tcx ], [ '.session.json', '.gpx', '.tcx' ] ):
+						r.path = path_for_id( id, self.name, f'{id}.{i + 1}{ext}' )
+						r.uid, r.source = UID( uid.classifier, uid.local_id, part=i + 1 ), src
+
+					# write resources
+					dst_fs.makedirs( dirname( summary.path ), recreate=True )
+					for r in [summary, gpx, tcx]:
+						dst_fs.writebytes( r.path, contents=r.content )
+						log.debug( f'wrote {len( r.content )} bytes of resource content to {dst_fs}/{r.path}' )
+						r.unload()
+
+					# update activity
+					a.uid = UID( uid.classifier, uid.local_id, part=i + 1 )
+
+				# update and write session resource
+				session = first_true( session_activity.resources, pred=lambda r: r.type == POLAR_SESSION_TYPE )
+				session.path = path_for_id( id, self.name, f'{id}.session.json' )
+				session.uid, session.source = uid, src
+				dst_fs.writebytes( session.path, contents=session.content )
+				log.debug( f'wrote {len( session.content )} bytes of resource content to {dst_fs}/{session.path}' )
+				session.unload()
+
+				# update session activity to be multipart
+				session_activity.parts = [ ActivityPart( uid=part.uid, gap=part.starttime - session_activity.starttime ) for part in remainders ]
+				imported_activities.extend( [ session_activity, *remainders ] )
+
+		return imported_activities
+
 	def login( self ) -> bool:
 		if self._logged_in and self._session:
 			return self._logged_in
@@ -449,7 +686,7 @@ class Polar( Service ):
 
 		if not self.cfg_value( 'username' ) and not self.cfg_value( 'password' ):
 			log.error( f"application setup not complete for Polar Flow, consider running {APPNAME} setup" )
-			sysexit( -1 )
+			sysexit( -1 )#
 
 		data = {
 			'csrfToken': token,
@@ -466,25 +703,29 @@ class Polar( Service ):
 		return self._logged_in
 
 	def fetch( self, force: bool, pretend: bool, **kwargs ) -> List[Resource]:
-		try:
-			url = self.events_url_for( range_from=kwargs.get( 'range_from' ), range_to=kwargs.get( 'range_to' ) )
-			json_list = self.json_handler.load( url=url, headers=HEADERS_API, session=self._session, stream=False )
+		if kwargs.get( 'from_takeouts', False ):
+			return self.take_importer.fetch( fs=self.ctx.takeout_fs( self.name ), existing_uids=kwargs.get( 'existing_uids' ), force=force )
 
-			return [
-				self.importer.save_to_resource(
-					content=self.json_handler.save_raw( j ),
-					raw=j,
-					data=self.importer.load_data( j ),
-					uid=f'{self.name}:{ _local_id( j ) }',
-					path=f'{_local_id( j )}.json',
-					type=POLAR_FLOW_TYPE,
-					source=self.url_for_id( _local_id( j ) ),
-				) for j in json_list.raw
-			]
+		else:
+			try:
+				url = self.events_url_for( range_from=kwargs.get( 'range_from' ), range_to=kwargs.get( 'range_to' ) )
+				json_list = self.json_handler.load( url=url, headers=HEADERS_API, session=self._session, stream=False )
 
-		except RuntimeError:
-			log.error( f'error fetching activity ids' )
-			return []
+				return [
+					self.importer.save_to_resource(
+						content=self.json_handler.save_raw( j ),
+						raw=j,
+						data=self.importer.load_data( j ),
+						uid=f'{self.name}:{ _local_id( j ) }',
+						path=f'{_local_id( j )}.json',
+						type=POLAR_FLOW_TYPE,
+						source=self.url_for_id( _local_id( j ) ),
+					) for j in json_list.raw
+				]
+
+			except RuntimeError:
+				log.error( f'error fetching activity ids' )
+				return []
 
 	def download( self, summary: Resource, force: bool = False, pretend: bool = False, **kwargs ) -> List[Resource]:
 		try:

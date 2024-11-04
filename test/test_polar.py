@@ -10,7 +10,7 @@ from tracs.activity_types import ActivityTypes
 from tracs.plugins.polar import BASE_URL, PolarFitnessTestImporter, PolarOrthostaticTestImporter, PolarRRRecordingImporter
 from tracs.plugins.polar import Polar, PolarFlowExercise
 from tracs.plugins.polar import PolarFlowImporter
-from tracs.utils import FsPath
+from tracs.utils import FsPath, fspath
 
 importer = PolarFlowImporter()
 
@@ -69,3 +69,12 @@ def test_live_workflow( service ):
 
 	fetched = service.fetch( force=False, pretend=False )
 	assert len( fetched ) > 0
+
+@mark.context( env='default', persist='clone', cleanup=True )
+@mark.service( cls=Polar, init=True, register=True )
+def test_takeout_import( service ):
+	src_fs, src_path = fspath( service.ctx.config_fs.getsyspath( 'takeouts/polar' ) )
+	activities = service.import_activities( fs=src_fs, path=src_path )
+	assert [ a.uid.to_str() for a in activities ] == [
+		'polar:7505780534', 'polar:7537918035', 'polar:7537918035#1', 'polar:7537918035#2', 'polar:7537918035#3', 'polar:7537918051'
+	]

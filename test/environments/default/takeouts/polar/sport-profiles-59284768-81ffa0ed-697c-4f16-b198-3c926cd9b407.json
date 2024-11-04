@@ -1,0 +1,1508 @@
+[
+  {
+    "exportVersion": "2.4",
+    "sport": "RUNNING",
+    "speedViewSettings": "PACE",
+    "heartRateViewSettings": "BEATS_PER_MINUTE",
+    "heartrateBroadcasting": false,
+    "volume": 66,
+    "powerViewSettings": "WATT",
+    "heartRateZoneLockAvailable": true,
+    "speedZoneLockAvailable": false,
+    "powerZoneLockAvailable": false,
+    "swimmingUnitSettings": "SWIMMING_METERS",
+    "autoLapSettings": {
+      "duration": "PT600S",
+      "distance": 1000.0,
+      "autoLapType": "DISTANCE"
+    },
+    "strideSettings": {
+      "calibrationType": "AUTOMATIC",
+      "calibrationFactor": 1.0,
+      "strideSpeedSource": "STRIDE",
+      "runningFactorSource": "DEFAULT"
+    },
+    "trainingReminderSettings": {
+      "type": "OFF",
+      "message": ""
+    },
+    "advancedSettings": [
+      {
+        "product": "Polar Vantage V",
+        "gpsState": "ON_NORMAL",
+        "autostartTraining": false,
+        "voiceGuidanceActive": true,
+        "heartTouchAction": "TIME_OF_DAY",
+        "tapButtonAction": "TAKE_LAP",
+        "vibrationActive": true,
+        "altitudeActive": true,
+        "sportTapButtonSensitivity": "MEDIUM",
+        "trainingDisplays": [
+          [
+            {
+              "name": "ZONE_POINTER",
+              "category": "HR"
+            },
+            {
+              "name": "DISTANCE",
+              "category": "DIST"
+            },
+            {
+              "name": "SPEED_OR_PACE",
+              "category": "SPEED"
+            },
+            {
+              "name": "STOPWATCH",
+              "category": "TIME"
+            }
+          ],
+          [
+            {
+              "name": "POWER_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "ALTITUDE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "HEART_RATE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "WATCH_FACE",
+              "category": "FULLSCREEN"
+            }
+          ]
+        ],
+        "lapDisplays": [
+          [
+            {
+              "name": "LD_LAP_NUMBER",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_LAP_DURATION",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_TOTAL_DURATION",
+              "category": "TIME"
+            }
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "exportVersion": "2.4",
+    "sport": "TREADMILL_RUNNING",
+    "speedViewSettings": "PACE",
+    "heartRateViewSettings": "BEATS_PER_MINUTE",
+    "heartrateBroadcasting": true,
+    "volume": 66,
+    "powerViewSettings": "WATT",
+    "heartRateZoneLockAvailable": true,
+    "speedZoneLockAvailable": false,
+    "powerZoneLockAvailable": false,
+    "swimmingUnitSettings": "SWIMMING_METERS",
+    "autoLapSettings": {
+      "duration": "PT600S",
+      "distance": 1000.0,
+      "autoLapType": "OFF"
+    },
+    "strideSettings": {
+      "calibrationType": "AUTOMATIC",
+      "calibrationFactor": 1.0,
+      "strideSpeedSource": "STRIDE",
+      "runningFactorSource": "DEFAULT"
+    },
+    "trainingReminderSettings": {
+      "type": "OFF",
+      "message": ""
+    },
+    "advancedSettings": [
+      {
+        "product": "Polar Vantage V",
+        "gpsState": "OFF",
+        "autostartTraining": false,
+        "voiceGuidanceActive": true,
+        "heartTouchAction": "TIME_OF_DAY",
+        "tapButtonAction": "TAKE_LAP",
+        "vibrationActive": true,
+        "altitudeActive": false,
+        "sportTapButtonSensitivity": "MEDIUM",
+        "trainingDisplays": [
+          [
+            {
+              "name": "ZONE_POINTER",
+              "category": "HR"
+            },
+            {
+              "name": "DISTANCE",
+              "category": "DIST"
+            },
+            {
+              "name": "SPEED_OR_PACE",
+              "category": "SPEED"
+            },
+            {
+              "name": "STOPWATCH",
+              "category": "TIME"
+            }
+          ],
+          [
+            {
+              "name": "HEART_RATE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "WATCH_FACE",
+              "category": "FULLSCREEN"
+            }
+          ]
+        ],
+        "lapDisplays": [
+          [
+            {
+              "name": "LD_LAP_NUMBER",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_LAP_DURATION",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_TOTAL_DURATION",
+              "category": "TIME"
+            }
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "exportVersion": "2.4",
+    "sport": "CYCLING",
+    "speedViewSettings": "SPEED",
+    "heartRateViewSettings": "BEATS_PER_MINUTE",
+    "heartrateBroadcasting": false,
+    "volume": 66,
+    "powerViewSettings": "WATT",
+    "heartRateZoneLockAvailable": true,
+    "speedZoneLockAvailable": false,
+    "powerZoneLockAvailable": false,
+    "swimmingUnitSettings": "SWIMMING_METERS",
+    "autoLapSettings": {
+      "duration": "PT600S",
+      "distance": 5000.0,
+      "autoLapType": "OFF"
+    },
+    "strideSettings": {
+      "calibrationType": "AUTOMATIC",
+      "calibrationFactor": 1.0,
+      "strideSpeedSource": "STRIDE",
+      "runningFactorSource": "DEFAULT"
+    },
+    "trainingReminderSettings": {
+      "type": "OFF",
+      "message": ""
+    },
+    "advancedSettings": [
+      {
+        "product": "Polar Vantage V",
+        "gpsState": "ON_NORMAL",
+        "autostartTraining": false,
+        "voiceGuidanceActive": true,
+        "heartTouchAction": "TIME_OF_DAY",
+        "tapButtonAction": "TAKE_LAP",
+        "vibrationActive": true,
+        "altitudeActive": true,
+        "sportTapButtonSensitivity": "MEDIUM",
+        "trainingDisplays": [
+          [
+            {
+              "name": "ZONE_POINTER",
+              "category": "HR"
+            },
+            {
+              "name": "DISTANCE",
+              "category": "DIST"
+            },
+            {
+              "name": "SPEED_OR_PACE",
+              "category": "SPEED"
+            },
+            {
+              "name": "STOPWATCH",
+              "category": "TIME"
+            }
+          ],
+          [
+            {
+              "name": "ALTITUDE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "HEART_RATE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "WATCH_FACE",
+              "category": "FULLSCREEN"
+            }
+          ]
+        ],
+        "lapDisplays": [
+          [
+            {
+              "name": "LD_LAP_NUMBER",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_LAP_DURATION",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_TOTAL_DURATION",
+              "category": "TIME"
+            }
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "exportVersion": "2.4",
+    "sport": "INDOOR_CYCLING",
+    "speedViewSettings": "SPEED",
+    "heartRateViewSettings": "BEATS_PER_MINUTE",
+    "heartrateBroadcasting": true,
+    "volume": 66,
+    "powerViewSettings": "WATT",
+    "heartRateZoneLockAvailable": true,
+    "speedZoneLockAvailable": false,
+    "powerZoneLockAvailable": false,
+    "swimmingUnitSettings": "SWIMMING_METERS",
+    "autoLapSettings": {
+      "duration": "PT600S",
+      "distance": 5000.0,
+      "autoLapType": "OFF"
+    },
+    "strideSettings": {
+      "calibrationType": "AUTOMATIC",
+      "calibrationFactor": 1.0,
+      "strideSpeedSource": "STRIDE",
+      "runningFactorSource": "DEFAULT"
+    },
+    "trainingReminderSettings": {
+      "type": "OFF",
+      "message": ""
+    },
+    "advancedSettings": [
+      {
+        "product": "Polar Vantage V",
+        "gpsState": "OFF",
+        "autostartTraining": false,
+        "voiceGuidanceActive": true,
+        "heartTouchAction": "TIME_OF_DAY",
+        "tapButtonAction": "TAKE_LAP",
+        "vibrationActive": true,
+        "altitudeActive": false,
+        "sportTapButtonSensitivity": "MEDIUM",
+        "trainingDisplays": [
+          [
+            {
+              "name": "ZONE_POINTER",
+              "category": "HR"
+            },
+            {
+              "name": "STOPWATCH",
+              "category": "TIME"
+            },
+            {
+              "name": "CALORIES",
+              "category": "HR"
+            }
+          ],
+          [
+            {
+              "name": "HEART_RATE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "WATCH_FACE",
+              "category": "FULLSCREEN"
+            }
+          ]
+        ],
+        "lapDisplays": [
+          [
+            {
+              "name": "LD_LAP_NUMBER",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_LAP_DURATION",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_TOTAL_DURATION",
+              "category": "TIME"
+            }
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "exportVersion": "2.4",
+    "sport": "MOUNTAIN_BIKING",
+    "speedViewSettings": "SPEED",
+    "heartRateViewSettings": "BEATS_PER_MINUTE",
+    "heartrateBroadcasting": false,
+    "volume": 66,
+    "powerViewSettings": "WATT",
+    "heartRateZoneLockAvailable": true,
+    "speedZoneLockAvailable": false,
+    "powerZoneLockAvailable": false,
+    "swimmingUnitSettings": "SWIMMING_METERS",
+    "autoLapSettings": {
+      "duration": "PT600S",
+      "distance": 5000.0,
+      "autoLapType": "OFF"
+    },
+    "strideSettings": {
+      "calibrationType": "AUTOMATIC",
+      "calibrationFactor": 1.0,
+      "strideSpeedSource": "STRIDE",
+      "runningFactorSource": "DEFAULT"
+    },
+    "trainingReminderSettings": {
+      "type": "OFF",
+      "message": ""
+    },
+    "advancedSettings": [
+      {
+        "product": "Polar Vantage V",
+        "gpsState": "ON_NORMAL",
+        "autostartTraining": false,
+        "voiceGuidanceActive": true,
+        "heartTouchAction": "TIME_OF_DAY",
+        "tapButtonAction": "TAKE_LAP",
+        "vibrationActive": true,
+        "altitudeActive": true,
+        "sportTapButtonSensitivity": "MEDIUM",
+        "trainingDisplays": [
+          [
+            {
+              "name": "ZONE_POINTER",
+              "category": "HR"
+            },
+            {
+              "name": "DISTANCE",
+              "category": "DIST"
+            },
+            {
+              "name": "SPEED_OR_PACE",
+              "category": "SPEED"
+            },
+            {
+              "name": "STOPWATCH",
+              "category": "TIME"
+            }
+          ],
+          [
+            {
+              "name": "ALTITUDE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "HEART_RATE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "WATCH_FACE",
+              "category": "FULLSCREEN"
+            }
+          ]
+        ],
+        "lapDisplays": [
+          [
+            {
+              "name": "LD_LAP_NUMBER",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_LAP_DURATION",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_TOTAL_DURATION",
+              "category": "TIME"
+            }
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "exportVersion": "2.4",
+    "sport": "SWIMMING",
+    "speedViewSettings": "SPEED",
+    "heartRateViewSettings": "BEATS_PER_MINUTE",
+    "heartrateBroadcasting": false,
+    "volume": 100,
+    "powerViewSettings": "WATT",
+    "heartRateZoneLockAvailable": true,
+    "speedZoneLockAvailable": false,
+    "powerZoneLockAvailable": false,
+    "swimmingUnitSettings": "SWIMMING_METERS",
+    "autoLapSettings": {
+      "duration": "PT600S",
+      "distance": 1000.0,
+      "autoLapType": "OFF"
+    },
+    "strideSettings": {
+      "calibrationType": "AUTOMATIC",
+      "calibrationFactor": 1.0,
+      "strideSpeedSource": "STRIDE",
+      "runningFactorSource": "DEFAULT"
+    },
+    "trainingReminderSettings": {
+      "type": "OFF",
+      "message": ""
+    },
+    "advancedSettings": [
+      {
+        "product": "Polar Vantage V",
+        "gpsState": "OFF",
+        "autostartTraining": false,
+        "voiceGuidanceActive": true,
+        "heartTouchAction": "TIME_OF_DAY",
+        "tapButtonAction": "TAKE_LAP",
+        "vibrationActive": false,
+        "altitudeActive": false,
+        "sportTapButtonSensitivity": "MEDIUM",
+        "swimmingPool": {
+          "type": "METERS",
+          "length": 25.0
+        },
+        "trainingDisplays": [
+          [
+            {
+              "name": "ZONE_POINTER",
+              "category": "HR"
+            },
+            {
+              "name": "DISTANCE",
+              "category": "DIST"
+            },
+            {
+              "name": "STOPWATCH",
+              "category": "TIME"
+            },
+            {
+              "name": "REST_TIME",
+              "category": "TIME"
+            }
+          ],
+          [
+            {
+              "name": "HEART_RATE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "WATCH_FACE",
+              "category": "FULLSCREEN"
+            }
+          ]
+        ],
+        "lapDisplays": [
+          [
+            {
+              "name": "LD_LAP_NUMBER",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_LAP_DURATION",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_TOTAL_DURATION",
+              "category": "TIME"
+            }
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "exportVersion": "2.4",
+    "sport": "STRENGTH_TRAINING",
+    "speedViewSettings": "SPEED",
+    "heartRateViewSettings": "BEATS_PER_MINUTE",
+    "heartrateBroadcasting": true,
+    "volume": 66,
+    "powerViewSettings": "WATT",
+    "heartRateZoneLockAvailable": true,
+    "speedZoneLockAvailable": false,
+    "powerZoneLockAvailable": false,
+    "swimmingUnitSettings": "SWIMMING_METERS",
+    "autoLapSettings": {
+      "duration": "PT600S",
+      "distance": 1000.0,
+      "autoLapType": "OFF"
+    },
+    "strideSettings": {
+      "calibrationType": "AUTOMATIC",
+      "calibrationFactor": 1.0,
+      "strideSpeedSource": "STRIDE",
+      "runningFactorSource": "DEFAULT"
+    },
+    "trainingReminderSettings": {
+      "type": "OFF",
+      "message": ""
+    },
+    "advancedSettings": [
+      {
+        "product": "Polar Vantage V",
+        "gpsState": "OFF",
+        "autostartTraining": false,
+        "voiceGuidanceActive": true,
+        "heartTouchAction": "TIME_OF_DAY",
+        "tapButtonAction": "TAKE_LAP",
+        "vibrationActive": true,
+        "altitudeActive": false,
+        "sportTapButtonSensitivity": "MEDIUM",
+        "trainingDisplays": [
+          [
+            {
+              "name": "ZONE_POINTER",
+              "category": "HR"
+            },
+            {
+              "name": "STOPWATCH",
+              "category": "TIME"
+            },
+            {
+              "name": "CALORIES",
+              "category": "HR"
+            }
+          ],
+          [
+            {
+              "name": "HEART_RATE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "WATCH_FACE",
+              "category": "FULLSCREEN"
+            }
+          ]
+        ],
+        "lapDisplays": [
+          [
+            {
+              "name": "LD_LAP_NUMBER",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_LAP_DURATION",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_TOTAL_DURATION",
+              "category": "TIME"
+            }
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "exportVersion": "2.4",
+    "sport": "CROSS_FIT",
+    "speedViewSettings": "SPEED",
+    "heartRateViewSettings": "BEATS_PER_MINUTE",
+    "heartrateBroadcasting": true,
+    "volume": 66,
+    "powerViewSettings": "WATT",
+    "heartRateZoneLockAvailable": true,
+    "speedZoneLockAvailable": false,
+    "powerZoneLockAvailable": false,
+    "swimmingUnitSettings": "SWIMMING_METERS",
+    "autoLapSettings": {
+      "duration": "PT600S",
+      "distance": 1000.0,
+      "autoLapType": "OFF"
+    },
+    "strideSettings": {
+      "calibrationType": "AUTOMATIC",
+      "calibrationFactor": 1.0,
+      "strideSpeedSource": "STRIDE",
+      "runningFactorSource": "DEFAULT"
+    },
+    "trainingReminderSettings": {
+      "type": "OFF",
+      "message": ""
+    },
+    "advancedSettings": [
+      {
+        "product": "Polar Vantage V",
+        "gpsState": "OFF",
+        "autostartTraining": false,
+        "voiceGuidanceActive": true,
+        "heartTouchAction": "TIME_OF_DAY",
+        "tapButtonAction": "TAKE_LAP",
+        "vibrationActive": true,
+        "altitudeActive": false,
+        "sportTapButtonSensitivity": "MEDIUM",
+        "trainingDisplays": [
+          [
+            {
+              "name": "ZONE_POINTER",
+              "category": "HR"
+            },
+            {
+              "name": "STOPWATCH",
+              "category": "TIME"
+            },
+            {
+              "name": "CALORIES",
+              "category": "HR"
+            }
+          ],
+          [
+            {
+              "name": "HEART_RATE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "WATCH_FACE",
+              "category": "FULLSCREEN"
+            }
+          ]
+        ],
+        "lapDisplays": [
+          [
+            {
+              "name": "LD_LAP_NUMBER",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_LAP_DURATION",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_TOTAL_DURATION",
+              "category": "TIME"
+            }
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "exportVersion": "2.4",
+    "sport": "WALKING",
+    "speedViewSettings": "PACE",
+    "heartRateViewSettings": "BEATS_PER_MINUTE",
+    "heartrateBroadcasting": false,
+    "volume": 66,
+    "powerViewSettings": "WATT",
+    "heartRateZoneLockAvailable": true,
+    "speedZoneLockAvailable": false,
+    "powerZoneLockAvailable": false,
+    "swimmingUnitSettings": "SWIMMING_METERS",
+    "autoLapSettings": {
+      "duration": "PT600S",
+      "distance": 1000.0,
+      "autoLapType": "DISTANCE"
+    },
+    "strideSettings": {
+      "calibrationType": "AUTOMATIC",
+      "calibrationFactor": 1.0,
+      "strideSpeedSource": "STRIDE",
+      "runningFactorSource": "DEFAULT"
+    },
+    "trainingReminderSettings": {
+      "type": "OFF",
+      "message": ""
+    },
+    "advancedSettings": [
+      {
+        "product": "Polar Vantage V",
+        "gpsState": "ON_NORMAL",
+        "autostartTraining": false,
+        "voiceGuidanceActive": true,
+        "heartTouchAction": "TIME_OF_DAY",
+        "tapButtonAction": "TAKE_LAP",
+        "vibrationActive": true,
+        "altitudeActive": true,
+        "sportTapButtonSensitivity": "MEDIUM",
+        "trainingDisplays": [
+          [
+            {
+              "name": "ZONE_POINTER",
+              "category": "HR"
+            },
+            {
+              "name": "DISTANCE",
+              "category": "DIST"
+            },
+            {
+              "name": "SPEED_OR_PACE",
+              "category": "SPEED"
+            },
+            {
+              "name": "STOPWATCH",
+              "category": "TIME"
+            }
+          ],
+          [
+            {
+              "name": "ALTITUDE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "HEART_RATE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "WATCH_FACE",
+              "category": "FULLSCREEN"
+            }
+          ]
+        ],
+        "lapDisplays": [
+          [
+            {
+              "name": "LD_LAP_NUMBER",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_LAP_DURATION",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_TOTAL_DURATION",
+              "category": "TIME"
+            }
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "exportVersion": "2.4",
+    "sport": "HIKING",
+    "speedViewSettings": "PACE",
+    "heartRateViewSettings": "BEATS_PER_MINUTE",
+    "heartrateBroadcasting": false,
+    "volume": 66,
+    "powerViewSettings": "WATT",
+    "heartRateZoneLockAvailable": true,
+    "speedZoneLockAvailable": false,
+    "powerZoneLockAvailable": false,
+    "swimmingUnitSettings": "SWIMMING_METERS",
+    "autoLapSettings": {
+      "duration": "PT600S",
+      "distance": 1000.0,
+      "autoLapType": "DISTANCE"
+    },
+    "strideSettings": {
+      "calibrationType": "AUTOMATIC",
+      "calibrationFactor": 1.0,
+      "strideSpeedSource": "STRIDE",
+      "runningFactorSource": "DEFAULT"
+    },
+    "trainingReminderSettings": {
+      "type": "OFF",
+      "message": ""
+    },
+    "advancedSettings": [
+      {
+        "product": "Polar Vantage V",
+        "gpsState": "ON_NORMAL",
+        "autostartTraining": false,
+        "voiceGuidanceActive": true,
+        "heartTouchAction": "TIME_OF_DAY",
+        "tapButtonAction": "TAKE_LAP",
+        "vibrationActive": true,
+        "altitudeActive": true,
+        "sportTapButtonSensitivity": "MEDIUM",
+        "trainingDisplays": [
+          [
+            {
+              "name": "ZONE_POINTER",
+              "category": "HR"
+            },
+            {
+              "name": "DISTANCE",
+              "category": "DIST"
+            },
+            {
+              "name": "SPEED_OR_PACE",
+              "category": "SPEED"
+            },
+            {
+              "name": "STOPWATCH",
+              "category": "TIME"
+            }
+          ],
+          [
+            {
+              "name": "ALTITUDE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "HEART_RATE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "WATCH_FACE",
+              "category": "FULLSCREEN"
+            }
+          ]
+        ],
+        "lapDisplays": [
+          [
+            {
+              "name": "LD_LAP_NUMBER",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_LAP_DURATION",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_TOTAL_DURATION",
+              "category": "TIME"
+            }
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "exportVersion": "2.4",
+    "sport": "OTHER_INDOOR",
+    "speedViewSettings": "SPEED",
+    "heartRateViewSettings": "BEATS_PER_MINUTE",
+    "heartrateBroadcasting": true,
+    "volume": 66,
+    "powerViewSettings": "WATT",
+    "heartRateZoneLockAvailable": true,
+    "speedZoneLockAvailable": false,
+    "powerZoneLockAvailable": false,
+    "swimmingUnitSettings": "SWIMMING_METERS",
+    "autoLapSettings": {
+      "duration": "PT600S",
+      "distance": 1000.0,
+      "autoLapType": "OFF"
+    },
+    "strideSettings": {
+      "calibrationType": "AUTOMATIC",
+      "calibrationFactor": 1.0,
+      "strideSpeedSource": "STRIDE",
+      "runningFactorSource": "DEFAULT"
+    },
+    "trainingReminderSettings": {
+      "type": "OFF",
+      "message": ""
+    },
+    "advancedSettings": [
+      {
+        "product": "Polar Vantage V",
+        "gpsState": "OFF",
+        "autostartTraining": false,
+        "voiceGuidanceActive": true,
+        "heartTouchAction": "TIME_OF_DAY",
+        "tapButtonAction": "TAKE_LAP",
+        "vibrationActive": true,
+        "altitudeActive": false,
+        "sportTapButtonSensitivity": "MEDIUM",
+        "trainingDisplays": [
+          [
+            {
+              "name": "ZONE_POINTER",
+              "category": "HR"
+            },
+            {
+              "name": "STOPWATCH",
+              "category": "TIME"
+            },
+            {
+              "name": "CALORIES",
+              "category": "HR"
+            }
+          ],
+          [
+            {
+              "name": "HEART_RATE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "WATCH_FACE",
+              "category": "FULLSCREEN"
+            }
+          ]
+        ],
+        "lapDisplays": [
+          [
+            {
+              "name": "LD_LAP_NUMBER",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_LAP_DURATION",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_TOTAL_DURATION",
+              "category": "TIME"
+            }
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "exportVersion": "2.4",
+    "sport": "OTHER_OUTDOOR",
+    "speedViewSettings": "SPEED",
+    "heartRateViewSettings": "BEATS_PER_MINUTE",
+    "heartrateBroadcasting": false,
+    "volume": 66,
+    "powerViewSettings": "WATT",
+    "heartRateZoneLockAvailable": true,
+    "speedZoneLockAvailable": false,
+    "powerZoneLockAvailable": false,
+    "swimmingUnitSettings": "SWIMMING_METERS",
+    "autoLapSettings": {
+      "duration": "PT600S",
+      "distance": 1000.0,
+      "autoLapType": "OFF"
+    },
+    "strideSettings": {
+      "calibrationType": "AUTOMATIC",
+      "calibrationFactor": 1.0,
+      "strideSpeedSource": "STRIDE",
+      "runningFactorSource": "DEFAULT"
+    },
+    "trainingReminderSettings": {
+      "type": "OFF",
+      "message": ""
+    },
+    "advancedSettings": [
+      {
+        "product": "Polar Vantage V",
+        "gpsState": "ON_NORMAL",
+        "autostartTraining": false,
+        "voiceGuidanceActive": true,
+        "heartTouchAction": "TIME_OF_DAY",
+        "tapButtonAction": "TAKE_LAP",
+        "vibrationActive": true,
+        "altitudeActive": true,
+        "sportTapButtonSensitivity": "MEDIUM",
+        "trainingDisplays": [
+          [
+            {
+              "name": "ZONE_POINTER",
+              "category": "HR"
+            },
+            {
+              "name": "DISTANCE",
+              "category": "DIST"
+            },
+            {
+              "name": "SPEED_OR_PACE",
+              "category": "SPEED"
+            },
+            {
+              "name": "STOPWATCH",
+              "category": "TIME"
+            }
+          ],
+          [
+            {
+              "name": "ALTITUDE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "HEART_RATE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "WATCH_FACE",
+              "category": "FULLSCREEN"
+            }
+          ]
+        ],
+        "lapDisplays": [
+          [
+            {
+              "name": "LD_LAP_NUMBER",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_LAP_DURATION",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_TOTAL_DURATION",
+              "category": "TIME"
+            }
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "exportVersion": "2.4",
+    "sport": "TRIATHLON",
+    "speedViewSettings": "PACE",
+    "heartRateViewSettings": "BEATS_PER_MINUTE",
+    "heartrateBroadcasting": false,
+    "volume": 60,
+    "powerViewSettings": "WATT",
+    "heartRateZoneLockAvailable": true,
+    "speedZoneLockAvailable": false,
+    "powerZoneLockAvailable": false,
+    "swimmingUnitSettings": "SWIMMING_METERS",
+    "autoLapSettings": {
+      "duration": "PT600S",
+      "distance": 1000.0,
+      "autoLapType": "OFF"
+    },
+    "strideSettings": {
+      "calibrationType": "AUTOMATIC",
+      "calibrationFactor": 1.0,
+      "strideSpeedSource": "STRIDE",
+      "runningFactorSource": "DEFAULT"
+    },
+    "trainingReminderSettings": {
+      "type": "OFF",
+      "message": ""
+    },
+    "advancedSettings": [
+      {
+        "product": "Polar Vantage V",
+        "gpsState": "OFF",
+        "autostartTraining": false,
+        "voiceGuidanceActive": true,
+        "heartTouchAction": "TIME_OF_DAY",
+        "tapButtonAction": "OFF",
+        "vibrationActive": true,
+        "altitudeActive": false,
+        "sportTapButtonSensitivity": "MEDIUM",
+        "trainingDisplays": [
+          [
+            {
+              "name": "ZONE_POINTER",
+              "category": "HR"
+            },
+            {
+              "name": "DISTANCE",
+              "category": "DIST"
+            },
+            {
+              "name": "SPEED_OR_PACE",
+              "category": "SPEED"
+            },
+            {
+              "name": "STOPWATCH",
+              "category": "TIME"
+            }
+          ],
+          [
+            {
+              "name": "ALTITUDE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "HEART_RATE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "WATCH_FACE",
+              "category": "FULLSCREEN"
+            }
+          ]
+        ],
+        "lapDisplays": [
+          [
+            {
+              "name": "LD_LAP_NUMBER",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_LAP_DURATION",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_TOTAL_DURATION",
+              "category": "TIME"
+            }
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "exportVersion": "2.4",
+    "sport": "TRIATHLON_CYCLING",
+    "speedViewSettings": "SPEED",
+    "heartRateViewSettings": "BEATS_PER_MINUTE",
+    "heartrateBroadcasting": false,
+    "volume": 66,
+    "powerViewSettings": "WATT",
+    "heartRateZoneLockAvailable": true,
+    "speedZoneLockAvailable": false,
+    "powerZoneLockAvailable": false,
+    "swimmingUnitSettings": "SWIMMING_METERS",
+    "autoLapSettings": {
+      "duration": "PT600S",
+      "distance": 5000.0,
+      "autoLapType": "OFF"
+    },
+    "strideSettings": {
+      "calibrationType": "AUTOMATIC",
+      "calibrationFactor": 1.0,
+      "strideSpeedSource": "STRIDE",
+      "runningFactorSource": "DEFAULT"
+    },
+    "trainingReminderSettings": {
+      "type": "OFF",
+      "message": ""
+    },
+    "advancedSettings": [
+      {
+        "product": "Polar Vantage V",
+        "gpsState": "ON_NORMAL",
+        "autostartTraining": false,
+        "voiceGuidanceActive": true,
+        "heartTouchAction": "TIME_OF_DAY",
+        "tapButtonAction": "TAKE_LAP",
+        "vibrationActive": true,
+        "altitudeActive": true,
+        "sportTapButtonSensitivity": "MEDIUM",
+        "trainingDisplays": [
+          [
+            {
+              "name": "ZONE_POINTER",
+              "category": "HR"
+            },
+            {
+              "name": "DISTANCE",
+              "category": "DIST"
+            },
+            {
+              "name": "SPEED_OR_PACE",
+              "category": "SPEED"
+            },
+            {
+              "name": "STOPWATCH",
+              "category": "TIME"
+            }
+          ],
+          [
+            {
+              "name": "ALTITUDE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "HEART_RATE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "WATCH_FACE",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "MULTISPORT_DURATION",
+              "category": "TIME"
+            },
+            {
+              "name": "MULTISPORT_DISTANCE",
+              "category": "DIST"
+            },
+            {
+              "name": "MULTISPORT_CALORIES",
+              "category": "HR"
+            }
+          ]
+        ],
+        "lapDisplays": [
+          [
+            {
+              "name": "LD_LAP_NUMBER",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_LAP_DURATION",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_TOTAL_DURATION",
+              "category": "TIME"
+            }
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "exportVersion": "2.4",
+    "sport": "TRIATHLON_RUNNING",
+    "speedViewSettings": "PACE",
+    "heartRateViewSettings": "BEATS_PER_MINUTE",
+    "heartrateBroadcasting": false,
+    "volume": 66,
+    "powerViewSettings": "WATT",
+    "heartRateZoneLockAvailable": true,
+    "speedZoneLockAvailable": false,
+    "powerZoneLockAvailable": false,
+    "swimmingUnitSettings": "SWIMMING_METERS",
+    "autoLapSettings": {
+      "duration": "PT600S",
+      "distance": 1000.0,
+      "autoLapType": "DISTANCE"
+    },
+    "strideSettings": {
+      "calibrationType": "AUTOMATIC",
+      "calibrationFactor": 1.0,
+      "strideSpeedSource": "STRIDE",
+      "runningFactorSource": "DEFAULT"
+    },
+    "trainingReminderSettings": {
+      "type": "OFF",
+      "message": ""
+    },
+    "advancedSettings": [
+      {
+        "product": "Polar Vantage V",
+        "gpsState": "ON_NORMAL",
+        "autostartTraining": false,
+        "voiceGuidanceActive": true,
+        "heartTouchAction": "TIME_OF_DAY",
+        "tapButtonAction": "TAKE_LAP",
+        "vibrationActive": true,
+        "altitudeActive": true,
+        "sportTapButtonSensitivity": "MEDIUM",
+        "trainingDisplays": [
+          [
+            {
+              "name": "ZONE_POINTER",
+              "category": "HR"
+            },
+            {
+              "name": "DISTANCE",
+              "category": "DIST"
+            },
+            {
+              "name": "SPEED_OR_PACE",
+              "category": "SPEED"
+            },
+            {
+              "name": "STOPWATCH",
+              "category": "TIME"
+            }
+          ],
+          [
+            {
+              "name": "POWER_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "ALTITUDE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "HEART_RATE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "WATCH_FACE",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "MULTISPORT_DURATION",
+              "category": "TIME"
+            },
+            {
+              "name": "MULTISPORT_DISTANCE",
+              "category": "DIST"
+            },
+            {
+              "name": "MULTISPORT_CALORIES",
+              "category": "HR"
+            }
+          ]
+        ],
+        "lapDisplays": [
+          [
+            {
+              "name": "LD_LAP_NUMBER",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_LAP_DURATION",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_TOTAL_DURATION",
+              "category": "TIME"
+            }
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "exportVersion": "2.4",
+    "sport": "TRIATHLON_SWIMMING",
+    "speedViewSettings": "PACE",
+    "heartRateViewSettings": "BEATS_PER_MINUTE",
+    "heartrateBroadcasting": false,
+    "volume": 100,
+    "powerViewSettings": "WATT",
+    "heartRateZoneLockAvailable": true,
+    "speedZoneLockAvailable": false,
+    "powerZoneLockAvailable": false,
+    "swimmingUnitSettings": "SWIMMING_METERS",
+    "autoLapSettings": {
+      "duration": "PT600S",
+      "distance": 1000.0,
+      "autoLapType": "OFF"
+    },
+    "strideSettings": {
+      "calibrationType": "AUTOMATIC",
+      "calibrationFactor": 1.0,
+      "strideSpeedSource": "STRIDE",
+      "runningFactorSource": "DEFAULT"
+    },
+    "trainingReminderSettings": {
+      "type": "OFF",
+      "message": ""
+    },
+    "advancedSettings": [
+      {
+        "product": "Polar Vantage V",
+        "gpsState": "ON_NORMAL",
+        "autostartTraining": false,
+        "voiceGuidanceActive": true,
+        "heartTouchAction": "TIME_OF_DAY",
+        "tapButtonAction": "TAKE_LAP",
+        "vibrationActive": false,
+        "altitudeActive": false,
+        "sportTapButtonSensitivity": "MEDIUM",
+        "trainingDisplays": [
+          [
+            {
+              "name": "ZONE_POINTER",
+              "category": "HR"
+            },
+            {
+              "name": "DISTANCE",
+              "category": "DIST"
+            },
+            {
+              "name": "SPEED_OR_PACE",
+              "category": "SPEED"
+            },
+            {
+              "name": "STOPWATCH",
+              "category": "TIME"
+            }
+          ],
+          [
+            {
+              "name": "HEART_RATE_GRAPH",
+              "category": "FULLSCREEN"
+            }
+          ],
+          [
+            {
+              "name": "WATCH_FACE",
+              "category": "FULLSCREEN"
+            }
+          ]
+        ],
+        "lapDisplays": [
+          [
+            {
+              "name": "LD_LAP_NUMBER",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_LAP_DURATION",
+              "category": "TIME"
+            },
+            {
+              "name": "LD_TOTAL_DURATION",
+              "category": "TIME"
+            }
+          ]
+        ]
+      }
+    ]
+  }
+]

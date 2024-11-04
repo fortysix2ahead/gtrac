@@ -180,6 +180,10 @@ def test_find( db ):
 	resources = db.find_resources_of_type( GPX_TYPE )
 	assert len( resources ) > 0 and all( [ r.type == GPX_TYPE for r in resources ] )
 
+	# find uids
+	assert 'polar:1001' in db.find_uids()
+	assert db.find_uids( 'waze' ) == [ 'waze:210111120000' ]
+
 	summaries = db.find_summaries( 'polar:1001' )
 	assert len( summaries ) == 1 and summaries[0].path == 'polar/1/0/0/1001/1001.json'
 	summaries = db.find_summaries( 'polar:1001', 'strava:1001' )

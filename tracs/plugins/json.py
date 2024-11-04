@@ -6,7 +6,6 @@ from typing import Any, Union
 
 from cattrs.preconf.orjson import make_converter
 from orjson import dumps as save_json, loads as load_json, OPT_APPEND_NEWLINE, OPT_INDENT_2, OPT_SORT_KEYS
-
 from tracs.handlers import ResourceHandler
 from tracs.pluginmgr import importer, resourcetype
 from tracs.resources import ResourceType

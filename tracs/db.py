@@ -445,6 +445,10 @@ class ActivityDb:
 		activities = self.find_by_classifier( classifier ) if classifier else self.activities
 		return max( activities, key=lambda a: a.starttime )
 
+	def find_uids( self, classifier: Optional[str] = None ) -> List[UID]:
+		uids = list( unique( chain( *[ a.metadata.members if a.group or a.multipart else [a.uid] for a in self.activities ] ) ) )
+		return [ u for u in uids if u.classifier == classifier] if classifier else uids
+
 	# find resources
 
 	# todo: create a universal method, like get from above

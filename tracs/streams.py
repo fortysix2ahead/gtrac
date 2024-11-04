@@ -80,7 +80,7 @@ class Stream:
 	def as_gpx( self, **kwargs ) -> GPX:
 		gpx = GPX()
 
-		gpx.creator = 'StravaGPX'  # not really true, but for comparing outcome
+		gpx.creator = 'Tracs'
 		gpx.nsmap['gpxtpx'] = 'http://www.garmin.com/xmlschemas/TrackPointExtension/v1'
 		gpx.nsmap['gpxx'] = 'http://www.garmin.com/xmlschemas/GpxExtensions/v3'
 		gpx.schema_locations = [

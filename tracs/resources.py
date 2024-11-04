@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from enum import Enum
 from functools import cached_property
 from logging import getLogger
@@ -9,14 +10,17 @@ from typing import Any, Callable, ClassVar, Dict, List, Optional, Union
 from attrs import Attribute, define, evolve, field, fields
 from cattrs import Converter, GenConverter
 from cattrs.gen import make_dict_unstructure_fn, override
+from dateutil.tz import UTC
 from fs.base import FS
 from fs.errors import ResourceNotFound
 from fs.path import basename, split
+from isodate import parse_duration
 from more_itertools import unique
-from more_itertools.more import first
+from more_itertools.more import first, last, rstrip
 
 from tracs.protocols import Exporter, Importer
 from tracs.uid import UID
+from utils import to_isotime
 
 log = getLogger( __name__ )
 
@@ -89,7 +93,7 @@ class ResourceTypes( dict[str, ResourceType] ):
 	def summaries( cls ) -> List[ResourceType]:
 		return [rt for rt in cls.inst().values() if rt.summary]
 
-@define
+@define( repr=False )
 class Resource:
 
 	converter: ClassVar[Converter] = GenConverter( omit_if_default=True )
@@ -133,6 +137,9 @@ class Resource:
 
 	def __hash__( self ):
 		return hash( (self.uid, self.path) )
+
+	def __repr__( self ):
+		return f'{self.name} [{self.uid}] [{self.path}]'
 
 	# class methods
 
@@ -184,6 +191,40 @@ class Resource:
 
 	def get_child( self, resource_type: str ) -> Optional[Resource]:
 		return next( (r for r in self.resources if r.type == resource_type), None )
+
+	# helper for convenient data access (only when raw field contains a dict)
+
+	def _value( self, *args, parent: Dict = None, conv: Callable, default: Any = None ) -> Any:
+		try:
+			parent, item = parent or self.raw, last( args )
+			for s in rstrip( args, lambda e: e is item ):
+				parent = parent[s]
+			return conv( val ) if ( val := parent[item] ) not in [ '', None, 0, 0.0 ] else default
+		except (KeyError, TypeError, ValueError):
+			return default
+
+	def float( self, *args, parent: Dict = None, default=None ) -> Optional[float]:
+		return self._value( *args, parent=parent, conv=float, default=default )
+
+	def list( self, *args, parent: Dict = None, default=None ) -> Optional[List]:
+		return self._value( *args, parent=parent, conv=list, default=default )
+
+	def int( self, *args, parent: Dict = None, default=None ) -> Optional[int]:
+		return self._value( *args, parent=parent, conv=int, default=default )
+
+	# can't name this method str() because of cattrs weirdness ...
+	def strg( self, *args, parent: Dict = None, default=None ) -> Optional[str]:
+		return self._value( *args, parent=parent, conv=str, default=default )
+
+	def dt( self, *args, parent: Dict = None, default=None ) -> Optional[datetime]:
+		return self._value( *args, parent=parent, conv=to_isotime, default=default )
+
+	def utc( self, *args, parent: Dict = None, default=None ) -> Optional[datetime]:
+		utc: datetime = self._value( *args, parent=parent, conv=to_isotime, default=default )
+		return utc.astimezone( UTC ) if utc else default
+
+	def td( self, *args, parent: Dict = None, default=None ) -> Optional[datetime]:
+		return self._value( *args, parent=parent, conv=parse_duration, default=default )
 
 	# serialization
 

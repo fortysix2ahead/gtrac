@@ -62,7 +62,7 @@ class ActivityPart:
 	def to_dict( self ) -> Dict[str, Any]:
 		return ActivityPart.converter.unstructure( self )
 
-@define( eq=True ) # todo: mark fields with proper eq attributes
+@define( eq=True, repr=False ) # todo: mark fields with proper eq attributes
 class Activity( VirtualFieldsBase, FormattedFieldsBase ):
 
 	converter: ClassVar[Converter] = GenConverter( omit_if_default=True )
@@ -115,10 +115,16 @@ class Activity( VirtualFieldsBase, FormattedFieldsBase ):
 	distance: float = field( default=None, metadata={ 'multipart': 'sum' } ) #
 	ascent: float = field( default=None ) #
 	descent: float = field( default=None ) #
+	elevation: float = field( default=None ) #
 	elevation_max: float = field( default=None ) #
 	elevation_min: float = field( default=None ) #
 	speed: float = field( default=None ) #
 	speed_max: float = field( default=None ) #
+
+	cadence: float = field( default=None ) #
+	cadence_max: float = field( default=None ) #
+	power: float = field( default=None ) #
+	power_max: float = field( default=None ) #
 
 	heartrate: int = field( default=None, metadata={ 'multipart': 'average' } ) #
 	heartrate_max: int = field( default=None ) #
@@ -196,6 +202,9 @@ class Activity( VirtualFieldsBase, FormattedFieldsBase ):
 		# convenience: allow init from other activities
 		if self.other_parts:
 			self.add( self.other_parts )
+
+	def __repr__( self ) -> str:
+		return f'{self.name} [{self.uid}] [{self.starttime}]'
 
 	# additional methods
 
