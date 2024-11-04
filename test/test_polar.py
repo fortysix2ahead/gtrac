@@ -10,7 +10,7 @@ from tracs.activity_types import ActivityTypes
 from tracs.plugins.polar import BASE_URL, PolarFitnessTestImporter, PolarOrthostaticTestImporter, PolarRRRecordingImporter
 from tracs.plugins.polar import Polar, PolarFlowExercise
 from tracs.plugins.polar import PolarFlowImporter
-from tracs.utils import FsPath
+from tracs.utils import FsPath, fspath
 
 importer = PolarFlowImporter()
 
@@ -69,3 +69,13 @@ def test_live_workflow( service ):
 
 	fetched = service.fetch( force=False, pretend=False )
 	assert len( fetched ) > 0
+
+@mark.context( env='default', persist='clone', cleanup=True )
+@mark.service( cls=Polar, init=True, register=True )
+def test_takeout_import( service ):
+	src_fs, src_path = fspath( service.ctx.config_fs.getsyspath( 'takeouts/polar' ) )
+	activities = service.import_activities( fs=src_fs, path=src_path )
+	# todo: actually there should be 5 imports?
+	assert [ a.uid.to_str() for a in activities ] == [
+		'waze:200712102429', 'waze:211222051711', 'waze:220102191316', 'waze:230310152717'
+	]

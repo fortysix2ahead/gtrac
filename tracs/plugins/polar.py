@@ -65,7 +65,7 @@ ACCOUNT_DATA_GLOB = 'account-data-*.json'
 ACCOUNT_PROFILE_GLOB = 'account-profile-*.json'
 TRAINING_SESSION_GLOB = 'training-session-*.json'
 
-TRAINING_SESSION_REGEX = compile( r'^.*training-session-\d{4}-\d{2}-\d{2}-(\d+)\.json$' )
+TRAINING_SESSION_REGEX = compile( r'^.*training-session-(\d{4}-\d{2}-\d{2})-(\d+)(-([a-f0-9-]+))*\.json$' )
 
 PED_NS = 'http://www.polarpersonaltrainer.com'
 
@@ -568,39 +568,40 @@ class Polar( Service ):
 		if not self.ctx.force:
 			log.debug( f'checking db for already existing activities ...' )
 
-			existing = []
-			for af in activity_files:
-				if not self.db.contains_activity( UID( f'{self.name}:{TRAINING_SESSION_REGEX.fullmatch( af ).groups()[0]}' ) ):
-					existing.append( af )
+			for af, ex in zip_longest( activity_files, existing := [] ):
+				if m := TRAINING_SESSION_REGEX.fullmatch( af ):
+					uid = UID( f'{self.name}:{m.groups()[1]}' )
+					if not self.db.contains_activity( uid ):
+						existing.append( af )
 			activity_files = existing
 
 			log.debug( f'found {len( activity_files)} activities which do not yet exist in db' )
 
 		for file in activity_files:
-			id = TRAINING_SESSION_REGEX.fullmatch( file ).groups()[0]
-			session = self.json_handler.load( fs=src_fs, path=file )
-			session.path = path_for_id( id, self.name, f'{id}.session.json' )
-			session.source = f'{self.name}{file}'
-			session.type = POLAR_SESSION_TYPE
-			session.uid = UID( f'{self.name}:{id}' )
-
-			session_activity = self._session_importer.load_as_activity( resource=session )
+			id = TRAINING_SESSION_REGEX.fullmatch( file ).groups()[1]
+			session_activity = self._session_importer.load_as_activity( fs=src_fs, path=file )
 			session_activity.uid = UID( f'{self.name}:{id}' )
-			# session_activity.resources.append( session ) # todo: check why session is not appended automatically
+
+			session_resource = first_true( session_activity.resources, pred=lambda r: r.type == POLAR_SESSION_TYPE )
+			session_resource.path = path_for_id( id, self.name, f'{id}.session.json' )
+			session_resource.source = f'{self.name}{file}'
+			session_resource.uid = session_activity.uid
 
 			session_gpx = first_true( session_activity.resources, pred=lambda r: r.type == GPX_TYPE )
 			session_gpx.path = path_for_id( id, self.name, f'{id}.gpx' )
 			session_gpx.source = f'{self.name}{file}'
+			session_gpx.uid = session_activity.uid
 
 			session_tcx = first_true( session_activity.resources, pred=lambda r: r.type == TCX_TYPE )
 			session_tcx.path = path_for_id( id, self.name, f'{id}.tcx' )
 			session_tcx.source = f'{self.name}{file}'
+			session_tcx.uid = session_activity.uid
 
-			dst_fs.makedirs( dirname( session.path ), recreate=True )
-			dst_fs.writebytes( session.path, contents=session.content )
+			dst_fs.makedirs( dirname( session_resource.path ), recreate=True )
+			dst_fs.writebytes( session_resource.path, contents=session_resource.content )
 			dst_fs.writebytes( session_gpx.path, contents=session_gpx.content )
 			dst_fs.writebytes( session_tcx.path, contents=session_tcx.content )
-			log.debug( f'wrote summary + recordings to {dst_fs}/{session.path}' )
+			log.debug( f'wrote summary to {dst_fs}/{session_resource.path}' )
 
 			[ r.unload() for r in session_activity.resources ]
 			imported_activities.append( session_activity )
