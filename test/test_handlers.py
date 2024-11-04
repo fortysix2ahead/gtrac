@@ -3,6 +3,7 @@ from fs.osfs import OSFS
 from gpxpy.gpx import GPX
 from lxml.etree import tostring
 from lxml.objectify import ObjectifiedElement
+from plugins.polar import POLAR_SESSION_TYPE, PolarTrainingSessionImporter
 from pytest import mark, raises
 
 from tracs.errors import ResourceImportException
@@ -176,6 +177,16 @@ def test_polar_flow_importer( path ):
 
 	activity = importer.load_as_activity( path=path )
 	assert activity.starttime.isoformat() == '2011-04-28T15:48:10+00:00'
+
+@mark.file( 'environments/default/takeouts/polar/training-session-2022-10-16-7505780534-1f8335dd-19e4-439e-a1ae-5c2039d3586c.json' )
+def test_polar_session_importer( path ):
+	importer = PolarTrainingSessionImporter()
+	assert importer.TYPE == POLAR_SESSION_TYPE
+
+	activity = importer.load_as_activity( path )
+	assert [ r.type for r in activity.resources ] == [ POLAR_SESSION_TYPE, GPX_TYPE, TCX_TYPE ]
+	assert round( activity.distance ) == 1151
+	assert not activity.multipart
 
 @mark.skip
 @mark.file( 'templates/polar/personal_trainer/20160904.xml' )

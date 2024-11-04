@@ -350,46 +350,51 @@ class PolarTrainingSessionImporter( JSONHandler ):
 	ACTIVITY_CLS = PolarTrainingSession
 
 	def as_activity( self, resource: Resource ) -> Activity:
-		activity = super().as_activity( resource )
-		activity.uid = resource.uid
-		activities = Activities( activity )
+		parent_activity = super().as_activity( resource )
 		data = resource.data
 
-		for e in data.get( 'exercises', [] ):
+		for exc, act in zip( el := data.get( 'exercises', [] ), activities := [Activity() for e in el] ):
 
-			activity.ascent = resource.float( 'ascent', parent=e )
-			activity.cadence = resource.float( 'cadence', 'avg', parent=e )
-			activity.cadence_max = resource.float( 'cadence', 'max', parent=e )
-			activity.calories = resource.int( 'kiloCalories', parent=e )
-			activity.descent = resource.float( 'descent', parent=e )
-			activity.distance = resource.float( 'distance', parent=e )
-			activity.duration = resource.td( 'duration', parent=e )
-			activity.elevation = resource.float( 'altitude', 'avg', parent=e )
-			activity.elevation_max = resource.float( 'altitude', 'max', parent=e )
-			activity.elevation_min = resource.float( 'altitude', 'min', parent=e )
-			activity.heartrate = resource.int( 'heartRate', 'avg', parent=e )
-			activity.heartrate_max = resource.int( 'heartRate', 'max', parent=e )
-			activity.heartrate_min = resource.int( 'heartRate', 'min', parent=e )
-			activity.location_latitude_start = resource.float( 'latitude', parent=e )
-			activity.location_longitude_start = resource.float( 'longitude', parent=e )
-			activity.power = resource.float( 'power', 'avg', parent=e )
-			activity.power_max = resource.float( 'power', 'max', parent=e )
-			activity.speed = resource.float( 'speed', 'avg', parent=e )
-			activity.speed_max = resource.float( 'speed', 'max', parent=e )
-			activity.starttime = resource.utc( 'startTime', parent=e )
-			activity.endtime = resource.utc( 'stopTime', parent=e )
+			act.ascent = resource.float( 'ascent', parent=exc )
+			act.cadence = resource.float( 'cadence', 'avg', parent=exc )
+			act.cadence_max = resource.float( 'cadence', 'max', parent=exc )
+			act.calories = resource.int( 'kiloCalories', parent=exc )
+			act.descent = resource.float( 'descent', parent=exc )
+			act.distance = resource.float( 'distance', parent=exc )
+			act.duration = resource.td( 'duration', parent=exc )
+			act.elevation = resource.float( 'altitude', 'avg', parent=exc )
+			act.elevation_max = resource.float( 'altitude', 'max', parent=exc )
+			act.elevation_min = resource.float( 'altitude', 'min', parent=exc )
+			act.heartrate = resource.int( 'heartRate', 'avg', parent=exc )
+			act.heartrate_max = resource.int( 'heartRate', 'max', parent=exc )
+			act.heartrate_min = resource.int( 'heartRate', 'min', parent=exc )
+			act.location_latitude_start = resource.float( 'latitude', parent=exc )
+			act.location_longitude_start = resource.float( 'longitude', parent=exc )
+			act.power = resource.float( 'power', 'avg', parent=exc )
+			act.power_max = resource.float( 'power', 'max', parent=exc )
+			act.speed = resource.float( 'speed', 'avg', parent=exc )
+			act.speed_max = resource.float( 'speed', 'max', parent=exc )
+			act.starttime = resource.utc( 'startTime', parent=exc )
+			act.endtime = resource.utc( 'stopTime', parent=exc )
 
 			# todo: actually this not always correct - when an activity took place in a different timezone than the home zone
-			activity.timezone = get_timezone().zone
-			activity.starttime_local= activity.starttime.astimezone( tzlocal() )
-			activity.endtime_local= activity.endtime.astimezone( tzlocal() )
+			act.timezone = get_timezone().zone
+			act.starttime_local= act.starttime.astimezone( tzlocal() )
+			act.endtime_local= act.endtime.astimezone( tzlocal() )
+
+			act.resources.append( Resource(
+				content=resource.content,
+				type=POLAR_SESSION_TYPE,
+			) )
 
 			# create streams, todo: make this part more resilient, at the moment it's not clear what data can exist or be missing
 
-			if samples := e.get( 'samples' ):
-				points = [ Point() for p in range( len( samples.get( 'heartRate', [] ) ) ) ]
-				for pnt, alt, dst, hr, rr, spd in zip_longest(
+			if samples := exc.get( 'samples' ):
+				name, values = first( samples.items() )
+				points = [ Point() for p in range( len( values ) ) ]
+				for pnt, fst, alt, dst, hr, rr, spd in zip_longest(
 					points,
+					samples.get( name, [] ),
 					samples.get( 'altitude', [] ),
 					# samples.get( 'cadence', [] ),
 					samples.get( 'distance', [] ),
@@ -401,7 +406,7 @@ class PolarTrainingSessionImporter( JSONHandler ):
 					# samples.get( 'temperature' ),
 					fillvalue={}
 				):
-					pnt.time = to_isotime( hr.get( 'dateTime' ) ).astimezone( UTC )
+					pnt.time = to_isotime( fst.get( 'dateTime' ) ).astimezone( UTC )
 					pnt.alt = alt.get( 'value', None )
 					pnt.distance = dst.get( 'value', None )
 					pnt.hr = hr.get( 'value', None )
@@ -413,31 +418,25 @@ class PolarTrainingSessionImporter( JSONHandler ):
 				stream = Stream( points )
 				gpx = stream.as_gpx()
 				tcx = stream.as_tcx(
-					average_heart_rate_bpm=activity.heartrate,
-					calories=activity.calories,
-					distance_meters=activity.distance,
+					average_heart_rate_bpm=act.heartrate,
+					calories=act.calories,
+					distance_meters=act.distance,
 					# id=f'{summary.raw.get( "start_date_local" )}Z',
 					intensity='Active', # todo: don't know where to get this from
-					maximum_heart_rate_bpm=activity.heartrate_max,
-					maximum_speed=activity.speed_max,
-					start_date=activity.starttime,
+					maximum_heart_rate_bpm=act.heartrate_max,
+					maximum_speed=act.speed_max,
+					start_date=act.starttime,
 					# trigger_method = 'Distance', # todo: this is not correct
-					total_time_seconds=round( activity.duration.total_seconds() ),
+					total_time_seconds=round( act.duration.total_seconds() ),
 				)
 
-				activity.resources.append( Resource(
+				act.resources.append( Resource(
 					content = gpx.to_xml( prettyprint=True ).encode( 'UTF-8' ),
-					path = 'activity.gpx',
-					# source = None,
 					type = GPX_TYPE,
-					uid = resource.uid,
 				) )
-				activity.resources.append( Resource(
+				act.resources.append( Resource(
 					content = tostring( tcx.as_xml(), pretty_print=True ),
-					path = 'activity.tcx',
-					# source = None,
 					type = TCX_TYPE,
-					uid = resource.uid,
 				) )
 
 		if len( activities ) == 1:
