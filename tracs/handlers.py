@@ -28,13 +28,10 @@ class ResourceHandler:
 		self._factory: Callable = self.transform_data
 		self._osfs: OSFS = OSFS( '/' )
 
-		# todo: are these fields really needed? probably not ...
-		self.resource: Optional[Resource] = None
-		self.content: Optional[Union[bytes,str]] = None
-		self.raw: Any = None
-		self.data: Any = None
+	def load( self, path: Path|str = None, url: str = None, content: bytes|str = None, fs: FS = None, **kwargs ) -> Resource:
+		if resource := kwargs.get( 'resource' ):
+			path, content = resource.path, resource.content
 
-	def load( self, path: Path|str = None, url: str = None, content: bytes|str = None, fs: FS = None, **kwargs ) -> Optional[Resource]:
 		# load from either from path, fs or url, if neither is provided use content
 		if path and not fs:
 			fs, path = self._osfs, abspath( path )
@@ -53,8 +50,16 @@ class ResourceHandler:
 		# postprocess data, transform from raw into structured data
 		data = self.load_data( raw, **kwargs )
 
-		# return the result
-		return self.load_resource( fs, path, url, content=content, raw=raw, data=data, **kwargs )
+		# update/return the result
+		resource = resource or Resource()
+		resource.content, resource.raw, resource.data = content, raw, data
+		if not resource.path:
+			resource.path = path
+		if not resource.source:
+			resource.source = kwargs.get( 'source' ) or url
+		resource.type = self.__class__.TYPE
+
+		return resource
 
 	def load_as_activity( self, path: Path|str = None, url: str = None, content: bytes|str = None, fs: FS = None, **kwargs ) -> Activity:
 		"""This is basically the same as load(), but transforms the loaded activity into a resource.
@@ -62,16 +67,15 @@ class ResourceHandler:
 		In addition, it's possible to provide a resource as kwarg. In this case the content/raw/data from the resource
 		will be used to construct the activity or the resource will be populated.
 		"""
-		resource = kwargs.pop( 'resource', None ) or Resource()
-		if resource.content:
-			resource = self.load( content=resource.content, resource=resource, **kwargs )
-		else:
-			resource = self.load( path=path, fs=fs, url=url, content=content, resource=resource, **kwargs )
-
-		return self.as_activity( resource )
+		resource = self.load( path=path, fs=fs, url=url, content=content, **kwargs )
+		activity = self.as_activity( resource )
+		attach = kwargs.get( 'attach', True ) if 'resource' in kwargs.keys() else True
+		if attach:
+			activity.resources.append( resource )
+		return activity
 
 	def as_activity( self, resource: Resource ) -> Activity:
-		return Activity( resources=Resources( resource ) )
+		return Activity()
 
 	# load methods
 
@@ -151,18 +155,6 @@ class ResourceHandler:
 	# noinspection PyMethodMayBeStatic
 	def transform_data( self, raw: Any, **kwargs ):
 		return raw
-
-	def load_resource( self, fs: FS, path: str = None, url: str = None, **kwargs ) -> Resource:
-		content, raw, data = kwargs.get( 'content' ), kwargs.get( 'raw' ), kwargs.get( 'data' )
-		source = kwargs.get( 'source' ) or url
-		resource = kwargs.get( 'resource' ) or Resource()
-
-		resource.content, resource.raw, resource.data = content, raw, data
-		resource.type = self.__class__.TYPE
-		# resource.path = path
-		# resource.source = source # todo: we might already set the source depending on FS
-
-		return resource
 
 	# noinspection PyMethodMayBeStatic
 	def as_str( self, content: bytes, encoding: str = 'UTF-8' ) -> str:

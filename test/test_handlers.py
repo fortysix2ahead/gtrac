@@ -5,6 +5,7 @@ from lxml.etree import tostring
 from lxml.objectify import ObjectifiedElement
 from plugins.polar import POLAR_SESSION_TYPE, PolarTrainingSessionImporter
 from pytest import mark, raises
+from resources import Resource
 
 from tracs.errors import ResourceImportException
 from tracs.plugins.bikecitizens import BIKECITIZENS_TYPE, BikecitizensActivity, BikecitizensImporter
@@ -24,25 +25,55 @@ def test_resource_handler( path ):
 	content = b'{"data":1}'
 	json = { 'data': 1 }
 
-	assert handler.load_from_content( content ) == content
-	assert 'trainingLoadProInterpretation' in handler.load_from_path( path ).decode( 'UTF-8' )
-	fs = OSFS( str( path.parent ) )
-	assert 'trainingLoadProInterpretation' in handler.load_from_fs( fs, path.name ).decode( 'UTF-8' )
-	assert handler.load_raw( content ) == json
-	assert handler.load_data( json ) == json
+	# load directly from content
+	resource = handler.load( content=content )
+	assert resource.content == content and resource.data == json
 
-	# unified load method
-	assert handler.load( content=content ).data == json
-	data = handler.load( path ).data
-	assert isinstance( data, list ) and all( [ isinstance( l, dict ) for l in data ] )
-	data = handler.load( fs=fs, path=path.name ).data
-	assert isinstance( data, list ) and all( [ isinstance( l, dict ) for l in data ] )
+	# load from path
+	resource = handler.load( path=path )
+	assert all( [ 'trainingLoadProInterpretation' in e for e in resource.data ] )
+
+	# load from fs
+	resource = handler.load( fs=OSFS( str( path.parent ) ), path=path.name )
+	assert all( [ 'trainingLoadProInterpretation' in e for e in resource.data ] )
 
 	with raises( ResourceNotFound ):
 		handler.load( path='/some_non_existing_path' )
 
 	with raises( ResourceNotFound ):
-		handler.load( fs=fs, path='some_non_existing_path' )
+		handler.load( fs=OSFS( str( path.parent ) ), path='some_non_existing_path' )
+
+	# load from existing resource
+	resource = Resource( content=content )
+	handler.load( resource=resource )
+	assert resource.data == json
+	# loading from absolute path works
+	resource = Resource( path=str( path ) )
+	handler.load( resource=resource )
+	assert all( [ 'trainingLoadProInterpretation' in e for e in resource.data ] )
+	# loading from relative paths works when fs is provided
+	resource = Resource( path=path.name )
+	handler.load( resource=resource, fs=OSFS( str( path.parent ) ) )
+	assert all( [ 'trainingLoadProInterpretation' in e for e in resource.data ] )
+	# ... but not if fs is missing
+	with raises( ResourceNotFound ):
+		handler.load( resource=Resource( path=path.name ) )
+
+	# load as activity
+	activity = handler.load_as_activity( path=path )
+	assert all( [ 'trainingLoadProInterpretation' in e for e in activity.resources[0].data ] )
+	# this shall not make a difference as no resource is provided
+	activity = handler.load_as_activity( path=path, attach=False )
+	assert all( [ 'trainingLoadProInterpretation' in e for e in activity.resources[0].data ] )
+	# resource is attached to created activity
+	resource = Resource( content=content )
+	activity = handler.load_as_activity( resource=resource )
+	assert resource.data == json and activity.resources[0].data == json
+	assert activity.resources == [ resource ]
+	# resource is not attached to created activity
+	resource = Resource( content=content )
+	activity = handler.load_as_activity( resource=resource, attach=False )
+	assert resource.data == json and activity.resources == []
 
 @mark.file( 'environments/default/takeouts/waze/2020-09/account_activity_3.csv' )
 def test_csv_handler( path ):
@@ -184,7 +215,7 @@ def test_polar_session_importer( path ):
 	assert importer.TYPE == POLAR_SESSION_TYPE
 
 	activity = importer.load_as_activity( path )
-	assert [ r.type for r in activity.resources ] == [ POLAR_SESSION_TYPE, GPX_TYPE, TCX_TYPE ]
+	assert [ r.type for r in activity.resources ] == [ GPX_TYPE, TCX_TYPE, POLAR_SESSION_TYPE ]
 	assert round( activity.distance ) == 1151
 	assert not activity.multipart
 

@@ -515,6 +515,7 @@ class Waze( Service ):
 
 				uid = f'{self.name}:{ld.id()}'
 				path = f'{self.path_for_id( ld.id(), self.name )}/{ld.id()}.txt'
+				source = f'{self.name}{file}'
 
 				if self.ctx.force or not self.db.contains_resource( uid, path ):
 					# create and write summary
@@ -522,19 +523,18 @@ class Waze( Service ):
 						content=ld.coordinates.encode( 'UTF-8' ),
 						path=path,
 						raw=ld, # this allows to skip parsing again
-						source=f'{self.name}{file}',
 						type=WAZE_TYPE,
-						uid=uid
 					)
 
 					# create and write gpx
 					recording = Resource(
 						path=f'{summary.path[0:-3]}gpx',
-						source=summary.source,
 						type=GPX_TYPE,
-						uid=summary.uid
 					)
 					recording.raw, recording.content = to_gpx( summary.raw.as_point_list() )
+
+					for r in [ summary, recording ]:
+						r.source, r.uid = source, uid
 
 					dst_fs.makedirs( dirname( path ), recreate=True )
 					dst_fs.writebytes( summary.path, contents=summary.content )
@@ -542,7 +542,7 @@ class Waze( Service ):
 					log.debug( f'wrote summary and recording to {dst_fs}/{summary.path} + {recording.path}' )
 
 					# create activity and unload resources
-					drive = self._drive_importer.load_as_activity( resource=summary )
+					drive = self._drive_importer.load_as_activity( resource=summary, fs=dst_fs )
 					drive.resources.append( recording )
 					summary.unload()
 					recording.unload()

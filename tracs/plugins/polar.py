@@ -382,10 +382,11 @@ class PolarTrainingSessionImporter( JSONHandler ):
 			act.starttime_local= act.starttime.astimezone( tzlocal() )
 			act.endtime_local= act.endtime.astimezone( tzlocal() )
 
-			act.resources.append( Resource(
-				content=resource.content,
-				type=POLAR_SESSION_TYPE,
-			) )
+			# do not append, this is done in calling method automatically
+			# act.resources.append( Resource(
+			# 	content=resource.content,
+			# 	type=POLAR_SESSION_TYPE,
+			# ) )
 
 			# create streams, todo: make this part more resilient, at the moment it's not clear what data can exist or be missing
 
@@ -461,7 +462,7 @@ class PolarTrainingSessionImporter( JSONHandler ):
 			parent_activity.endtime_local= parent_activity.endtime.astimezone( tzlocal() )
 
 			# append main resource + recordings
-			parent_activity.resources.append( resource )
+			# parent_activity.resources.append( resource )
 			return parent_activity
 
 		else: # can this happen?
