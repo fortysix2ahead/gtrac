@@ -4,7 +4,7 @@ from typing import Optional, Union
 
 from fs.base import FS
 from fs.copy import copy_file
-from fs.path import dirname
+from fs.path import dirname, isparent, relativefrom
 from fs.zipfs import ReadZipFS
 
 from tracs.activity import Activities, Activity
@@ -81,7 +81,10 @@ class Local( Service ):
 						if isinstance( src_fs, ReadZipFS ):
 							resource.source = src_fs.geturl( src_path, purpose='fs' )
 						else:
-							resource.source = src_fs.geturl( src_path, purpose='download' )
+							if isparent( ld := self.ctx.lib_fs.getsyspath( '/' ), sp := src_fs.getsyspath( src_path ) ):
+								resource.source = relativefrom( ld, sp )
+							else:
+								resource.source = src_fs.geturl( src_path, purpose='download' )
 
 						# don't need to set the resource uid as activity uid is set
 						# resource.uid = UID( classifier, int( activity.starttime.strftime( "%y%m%d%H%M%S" ) ) )
