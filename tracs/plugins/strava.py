@@ -284,7 +284,7 @@ class Strava( Service ):
 				log.debug( f'wrote summary to {dst_fs}/{summary.path}' )
 
 				# create activity and unload resources
-				activity = self.importer.load_as_activity( resource=summary )
+				activity = self.importer.load_as_activity( resource=summary, fs=dst_fs )
 				activity.resources.append( tcx_recording )
 				if gpx_recording:
 					activity.resources.append( gpx_recording )
