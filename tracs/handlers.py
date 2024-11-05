@@ -7,12 +7,11 @@ from typing import Any, Callable, Optional, Type, Union
 
 from fs.base import FS
 from fs.osfs import OSFS
-from fs.path import basename
 from requests import Response, Session
 
 from tracs.activity import Activity
 from tracs.resources import Resource, Resources
-from utils import abspath
+from tracs.utils import abspath
 
 log = getLogger( __name__ )
 

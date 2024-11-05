@@ -20,7 +20,7 @@ from more_itertools.more import first, last, rstrip
 
 from tracs.protocols import Exporter, Importer
 from tracs.uid import UID
-from utils import to_isotime
+from tracs.utils import to_isotime
 
 log = getLogger( __name__ )
 

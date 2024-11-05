@@ -1,7 +1,6 @@
 from datetime import datetime, time, timedelta
 from itertools import chain, zip_longest
 from logging import getLogger
-from math import remainder
 from pathlib import Path
 from re import compile, match
 from sys import exit as sysexit
@@ -21,13 +20,11 @@ from fs.base import FS
 from fs.errors import CreateFailed
 from fs.path import dirname
 from fs.zipfs import ReadZipFS
-from helpers import gpx_resource
 from lxml.etree import tostring
 from more_itertools import first, first_true
 from regex import compile
 from requests_cache import CachedSession
 from rich.prompt import Prompt
-from streams import Point, Stream
 
 from tracs.activity import Activities, Activity, ActivityPart
 from tracs.activity_types import ActivityTypes, ActivityTypes as Types
@@ -41,6 +38,7 @@ from tracs.plugins.tcx import TCX_TYPE
 from tracs.plugins.xml import XMLHandler
 from tracs.resources import Resource
 from tracs.service import Service, path_for_id
+from tracs.streams import Point, Stream
 from tracs.utils import seconds_to_time, to_isotime
 from tracs.uid import UID
 

@@ -6,7 +6,7 @@ from attrs import define
 from fs.base import FS
 from more_itertools.recipes import first_true
 
-from plugins.json import JSONHandler
+from tracs.plugins.json import JSONHandler
 from tracs.resources import Resource
 from tracs.uid import UID
 
