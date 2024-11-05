@@ -92,6 +92,6 @@ class Local( Service ):
 						log.info( f'skipping import of {src_fs}/{src_path}, resource already exists' )
 
 				except (AttributeError, ResourceImportException):
-					log.error( f'unable to read GPX file from FS {src_fs}, path {path}/{f.name}' )
+					log.error( f'unable to read GPX file from FS {src_fs}, path {path}/{f.name}', exc_info=True )
 
 		return activities
