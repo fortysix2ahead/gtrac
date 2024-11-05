@@ -18,14 +18,15 @@ from tracs.utils import fmt, red
 log = getLogger( __name__ )
 
 # noinspection PyTestUnpassedFixture
-def list_activities( activities: List[Activity], sort: str = False, reverse: bool = False, format_name: str = False, fields: str = None, ctx: ApplicationContext = None ) -> None:
+def list_activities( activities: List[Activity], sort: str = None, reverse: bool = False, format_name: str = False, fields: str = None, ctx: ApplicationContext = None ) -> None:
 	sort = sort or 'starttime'
 	fields = fields or []
 
-	if sort in Activity.field_names():
-		activities.sort( key=lambda act: getattr( act, sort, None ) )
-	else:
-		log.warning( f'ignoring unknown sort field "{sort}", falling back to "starttime"' )
+	try:
+		activities = sorted( activities, key=lambda act: ( ( att := getattr( act, sort, None ) ) is None, att ) )
+	except (AttributeError, TypeError):
+		log.warning( f'unable to sort for field "{sort}", falling back to "starttime"' )
+		activities = sorted( activities, key=lambda act: getattr( act, "starttime" ) )
 
 	if reverse:
 		activities.reverse()
