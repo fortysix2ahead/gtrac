@@ -18,7 +18,7 @@ from tracs.fsio import backup_db, restore_db
 from tracs.group import group_activities, part_activities, ungroup_activities, unpart_activities
 from tracs.inspct import inspect_activities, inspect_keywords, inspect_plugins, inspect_registry, inspect_resources
 from tracs.link import link_activities
-from tracs.list import list_activities, show_config, show_fields
+from tracs.list import list_activities, show_config, show_fields, show_filters
 from tracs.setup import setup as setup_application
 from tracs.show import show_activities, show_aggregate, show_equipments, show_keywords, show_resources, show_tags, show_types
 from tracs.validate import validate_activities
@@ -94,6 +94,11 @@ def commit( ctx: ApplicationContext ):
 @cli.command( help='prints information about fields that can be used for filtering' )
 def fields():
 	show_fields()
+
+@cli.command( help='prints predefined filter expressions' )
+@pass_obj
+def filters( ctx: ApplicationContext ):
+	show_filters( ctx )
 
 @cli.command( 'import', hidden=True, help='imports activities' )
 @option( '-a', '--fetch-all', required=False, hidden=True, default=False, is_flag=True, type=bool, help='always fetch all activities instead of the most recent ones' )

@@ -35,6 +35,10 @@ formats:
 
 filters:
   default:
+  bikecitizens: classifier:bikecitizens
+  polar: classifier:polar
+  strava: classifier:strava
+  waze: classifier:waze
 
 import:
   fetch_all: false # always fetch all activities, setting this to true will ignore the value for range
