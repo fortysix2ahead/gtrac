@@ -339,29 +339,30 @@ def vproperty( **kwargs ):
 	return inner
 
 @define
-class FormattedField:
+class FieldFormatter:
 
 	name: str = field( default=None )
-	formatter: Callable = field( default=None )
 	format: str = field( default=None )
 	locale: str = field( default=None )
 
-	def __call__( self, value: Any ) -> Any:
-		return self.__format__( value )
+	formatter: Callable = field( default=None )
 
-	def __format__( self, value: Any ) -> Any:
-		return self.formatter( value, self.format, self.locale )
+	def __call__( self, value: Any, format: str = None, locale: str = None ) -> Any:
+		return self.__format__( value, format, locale )
+
+	def __format__( self, value: Any, format: str = None, locale: str = None ) -> Any:
+		return self.formatter( value, format or self.format, locale or self.locale )
 
 @define( slots=False )
-class FormattedFields:
+class FieldFormatters:
 
 	__default_fmf__: ClassVar[str] = '__default__'
 
-	__fields__: Dict[str, FormattedField] = field( factory=dict, alias='__fields__' )
+	__fields__: Dict[str, FieldFormatter] = field( factory=dict, alias='__fields__' )
 	__parent_cls__: Type = field( default=None, alias='__parent_cls__' )
 	__parent__: Any = field( default=None, alias='__parent__' )
 
-	def __call__( self, parent: Any ) -> FormattedFields:
+	def __call__( self, parent: Any ) -> FieldFormatters:
 		if parent is None:
 			raise AttributeError( 'FormattedFields instance cannot be used without a parent instance' )
 
@@ -379,19 +380,19 @@ class FormattedFields:
 			# return getattr( self.__parent__, name )
 			return self.__fields__.get( self.__class__.__default_fmf__ )( getattr( self.__parent__, name, None ) )
 
-	def __getitem__( self, key: str ) -> FormattedField:
+	def __getitem__( self, key: str ) -> FieldFormatter:
 		return self.__fields__[key]
 
-	def __setitem__( self, key: str, field: FormattedField | Callable ) -> None:
+	def __setitem__( self, key: str, field: FieldFormatter | Callable ) -> None:
 		if not callable( field ):
-			raise ValueError( f'value must be of type {FormattedField} or Callable' )
+			raise ValueError( f'value must be of type {FieldFormatter} or Callable' )
 
-		if not isinstance( field, FormattedField ):
-			field = FormattedField( name=key, formatter=field )
+		if not isinstance( field, FieldFormatter ):
+			field = FieldFormatter( name=key, formatter=field )
 
 		self.__fields__[key] = field
 
-	def add( self, field: FormattedField ) -> None:
+	def add( self, field: FieldFormatter ) -> None:
 		self[field.name] = field
 
 	def as_list( self, *fields: str, suppress_error: bool = False, converter: Callable = None ) -> List[str]:
@@ -409,7 +410,7 @@ class FormattedFields:
 		return results
 
 	@property
-	def fields( self ) -> Dict[str, Union[FormattedField, Callable]]:
+	def fields( self ) -> Dict[str, Union[FieldFormatter, Callable]]:
 		return self.__fields__
 
 	@property
@@ -423,14 +424,17 @@ class FormattedFields:
 @define
 class FormattedFieldsBase( AttrsInstance ):
 
-	__fmf__: ClassVar[FormattedFields] = FormattedFields()
+	__fmf__: ClassVar[FieldFormatters] = FieldFormatters()
 
 	@classmethod
-	def FMF( cls ) -> FormattedFields:
+	def FMF( cls ) -> FieldFormatters:
 		return cls.__fmf__
 
 	@property
-	def fmf( self ) -> FormattedFields:
+	def fmf( self ) -> FieldFormatters:
+		return self.__class__.__fmf__( self )
+
+	def format( self, name: str, fmt: str = None, locale: str = None, suppress_errors: bool = False ) -> str:
 		return self.__class__.__fmf__( self )
 
 @define
