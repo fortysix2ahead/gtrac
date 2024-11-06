@@ -17,7 +17,7 @@ from tzlocal import get_localzone_name
 from tracs.activity_types import ActivityTypes
 from tracs.core import FormattedFieldsBase, Metadata, VirtualFieldsBase
 from tracs.resources import Resource, Resources
-from tracs.ui.utils import fmt_default
+from tracs.ui.utils import fmt_datetime, fmt_default
 from tracs.uid import UID
 from tracs.utils import fromisoformat, str_to_timedelta, sum_timedeltas, timedelta_to_str, toisoformat, unique_sorted
 
@@ -607,3 +607,5 @@ Activity.converter.register_structure_hook( Resources, lambda obj, cls: Resource
 # configure formatting
 
 Activity.__fmf__['__default__'] = fmt_default
+for f in [ 'starttime', 'starttime_local', 'endtime', 'endtime_local' ]:
+	Activity.__fmf__[f] = fmt_datetime
