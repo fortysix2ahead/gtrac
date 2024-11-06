@@ -44,7 +44,7 @@ def list_activities( activities: List[Activity], sort: str = None, reverse: bool
 	table = create_table(
 		box_name=ctx.config.formats.table.box,
 		headers=[ f for f in list_fields ],
-		rows=[ a.fmf.as_list( *list_fields ) for a in activities ],
+		rows=[ a.format_as_list( *list_fields, suppress_errors=True ) for a in activities ],
 	)
 
 	if len( table.rows ) > 0:

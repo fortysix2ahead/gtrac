@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from atexit import register as register_atexit
 from logging import getLogger
-from os.path import expanduser, expandvars
-from pathlib import Path
 from typing import ClassVar, Optional, Tuple
 
 from attrs import define, field
 from dynaconf import Dynaconf as Configuration
 
 from tracs import setup_console_logging, setup_file_logging
+from tracs.activity import configure_formatters as configure_activity_formatters
 from tracs.config import ApplicationContext, set_current_ctx
 from tracs.db import ActivityDb
 from tracs.pluginmgr import PluginManager
@@ -121,8 +120,9 @@ class Application:
 			normalizers=self.registry.normalizers,
 		)
 
-		# ---- announce context/configuration to utils module ----
+		# ---- announce context/configuration to utils module + configure formatters ----
 		UCFG.reconfigure( self._ctx.config )
+		configure_activity_formatters( self._ctx.config.formats )
 
 		# ---- register cleanup functions ----
 		register_atexit( self._ctx.db.close )
