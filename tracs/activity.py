@@ -17,7 +17,7 @@ from tzlocal import get_localzone_name
 from tracs.activity_types import ActivityTypes
 from tracs.core import FormattedFieldsBase, Metadata, VirtualFieldsBase
 from tracs.resources import Resource, Resources
-from tracs.ui.utils import fmt_datetime, fmt_default, fmt_timedelta
+from tracs.ui.utils import fmt_datetime, fmt_decimal, fmt_default, fmt_timedelta
 from tracs.uid import UID
 from tracs.utils import fromisoformat, str_to_timedelta, sum_timedeltas, timedelta_to_str, toisoformat, unique_sorted
 
@@ -611,3 +611,5 @@ for f in [ 'starttime', 'starttime_local', 'endtime', 'endtime_local' ]:
 	Activity.__fmf__[f] = fmt_datetime
 for f in [ 'duration', 'duration_moving' ]:
 	Activity.__fmf__[f] = fmt_timedelta
+for f in [ 'distance', 'ascent', 'descent', 'elevation', 'elevation_max', 'elevation_min', 'speed', 'speed_max' ]:
+	Activity.__fmf__[f] = fmt_decimal
