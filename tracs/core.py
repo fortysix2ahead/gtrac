@@ -355,6 +355,8 @@ class FormattedField:
 @define( slots=False )
 class FormattedFields:
 
+	__default_fmf__: ClassVar[str] = '__default__'
+
 	__fields__: Dict[str, FormattedField] = field( factory=dict, alias='__fields__' )
 	__parent_cls__: Type = field( default=None, alias='__parent_cls__' )
 	__parent__: Any = field( default=None, alias='__parent__' )
@@ -374,7 +376,8 @@ class FormattedFields:
 			return self.__fields__.get( name )( getattr( self.__parent__, name ) )
 		else:
 			# todo: this return the parent value, we could also call str( value ) here instead, to be decided later
-			return getattr( self.__parent__, name )
+			# return getattr( self.__parent__, name )
+			return self.__fields__.get( self.__class__.__default_fmf__ )( getattr( self.__parent__, name, None ) )
 
 	def __getitem__( self, key: str ) -> FormattedField:
 		return self.__fields__[key]

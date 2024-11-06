@@ -33,20 +33,18 @@ def list_activities( activities: List[Activity], sort: str = None, reverse: bool
 
 	if fields:
 		list_fields = fields.split()
-
 	elif format_name:
 		try:
 			list_fields = ctx.config.formats.list[format_name].split()
 		except BoxKeyError:
 			list_fields = ctx.config.formats.list['default'].split()
-
 	else:
 		list_fields = ctx.config.formats.list['default'].split()
 
 	table = create_table(
 		box_name=ctx.config.formats.table.box,
 		headers=[ f for f in list_fields ],
-		rows=[ [fmt( a.getattr( f ) ) for f in list_fields] for a in activities ],
+		rows=[ a.fmf.as_list( *list_fields ) for a in activities ],
 	)
 
 	if len( table.rows ) > 0:
