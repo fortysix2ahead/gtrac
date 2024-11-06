@@ -4,6 +4,7 @@ from logging import getLogger
 from typing import List, Optional, Tuple
 
 from click import argument, Choice, Context as ClickContext, group, option, pass_context, pass_obj, Path as ClickPath
+from click_aliases import ClickAliasedGroup
 from click_shell import make_click_shell
 from rule_engine import RuleSyntaxError
 
@@ -34,7 +35,7 @@ def setup_context( *args, **kwargs ) -> None:
 def teardown_context( *args, **kwargs ) -> None:
 	pass
 
-@group()
+@group( cls=ClickAliasedGroup )
 # @shell( prompt=f'{APPNAME} > ', intro=f'Starting interactive shell mode, enter <exit> to leave this mode again, use <{APPNAME} --help> for help ...' )
 @option( '-c', '--configuration', is_flag=False, required=False, help='configuration area location', metavar='PATH' )
 @option( '-l', '--library', is_flag=False, required=False, help='library location', metavar='PATH' )
@@ -136,7 +137,7 @@ def download( ctx: ApplicationContext, filters ):
 def link( ctx: ApplicationContext, filters ):
 	link_activities( ctx, _flt( *filters ) )
 
-@cli.command( 'list', help='lists activities' )
+@cli.command( 'list', help='lists activities', aliases=['ls'] )
 @option( '-s', '--sort', is_flag=False, required=False, help='sorts the output according to an attribute' )
 @option( '-r', '--reverse', is_flag=True, required=False, help='reverses sort order' )
 @option( '-f', '--format', 'format_name', is_flag=False, required=False, type=str, help='uses the format with the provided name when printing', metavar='FORMAT' )

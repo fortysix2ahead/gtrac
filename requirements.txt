@@ -5,6 +5,7 @@ Babel~=2.16.0
 bottle~=0.13.2
 cattrs~=24.1.2
 click~=8.1.7
+click-aliases~=1.0.4
 click-shell~=2.1.0
 DateTimeRange~=2.3.0
 dynaconf~=3.2.6
