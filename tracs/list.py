@@ -18,34 +18,33 @@ from tracs.utils import fmt, red
 log = getLogger( __name__ )
 
 # noinspection PyTestUnpassedFixture
-def list_activities( activities: List[Activity], sort: str = False, reverse: bool = False, format_name: str = False, fields: str = None, ctx: ApplicationContext = None ) -> None:
+def list_activities( activities: List[Activity], sort: str = None, reverse: bool = False, format_name: str = False, fields: str = None, ctx: ApplicationContext = None ) -> None:
 	sort = sort or 'starttime'
 	fields = fields or []
 
-	if sort in Activity.field_names():
-		activities.sort( key=lambda act: getattr( act, sort, None ) )
-	else:
-		log.warning( f'ignoring unknown sort field "{sort}", falling back to "starttime"' )
+	try:
+		activities = sorted( activities, key=lambda act: ( ( att := getattr( act, sort, None ) ) is None, att ) )
+	except (AttributeError, TypeError):
+		log.warning( f'unable to sort for field "{sort}", falling back to "starttime"' )
+		activities = sorted( activities, key=lambda act: getattr( act, "starttime" ) )
 
 	if reverse:
 		activities.reverse()
 
 	if fields:
 		list_fields = fields.split()
-
 	elif format_name:
 		try:
 			list_fields = ctx.config.formats.list[format_name].split()
 		except BoxKeyError:
 			list_fields = ctx.config.formats.list['default'].split()
-
 	else:
 		list_fields = ctx.config.formats.list['default'].split()
 
 	table = create_table(
 		box_name=ctx.config.formats.table.box,
 		headers=[ f for f in list_fields ],
-		rows=[ [fmt( a.getattr( f ) ) for f in list_fields] for a in activities ],
+		rows=[ a.format_as_list( *list_fields, suppress_errors=True ) for a in activities ],
 	)
 
 	if len( table.rows ) > 0:

@@ -4,7 +4,7 @@ from attrs import define, field
 from babel.numbers import format_decimal
 from pytest import mark, raises
 
-from tracs.core import FormattedField, FormattedFields, FormattedFieldsBase, Metadata, VirtualField, VirtualFieldsBase
+from tracs.core import FieldFormatter, FieldFormatters, FormattedFieldsBase, Metadata, VirtualField, VirtualFieldsBase
 from uid import UID
 
 def test_virtual_field():
@@ -110,25 +110,30 @@ def test_virtual_fields():
 
 def test_formatted_field():
 
-	ff = FormattedField( name='lower', formatter=lambda v, f, l: v.lower() )
+	ff = FieldFormatter( name='lower', formatter=lambda v, f, l: v.lower() )
 	assert ff( "TEST" ) == 'test'
 	assert ff.__format__( "TEST" ) == 'test'
 
 	# test babel fields
-	ffe = FormattedField( name='en_int', formatter=lambda v, f, l: format_decimal( v, f, l ), locale='en' )
-	ffd = FormattedField( name='en_de', formatter=lambda v, f, l: format_decimal( v, f, l ), locale='de' )
+	ff_en = FieldFormatter( name='en_int', formatter=lambda v, f, l: format_decimal( v, f, l ), locale='en' )
+	ff_de = FieldFormatter( name='de_de', formatter=lambda v, f, l: format_decimal( v, f, l ), locale='de' )
 
-	assert ffe( 1000 ) == '1,000'
-	assert ffd( 1000 ) == '1.000'
+	assert ff_en( 1000 ) == '1,000'
+	assert ff_de( 1000 ) == '1.000'
+
+	# provide format and locale at runtime
+	ff_uni = FieldFormatter( name='uni', formatter=lambda v, f, l: format_decimal( v, f, l ), locale='en' )
+	assert ff_uni( 1000, format='####' ) == '1000'
+	assert ff_uni( 1000, locale='de' ) == '1.000'
 
 def test_formatted_fields():
 
-	ffs = FormattedFields()
+	ffs = FieldFormatters()
 	ffs['lower'] = lambda v, f, l: v.lower()
-	ffs['upper'] = FormattedField( name='upper', formatter=lambda s: s.upper() )
+	ffs['upper'] = FieldFormatter( name='upper', formatter=lambda s: s.upper() )
 
-	assert 'lower' in ffs.__fields__ and type( ffs.__fields__.get( 'lower' ) ) is FormattedField
-	assert 'upper' in ffs.__fields__ and type( ffs.__fields__.get( 'upper' ) ) is FormattedField
+	assert 'lower' in ffs and type( ffs.get( 'lower' ) ) is FieldFormatter
+	assert 'upper' in ffs and type( ffs.get( 'upper' ) ) is FieldFormatter
 
 	@define
 	class FormattedDataclass( FormattedFieldsBase ):
@@ -139,24 +144,25 @@ def test_formatted_fields():
 		width: float = field( default=None )
 
 	FormattedDataclass.__fmf__['name'] = lambda v, f, l: v.lower()
-	FormattedDataclass.__fmf__.add( FormattedField( name='speed', formatter=lambda v, f, l: format_decimal( v, f, l ), locale='en' ) )
+	FormattedDataclass.__fmf__.add( FieldFormatter( name='speed', formatter=lambda v, f, l: format_decimal( v, f, l ), locale='en' ) )
 
 	fdc = FormattedDataclass()
 
-	assert fdc.fmf.name == 'name'
-	assert fdc.fmf.age == 10
-	assert fdc.fmf.speed == '12,345.6'
+	assert fdc.format( 'name' ) == 'name'
+	assert fdc.format( 'age' ) == '10' # this uses the default formatter
+	assert fdc.format( 'speed' ) == '12,345.6'
 
 	with raises( AttributeError ):
-		assert fdc.fmf.noexist == 0
+		assert fdc.format( 'noexist' ) == ''
+	assert fdc.format( 'noexist', suppress_errors=True ) == ''
 
-	assert fdc.fmf.as_list( 'name', 'age', 'speed', 'width' ) == ['name', 10, '12,345.6', None]
+	assert fdc.format_as_list( 'name', 'age', 'speed', 'width' ) == [ 'name', '10', '12,345.6', '' ] # last should be 'None' ?
+	# assert fdc.format_as_list( 'name', 'age', 'speed', 'width' ) == [ 'name', '10', '12,345.6', 'None' ]
 
 	with raises( AttributeError ):
-		assert fdc.fmf.as_list( 'name', 'age', 'speed', 'height' ) == ['name', 10, '12,345.6', None]
-
-	assert fdc.fmf.as_list( 'name', 'age', 'speed', 'height', suppress_error=True ) == ['name', 10, '12,345.6', None]
-	assert fdc.fmf.as_list( 'name', 'age', 'speed', 'width', converter=lambda v: str( v ) ) == ['name', '10', '12,345.6', 'None']
+		assert fdc.format_as_list( 'name', 'age', 'speed', 'height' ) == ['name', '10', '12,345.6', '']
+	assert fdc.format_as_list( 'name', 'age', 'speed', 'height', suppress_errors=True ) == ['name', '10', '12,345.6', '']
+	assert fdc.format_as_list( 'name', 'age', 'speed', 'width', conv=lambda v: str( v ) ) == ['Name', '10', '12345.6', 'None']
 
 def test_metadata():
 

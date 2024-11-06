@@ -339,96 +339,63 @@ def vproperty( **kwargs ):
 	return inner
 
 @define
-class FormattedField:
+class FieldFormatter:
 
 	name: str = field( default=None )
-	formatter: Callable = field( default=None )
 	format: str = field( default=None )
 	locale: str = field( default=None )
 
-	def __call__( self, value: Any ) -> Any:
-		return self.__format__( value )
+	formatter: Callable = field( default=None )
 
-	def __format__( self, value: Any ) -> Any:
-		return self.formatter( value, self.format, self.locale )
+	def __call__( self, value: Any, format: str = None, locale: str = None ) -> Any:
+		return self.__format__( value, format, locale )
 
-@define( slots=False )
-class FormattedFields:
+	def __format__( self, value: Any, format: str = None, locale: str = None ) -> Any:
+		return self.formatter( value, format or self.format, locale or self.locale )
 
-	__fields__: Dict[str, FormattedField] = field( factory=dict, alias='__fields__' )
-	__parent_cls__: Type = field( default=None, alias='__parent_cls__' )
-	__parent__: Any = field( default=None, alias='__parent__' )
+class FieldFormatters( dict[str, FieldFormatter] ):
 
-	def __call__( self, parent: Any ) -> FormattedFields:
-		if parent is None:
-			raise AttributeError( 'FormattedFields instance cannot be used without a parent instance' )
+	__default_formatter_name__: ClassVar[str] = '__default__'
+	__default_formatter__: ClassVar[FieldFormatter] = FieldFormatter( __default_formatter_name__, formatter=str )
 
-		self.__parent__ = parent
-		return self
-
-	def __getattr__( self, name: str ) -> Any:
-		if self.__parent__ is None:
-			raise AttributeError( 'FormattedFields instance cannot be used without a parent instance' )
-
-		if name in self.__fields__:
-			return self.__fields__.get( name )( getattr( self.__parent__, name ) )
-		else:
-			# todo: this return the parent value, we could also call str( value ) here instead, to be decided later
-			return getattr( self.__parent__, name )
-
-	def __getitem__( self, key: str ) -> FormattedField:
-		return self.__fields__[key]
-
-	def __setitem__( self, key: str, field: FormattedField | Callable ) -> None:
+	def __setitem__( self, key: str, field: FieldFormatter|Callable ) -> None:
 		if not callable( field ):
-			raise ValueError( f'value must be of type {FormattedField} or Callable' )
+			raise ValueError( f'value must be of type {FieldFormatter} or Callable' )
 
-		if not isinstance( field, FormattedField ):
-			field = FormattedField( name=key, formatter=field )
+		if not isinstance( field, FieldFormatter ):
+			field = FieldFormatter( name=key, formatter=field )
 
-		self.__fields__[key] = field
+		super().__setitem__( key, field )
 
-	def add( self, field: FormattedField ) -> None:
+	def add( self, field: FieldFormatter ) -> None:
 		self[field.name] = field
-
-	def as_list( self, *fields: str, suppress_error: bool = False, converter: Callable = None ) -> List[str]:
-		results = []
-		if suppress_error:
-			for f in fields:
-				try:
-					results.append( getattr( self, f ) )
-				except AttributeError:
-					results.append( None )
-		else:
-			results = [ getattr( self, f ) for f in fields ]
-
-		results = [ converter( r ) for r in results ] if converter else results
-		return results
-
-	@property
-	def fields( self ) -> Dict[str, Union[FormattedField, Callable]]:
-		return self.__fields__
-
-	@property
-	def parent( self ) -> Any:
-		return self.__parent__
-
-	@property
-	def parent_cls( self ) -> Type:
-		return self.__parent_cls__
 
 @define
 class FormattedFieldsBase( AttrsInstance ):
 
-	__fmf__: ClassVar[FormattedFields] = FormattedFields()
+	__fmf__: ClassVar[FieldFormatters] = FieldFormatters()
 
 	@classmethod
-	def FMF( cls ) -> FormattedFields:
+	def field_formatters( cls ) -> FieldFormatters:
 		return cls.__fmf__
 
-	@property
-	def fmf( self ) -> FormattedFields:
-		return self.__class__.__fmf__( self )
+	def format( self, name: str, fmt: str = None, locale: str = None, suppress_errors: bool = False ) -> str:
+		if not ( formatter := self.__class__.__fmf__.get( name ) ):
+			formatter = self.__class__.__fmf__.get( FieldFormatters.__default_formatter_name__ )
+
+		if suppress_errors:
+			try:
+				return formatter( getattr( self, name ), fmt, locale )
+			except Exception:
+				return ''
+		else:
+			return formatter( getattr( self, name ), fmt, locale )
+
+	def format_as_list( self, *fields, fmt: str = None, locale: str = None, conv: Callable = None, suppress_errors: bool = False ) -> List[str]:
+		if conv:
+			return [ conv( getattr( self, f ) ) for f in fields ]
+		else:
+			return [ self.format( f, fmt, locale, suppress_errors ) for f in fields ]
 
 @define
 class Keyword:

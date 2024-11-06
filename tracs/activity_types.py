@@ -88,6 +88,14 @@ class ActivityTypes( Enum ):
 	def values( cls ):
 		return list( map( lambda c: c.value, cls ) )
 
+	# properties
+
+	def __repr__( self ) -> str:
+		return f'{self.name} <{self.value}>'
+
+	def __str__( self ) -> str:
+		return self.value
+
 	@property
 	def abbreviation( self ) -> str:
 		return ':sports_medal:'
