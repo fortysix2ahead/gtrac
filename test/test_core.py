@@ -132,8 +132,8 @@ def test_formatted_fields():
 	ffs['lower'] = lambda v, f, l: v.lower()
 	ffs['upper'] = FieldFormatter( name='upper', formatter=lambda s: s.upper() )
 
-	assert 'lower' in ffs.__fields__ and type( ffs.__fields__.get( 'lower' ) ) is FieldFormatter
-	assert 'upper' in ffs.__fields__ and type( ffs.__fields__.get( 'upper' ) ) is FieldFormatter
+	assert 'lower' in ffs and type( ffs.get( 'lower' ) ) is FieldFormatter
+	assert 'upper' in ffs and type( ffs.get( 'upper' ) ) is FieldFormatter
 
 	@define
 	class FormattedDataclass( FormattedFieldsBase ):
@@ -148,20 +148,21 @@ def test_formatted_fields():
 
 	fdc = FormattedDataclass()
 
-	assert fdc.fmf.name == 'name'
-	assert fdc.fmf.age == '10'
-	assert fdc.fmf.speed == '12,345.6'
+	assert fdc.format( 'name' ) == 'name'
+	assert fdc.format( 'age' ) == '10' # this uses the default formatter
+	assert fdc.format( 'speed' ) == '12,345.6'
 
 	with raises( AttributeError ):
-		assert fdc.fmf.noexist == ''
+		assert fdc.format( 'noexist' ) == ''
+	assert fdc.format( 'noexist', suppress_errors=True ) == ''
 
-	assert fdc.fmf.as_list( 'name', 'age', 'speed', 'width' ) == ['name', '10', '12,345.6', '']
+	assert fdc.format_as_list( 'name', 'age', 'speed', 'width' ) == [ 'name', '10', '12,345.6', '' ] # last should be 'None' ?
+	# assert fdc.format_as_list( 'name', 'age', 'speed', 'width' ) == [ 'name', '10', '12,345.6', 'None' ]
 
 	with raises( AttributeError ):
-		assert fdc.fmf.as_list( 'name', 'age', 'speed', 'height' ) == ['name', '10', '12,345.6', '']
-
-	assert fdc.fmf.as_list( 'name', 'age', 'speed', 'height', suppress_error=True ) == ['name', 10, '12,345.6', None]
-	assert fdc.fmf.as_list( 'name', 'age', 'speed', 'width', converter=lambda v: str( v ) ) == ['name', '10', '12,345.6', 'None']
+		assert fdc.format_as_list( 'name', 'age', 'speed', 'height' ) == ['name', '10', '12,345.6', '']
+	assert fdc.format_as_list( 'name', 'age', 'speed', 'height', suppress_errors=True ) == ['name', '10', '12,345.6', '']
+	assert fdc.format_as_list( 'name', 'age', 'speed', 'width', conv=lambda v: str( v ) ) == ['Name', '10', '12345.6', 'None']
 
 def test_metadata():
 
