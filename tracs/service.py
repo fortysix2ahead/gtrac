@@ -250,6 +250,7 @@ class Service( Plugin ):
 		src_path = kwargs.get( 'path' )
 
 		classifier = kwargs.get( 'classifier' ) or self.name
+		type = kwargs.get( 'type' )
 
 		skip_fetch = kwargs.get( 'skip_fetch', False )
 		skip_download = kwargs.get( 'skip_download', False )
@@ -259,7 +260,7 @@ class Service( Plugin ):
 		# actual import from local fs or remote
 		if src_fs and self.supports_fs_import( src_fs, src_path ):
 			log.debug( f'service {self.name} supports import from {src_fs}' )
-			activities = self.import_from_fs( src_fs, dst_fs, path=src_path, classifier=classifier )
+			activities = self.import_from_fs( src_fs, dst_fs, path=src_path, classifier=classifier, type=type )
 
 		elif self.supports_remote_import():
 			activities = self.import_from_remote( dst_fs, range_from=range_from, range_to=range_to )

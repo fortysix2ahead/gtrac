@@ -106,17 +106,11 @@ def filters( ctx: ApplicationContext ):
 @option( '-m', '--move', required=False, hidden=True, is_flag=True, help='remove resources after import (dangerous, applies for imports from takeouts only)' )
 @option( '-sd', '--skip-download', hidden=True, required=False, is_flag=True, help='skips download of activities' )
 @option( '-t', '--from-takeouts', required=False, is_flag=True, help='imports activities from takeouts folder (plugin needs to support this)' )
+@option( '-tp', '--type', required=False, is_flag=False, help='use type to activties', type=str )
 @argument( 'sources', nargs=-1 )
 @pass_obj
-def imprt( ctx: ApplicationContext,
-           sources,
-           fetch_all: bool,
-           skip_download: bool = False,
-           move: bool = False,
-           from_takeouts: str = None,
-           classifier: str = None,
-           ):
-	activities = import_activities( ctx, sources, fetch_all=fetch_all, skip_download=skip_download, move=move, from_takeouts=from_takeouts, classifier=classifier )
+def imprt( ctx: ApplicationContext, sources, fetch_all: bool, skip_download: bool, move: bool, from_takeouts: str, classifier: str, type: str ):
+	activities = import_activities( ctx, sources, fetch_all=fetch_all, skip_download=skip_download, move=move, from_takeouts=from_takeouts, classifier=classifier, type=type )
 
 	if ctx.json:
 		ctx.console.print_json( data=activities.to_dict() )

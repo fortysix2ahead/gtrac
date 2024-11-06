@@ -7,7 +7,7 @@ from fs.copy import copy_file
 from fs.path import dirname, isparent, relativefrom
 from fs.zipfs import ReadZipFS
 
-from tracs.activity import Activities, Activity
+from tracs.activity import Activities, Activity, ActivityTypes
 from tracs.errors import ResourceImportException
 from tracs.pluginmgr import service
 from tracs.plugins.gpx import GPXImporter
@@ -53,6 +53,7 @@ class Local( Service ):
 		# classifier + optional location
 		import_path = kwargs.get( 'path' )
 		classifier = kwargs.get( 'classifier' ) or self.name
+		type = ActivityTypes.get( kwargs.get( 'type' ) )
 
 		filters, max_depth = [ '*.gpx' ], 0 # todo: support tcx as well
 		if import_path:
@@ -67,6 +68,7 @@ class Local( Service ):
 					src_path = f'{path}/{f.name}'
 					activity = self._gpx_importer.load_as_activity( fs=src_fs, path=src_path )
 					activity.uid = UID( classifier, int( activity.starttime.strftime( "%y%m%d%H%M%S" ) ) )
+					activity.type = type
 					dst_path = f'{classifier}/{path_for_date( activity.starttime )}/{activity.starttime.strftime( "%y%m%d%H%M%S" )}{f.suffix}'
 
 					if self.ctx.force or not self.db.contains_resource( activity.uid, dst_path ):

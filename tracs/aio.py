@@ -10,7 +10,7 @@ from fs.errors import ResourceNotFound
 from rich.prompt import Confirm
 from tzlocal import get_localzone_name
 
-from tracs.activity import Activities, Activity
+from tracs.activity import Activities, Activity, ActivityTypes
 from tracs.config import ApplicationContext
 from tracs.db import ActivityDb
 from tracs.plugins.gpx import GPX_TYPE
@@ -34,6 +34,10 @@ MAXIMUM_OPEN = 8
 def import_activities( ctx: ApplicationContext, sources: List[str], **kwargs ) -> Activities:
 	sources = sources or ctx.registry.service_names()
 	activities = Activities()
+
+	if ( t := kwargs.get( 'type' ) ) and t not in ActivityTypes.names():
+		log.error( f'cannot use unknown activity type "{t}" during import, use the command "tracs types" to learn what types exist' )
+		return activities
 
 	for src in sources:
 		imported = Activities()
