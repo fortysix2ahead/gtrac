@@ -50,6 +50,16 @@ def list_activities( activities: List[Activity], sort: str = None, reverse: bool
 	if len( table.rows ) > 0:
 		console.print( table )
 
+def show_filters( ctx: ApplicationContext ):
+	table = Table( box=box.MINIMAL, show_header=True, show_footer=False )
+	table.add_column( 'filter' )
+	table.add_column( 'expression' )
+
+	for f in sorted( ctx.config.filters.to_dict().items(), key=lambda flt: flt[0] ):
+		table.add_row( *f )
+
+	console.print( table )
+
 def show_fields():
 	table = Table( box=box.MINIMAL, show_header=True, show_footer=False )
 	table.caption, table.caption_justify = 'Virtual fields are marked with \u24e5  and shown in yellow.', 'left'
