@@ -425,14 +425,10 @@ def test_formatted_activity_fields():
 	a1 = Activity( name='Morning Run in Berlin', type=ActivityTypes.run )
 	a2 = Activity( name='Afternoon Walk in Berlin', type=ActivityTypes.walk )
 
-	assert a1.fmf.__parent__ is a1
-	assert a2.fmf.__parent__ is a2
-	assert a1.fmf is a2.fmf # should reference the same instance
-
-	assert a1.fmf.name == 'Morning Run in Berlin'
-	assert a2.fmf.name == 'Afternoon Walk in Berlin'
+	assert a1.format( 'name' ) == 'Morning Run in Berlin'
+	assert a2.format( 'name' ) == 'Afternoon Walk in Berlin'
 
 	Activity.field_formatters()['name'] = lambda s, a, b: s.lower()
 
-	assert a1.fmf.name == 'morning run in berlin'
-	assert a2.fmf.name == 'afternoon walk in berlin'
+	assert a1.format( 'name' ) == 'morning run in berlin'
+	assert a2.format( 'name' ) == 'afternoon walk in berlin'
