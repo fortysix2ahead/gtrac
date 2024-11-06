@@ -1,5 +1,5 @@
 from datetime import datetime, time, timedelta
-from itertools import chain, zip_longest
+from itertools import zip_longest
 from logging import getLogger
 from pathlib import Path
 from re import compile, match
@@ -22,7 +22,6 @@ from fs.path import dirname
 from fs.zipfs import ReadZipFS
 from lxml.etree import tostring
 from more_itertools import first, first_true
-from regex import compile
 from requests_cache import CachedSession
 from rich.prompt import Prompt
 
@@ -33,6 +32,7 @@ from tracs.config import ApplicationContext, APPNAME
 from tracs.pluginmgr import importer, resourcetype, service, setup
 from tracs.plugins.gpx import GPX_TYPE, GPXImporter
 from tracs.plugins.json import DataclassFactoryHandler, JSONHandler
+from tracs.plugins.polarconstants import ACCESSLINK_TYPES
 from tracs.plugins.polar_takeout import PolarFlowTakeoutImporter
 from tracs.plugins.tcx import TCX_TYPE
 from tracs.plugins.xml import XMLHandler
@@ -382,13 +382,15 @@ class PolarTrainingSessionImporter( JSONHandler ):
 			act.starttime_local= act.starttime.astimezone( tzlocal() )
 			act.endtime_local= act.endtime.astimezone( tzlocal() )
 
+			act.type = ACCESSLINK_TYPES.get( resource.strg( 'sport', parent=exc ) )
+
 			# do not append, this is done in calling method automatically
 			# act.resources.append( Resource(
 			# 	content=resource.content,
 			# 	type=POLAR_SESSION_TYPE,
 			# ) )
 
-			# create streams, todo: make this part more resilient, at the moment it's not clear what data can exist or be missing
+			# create streams, todo: make this part more resilient, at the moment it's not clear what data can or cannot exist
 
 			if samples := exc.get( 'samples' ):
 				name, values = first( samples.items() )
@@ -657,6 +659,7 @@ class Polar( Service ):
 
 				# update session activity to be multipart
 				session_activity.parts = [ ActivityPart( uid=part.uid, gap=part.starttime - session_activity.starttime ) for part in remainders ]
+				session_activity.type = ActivityTypes.multisport
 				imported_activities.extend( [ session_activity, *remainders ] )
 
 		return imported_activities
