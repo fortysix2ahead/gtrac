@@ -104,6 +104,7 @@ class LocationDetail:
 	# - 2022: [{"0":"2020-07-03 09:30:26 GMT(50.0; 10.0) => 2020-07-03 09:30:32 GMT(50.1; 10.1) ...
 	# - 2023 V1: (10.0 50.0)|(10.1 50.1)| ...
 	# - 2023 V2: 2023-02-23 13:49:52 UTC(50.0 10.0)|2023-02-23 13:49:55 UTC(50.1 10.1)| ...
+	# - 2024: 2024-09-02 14:21:45+00(10.0 50.0)|2024-09-02 14:21:49+00(10.1 50.1)| ...
 	# unclear how this was created:
 	# - 1970-01-01 00:35:40 UTC,1970-01-01 00:35:40+00(14.0 50.0)|1970-01-01 00:35:46+00(14.1 50.1)
 
@@ -134,8 +135,8 @@ class LocationDetail:
 				points = [ Point( time=p[0], lat=p[1], lon=p[2] ) for p in points ]
 			elif points and self.__class__.COORDS_3.match( points[0] ):
 				points = [p[:-1].split( '(' ) for p in points]
-				points = [[p[0], *p[1].split( ' ' )] for p in points]  # format lat lon!!
-				points = [Point( time=p[0], lat=p[1], lon=p[2] ) for p in points]
+				points = [[p[0], *p[1].split( ' ' )] for p in points]  # format lon lat!!
+				points = [Point( time=p[0], lat=p[2], lon=p[1] ) for p in points]
 			else:
 				raise RuntimeError( f'unsupported format error, example: {points[0]}' )
 
