@@ -20,7 +20,7 @@ from tracs.registry import Registry
 from tracs.rules import RuleParser
 from tracs.service import Service
 from tracs.utils import FsPath
-from .helpers import get_db_as_json, get_file_as_json
+from test.helpers import get_db_as_json, get_file_as_json
 
 log = getLogger( __name__ )
 
