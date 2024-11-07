@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from logging import getLogger
 from pathlib import Path
@@ -7,11 +7,13 @@ from typing import Any, cast, List, Optional, Tuple, Union
 
 from attrs import define, field
 from dateutil.parser import parse as parse_datetime
-from dateutil.tz import gettz, UTC
+from dateutil.tz import gettz, tzlocal, UTC
 from fs.base import FS
 from fs.path import dirname, frombase, parts, relpath
 from gpxpy.gpx import GPX, GPXTrack, GPXTrackPoint, GPXTrackSegment
 from more_itertools import unique
+from more_itertools.more import first, last
+
 from tracs.activity import Activities, Activity
 from tracs.activity_types import ActivityTypes
 from tracs.handlers import ResourceHandler
@@ -531,19 +533,31 @@ class Waze( Service ):
 						path=f'{summary.path[0:-3]}gpx',
 						type=GPX_TYPE,
 					)
-					recording.raw, recording.content = to_gpx( summary.raw.as_point_list() )
+					recording.data, recording.content = to_gpx( summary.raw.as_point_list() )
 
 					for r in [ summary, recording ]:
 						r.source, r.uid = source, uid
 
 					dst_fs.makedirs( dirname( path ), recreate=True )
-					dst_fs.writebytes( summary.path, contents=summary.content )
-					dst_fs.writebytes( recording.path, contents=recording.content )
+					for r in [ summary, recording ]:
+						dst_fs.writebytes( r.path, contents=r.content )
 					log.debug( f'wrote summary and recording to {dst_fs}/{summary.path} + {recording.path}' )
 
 					# create activity and unload resources
 					drive = self._drive_importer.load_as_activity( resource=summary, fs=dst_fs )
 					drive.resources.append( recording )
+
+					# update activity with gpx metadata
+					gpx = recording.data
+					drive.distance = gpx.length_2d()
+					drive.duration = timedelta( seconds=gpx.get_duration() )
+					drive.starttime, drive.endtime = gpx.get_time_bounds()
+					drive.starttime_local, drive.endtime_local = drive.starttime.astimezone( tzlocal() ), drive.endtime.astimezone( tzlocal() )
+					start_point, end_point = first( gpx.get_points_data() ), last( gpx.get_points_data() )
+					drive.location_latitude_start, drive.location_longitude_start = start_point.point.latitude, start_point.point.longitude
+					drive.location_latitude_end, drive.location_longitude_end = end_point.point.latitude, end_point.point.longitude
+					
+					# unload and append
 					summary.unload()
 					recording.unload()
 					activities.append( drive )
