@@ -1,12 +1,13 @@
 from json import loads
 
 from pydantic import ValidationError
-from pytest import mark, fail
+from pytest import mark, fail, raises
 from stravalib.client import Client
 from stravalib.model import DetailedActivity
 
-from conftest import service
+from test.conftest import service
 from tracs.plugins.strava import Strava
+
 
 # test case with development account
 
@@ -23,14 +24,19 @@ def test_activity( service ):
 
 	# load detailed activity and dump it into a string
 	detailed_activity = client.get_activity( 7973155107, include_all_efforts=True )
+	assert detailed_activity.start_date.tzinfo is not None
+	assert detailed_activity.start_date_local.tzinfo is None
 	json_str = detailed_activity.model_dump_json( exclude_unset=True, exclude_defaults=True, exclude_none=True, indent=2 )
+
 	print( json_str )
 
-	# load json from string and parse it into a detailed activity again, this fails with:
-	# start_date_local
-	#   Input should have timezone info [type=timezone_aware, input_value='2022-10-16T14:23:40', input_type=str]
-	#     For further information visit https://errors.pydantic.dev/2.9/v/timezone_aware
+	# this works ...
 	try:
-		DetailedActivity.model_validate_json( loads( json_str ) )
+		DetailedActivity.model_validate_json( json_str )
 	except ValidationError:
 		fail( 'unable to transform json to detailed activity' )
+
+	# this does not work: after loading the json the field "start_date" is of type str, not datetime, this creates a failure when loading
+	with raises( ValidationError ):
+		json = loads( json_str )
+		DetailedActivity.model_validate_json( json )
