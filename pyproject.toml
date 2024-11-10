@@ -40,7 +40,7 @@ dependencies = [
     'requests-oauthlib~=2.0.0',
     'rich~=13.9.2',
     'rule-engine~=4.5.0',
-    'stravalib~=2.0.0',
+    'stravalib~=2.1.0',
     'tcxreader~=0.4.4',
     'tzlocal~=5.2',
 ]
