@@ -160,6 +160,8 @@ def test_rule_pattern():
 	assert match( KEYWORD_PATTERN, 'Polar22' )
 	assert not match( KEYWORD_PATTERN, '1Polar22' )
 
+def test_rule_pattern_2():
+
 	# normal expressions
 
 	# empty value is allowed
