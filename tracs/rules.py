@@ -53,7 +53,7 @@ TIME_PATTERN = '^(?P<hour>[0-1]\d|2[0-4]):(?P<minute>[0-5]\d):(?P<second>[0-5]\d
 FUZZY_TIME_PATTERN = '^(?P<hour>[0-1]\d|2[0-4])(:(?P<minute>[0-5]\d)(:(?P<second>[0-5]\d))?)?$'
 
 SHORT_RULE_PATTERN = r'^(\w+)(:|=)([\w\"\.].+)$' # short version: id=10 or id:10 for convenience, value must begin with alphanum or "
-RULE_PATTERN = '^(\w+)(==|!=|=~|!~|>=|<=|>|<|=|:)([\w\"\.].+)*$'
+RULE_PATTERN = rx_compile( r'^(\w+)(==|!=|=~|!~|>=|<=|>|<|=|:)([\w\".].+)*$' )
 
 # type hints to be able to parse certain string correctly (i.e. 2022 as date, not as int)
 RESOLVER_TYPES: Dict[str, Type] = {
@@ -129,7 +129,7 @@ class RuleParser:
 			else:
 				raise RuleSyntaxError( f'syntax error: unsupported keyword "{rule}"' )
 
-		elif m := match( RULE_PATTERN, rule ): #
+		elif m := RULE_PATTERN.fullmatch( rule ): #
 			left, op, right = m.groups()
 			if op == '=':
 				if match( NUMBER_PATTERN, right ) or match( QUOTED_STRING_PATTERN, right ):
